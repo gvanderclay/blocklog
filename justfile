@@ -20,6 +20,22 @@ _udid:
 generate:
     @{{xcodegen}} generate --quiet
 
+# Format the Swift sources in place with the toolchain's swift format; settings are in .swift-format.
+fmt:
+    xcrun swift format --in-place --recursive App Tests UITests
+
+# Export Apple's SwiftUI Specialist and What's New in SwiftUI skills from Xcode into the gitignored .agents/skills/apple/.
+skills:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    # The exporter writes all of Xcode's skills; keep the two SwiftUI ones.
+    xcrun agent skills export --output-dir "$tmp"
+    rm -rf .agents/skills/apple
+    mkdir -p .agents/skills/apple
+    mv "$tmp/swiftui-specialist" "$tmp/swiftui-whats-new-27" .agents/skills/apple/
+
 # Run xcodebuild with logging, a fresh xcresult and beautified output.
 _xcb name *args:
     @mkdir -p build/logs build/results
