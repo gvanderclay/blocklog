@@ -1,0 +1,6 @@
+Blocklog.xcodeproj/
+build/
+DerivedData/
+*.xcresult
+.DS_Store
+.agents/skills/apple/

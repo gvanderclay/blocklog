@@ -1,0 +1,100 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+sim_name := env("SIM_NAME", "iPhone 17")
+project := "Blocklog.xcodeproj"
+derived := "build/DerivedData"
+bundle_id := "com.gvanderclay.blocklog"
+xcodegen := "mise exec -- xcodegen"
+xcbeautify := "mise exec -- xcbeautify"
+# A failing test otherwise starts a slow `simctl diagnose` that blocks for minutes.
+no_diag := "-collect-test-diagnostics never"
+
+default:
+    @just --list
+
+# First available simulator named sim_name on iOS 27.
+_udid:
+    @xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for r,ds in d.items() if "iOS-27" in r for x in ds if x["name"]=="{{sim_name}}"))'
+
+# Generate Blocklog.xcodeproj from project.yml.
+generate:
+    @{{xcodegen}} generate --quiet
+
+# Run xcodebuild with logging, a fresh xcresult and beautified output.
+_xcb name *args:
+    @mkdir -p build/logs build/results
+    xcodebuild -project {{project}} -derivedDataPath {{derived}} -resultBundlePath "build/results/{{name}}-$(date +%Y%m%d-%H%M%S).xcresult" {{args}} 2>&1 | tee build/logs/{{name}}.log | {{xcbeautify}}
+
+# Build the app for the simulator.
+build: generate
+    @just _xcb build -scheme Blocklog -destination "id=$(just _udid)" build
+
+# Run every test (unit and UI) on the simulator.
+test: generate
+    @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" {{no_diag}} test
+
+test-unit: generate
+    @just _xcb test-unit -scheme BlocklogUnit -destination "id=$(just _udid)" {{no_diag}} test
+
+test-ui: generate
+    @just _xcb test-ui -scheme BlocklogUI -destination "id=$(just _udid)" {{no_diag}} test
+
+# Run one test, e.g. `just test-one BlocklogTests/hostedInApp()`.
+test-one identifier: generate
+    @just _xcb test-one -scheme Blocklog -destination "id=$(just _udid)" "-only-testing:{{identifier}}" {{no_diag}} test
+
+# Build, install and launch on the simulator.
+run: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    udid=$(just _udid)
+    xcrun simctl boot "$udid" 2>/dev/null || true
+    # Xcode 27 here ships no Simulator.app; the simulator runs headless and build/run.png shows the result.
+    open -b com.apple.iphonesimulator 2>/dev/null || true
+    xcrun simctl install "$udid" "{{derived}}/Build/Products/Debug-iphonesimulator/Blocklog.app"
+    xcrun simctl launch "$udid" {{bundle_id}}
+    sleep 8  # ponytail: fixed wait for the launch animation; poll the accessibility tree if it proves flaky
+    xcrun simctl io "$udid" screenshot build/run.png
+
+# Capture ScreenshotTests in light, dark and dark at the largest accessibility text size.
+screenshot: generate
+    #!/usr/bin/env bash
+    set -euo pipefail
+    udid=$(just _udid)
+    xcrun simctl boot "$udid" 2>/dev/null || true
+    xcrun simctl bootstatus "$udid" >/dev/null
+    reset() { xcrun simctl ui "$udid" appearance light; xcrun simctl ui "$udid" content_size large; }
+    trap reset EXIT
+    rm -rf build/screenshots
+    for mode in light dark ax-large; do
+        case $mode in
+            light) xcrun simctl ui "$udid" appearance light; xcrun simctl ui "$udid" content_size large ;;
+            dark) xcrun simctl ui "$udid" appearance dark; xcrun simctl ui "$udid" content_size large ;;
+            ax-large) xcrun simctl ui "$udid" appearance dark; xcrun simctl ui "$udid" content_size accessibility-extra-extra-extra-large ;;
+        esac
+        result="build/results/screenshot-$mode-$(date +%Y%m%d-%H%M%S).xcresult"
+        mkdir -p build/logs build/results "build/screenshots/$mode"
+        xcodebuild -project {{project}} -derivedDataPath {{derived}} -resultBundlePath "$result" \
+            -scheme BlocklogUI -destination "id=$udid" -only-testing:BlocklogUITests/ScreenshotTests {{no_diag}} test \
+            2>&1 | tee "build/logs/screenshot-$mode.log" | {{xcbeautify}}
+        xcrun xcresulttool export attachments --path "$result" --output-path "build/screenshots/$mode"
+        # Exports are named by UUID; rename each to <screen-name>.png from the manifest.
+        python3 -c 'import json,os,sys; d=sys.argv[1]; [os.rename(os.path.join(d, a["exportedFileName"]), os.path.join(d, a["suggestedHumanReadableName"].rsplit("_", 2)[0] + ".png")) for t in json.load(open(os.path.join(d, "manifest.json"))) for a in t["attachments"]]' "build/screenshots/$mode"
+    done
+    ls build/screenshots/*
+
+# Build, sign, install and launch on the connected iPhone (or $DEVICE).
+device: generate
+    #!/usr/bin/env bash
+    set -euo pipefail
+    device="${DEVICE:-}"
+    if [[ -z "$device" ]]; then
+        devices=$(xcrun devicectl list devices | awk '/connected/ && /iPhone/ && /physical/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-/) print $i}')
+        count=$(printf '%s' "$devices" | grep -c . || true)
+        [[ "$count" == 1 ]] || { echo "Expected one connected iPhone, found $count. Set DEVICE=<identifier>." >&2; exit 1; }
+        device=$devices
+    fi
+    # The phone itself, not generic/platform=iOS: a free team's profile needs the device registered, and this registers it.
+    just _xcb device -scheme Blocklog -destination "id=$device" -allowProvisioningUpdates build
+    xcrun devicectl device install app --device "$device" "{{derived}}/Build/Products/Debug-iphoneos/Blocklog.app"
+    xcrun devicectl device process launch --device "$device" {{bundle_id}}

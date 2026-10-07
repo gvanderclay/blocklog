@@ -1,0 +1,66 @@
+name: Blocklog
+options:
+  minimumXcodeGenVersion: 2.46.0
+  bundleIdPrefix: com.gvanderclay
+  deploymentTarget:
+    iOS: "27.0"
+settings:
+  base:
+    SWIFT_VERSION: "6"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: H2B8G7M3AZ
+targets:
+  Blocklog:
+    type: application
+    platform: iOS
+    sources: [App]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gvanderclay.blocklog
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: build/generated/Blocklog-Info.plist
+      properties:
+        CFBundleDisplayName: Blocklog
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+  BlocklogTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Blocklog
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.gvanderclay.blocklog.tests
+  BlocklogUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Blocklog
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.gvanderclay.blocklog.uitests
+        TEST_TARGET_NAME: Blocklog
+schemes:
+  Blocklog:
+    build:
+      targets:
+        Blocklog: all
+    test:
+      targets: [BlocklogTests, BlocklogUITests]
+  BlocklogUnit:
+    build:
+      targets:
+        Blocklog: all
+    test:
+      targets: [BlocklogTests]
+  BlocklogUI:
+    build:
+      targets:
+        Blocklog: all
+    test:
+      targets: [BlocklogUITests]
