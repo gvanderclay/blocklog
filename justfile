@@ -56,8 +56,8 @@ ci-test scheme: generate
     rm -rf "build/results/{{scheme}}.xcresult"
     xcodebuild test -project {{project}} -scheme "{{scheme}}" -destination "platform=iOS Simulator,id=$udid" \
         CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO -parallel-testing-enabled NO -showBuildTimingSummary \
-        -derivedDataPath {{derived}} -resultBundlePath "build/results/{{scheme}}.xcresult" "${extra[@]}" \
-        2>&1 | tee "build/logs/{{scheme}}.log" | {{xcbeautify}} "${renderer[@]}"
+        -derivedDataPath {{derived}} -resultBundlePath "build/results/{{scheme}}.xcresult" ${extra[@]+"${extra[@]}"} \
+        2>&1 | tee "build/logs/{{scheme}}.log" | {{xcbeautify}} ${renderer[@]+"${renderer[@]}"}
 
 # Build, install and launch on the simulator.
 run: build
