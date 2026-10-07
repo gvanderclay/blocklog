@@ -22,7 +22,15 @@ generate:
 
 # Format the Swift sources in place with the toolchain's swift format; settings are in .swift-format.
 fmt:
-    xcrun swift format --in-place --recursive App Tests UITests
+    xcrun swift format --in-place --recursive App Tests UITests scripts
+
+# Synthesize the rest-end chime into App/Resources/rest-chime.caf.
+chime:
+    xcrun swift scripts/make-chime.swift
+
+# Render the light, dark and tinted app icons into App/Resources/Assets.xcassets/AppIcon.appiconset.
+icon:
+    xcrun swift scripts/render-icon.swift
 
 # Export Apple's SwiftUI Specialist and What's New in SwiftUI skills from Xcode into the gitignored .agents/skills/apple/.
 skills:

@@ -36,6 +36,8 @@ Run these commands from the repository root:
 | `just device` | Build, sign, install, and launch on a connected iPhone. |
 | `just fmt` | Format the Swift sources with the toolchain's `swift format`. |
 | `just skills` | Export Apple's SwiftUI agent skills into `.agents/skills/apple/`. |
+| `just chime` | Regenerate the rest-end chime, `App/Resources/rest-chime.caf`. |
+| `just icon` | Regenerate the light, dark and tinted app icons. |
 
 Build and test logs go in `build/logs/`, and result bundles go in `build/results/`. Screenshot files are written to `build/screenshots/{light,dark,ax-large}/<screen>.png`. Set `SIM_NAME` to choose a simulator (default: **iPhone 17** on iOS 27), or set `DEVICE` to choose the phone for `just device`.
 

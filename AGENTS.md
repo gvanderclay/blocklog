@@ -17,6 +17,7 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 - `just screenshot`: capture `ScreenshotTests` into `build/screenshots/{light,dark,ax-large}/`, for design reviews.
 - `just device`: build, sign and install on the connected iPhone; checkpoints use it.
 - `just fmt`: format the Swift sources; run it before every commit that changes Swift files.
+- `just chime` / `just icon`: regenerate `App/Resources/rest-chime.caf` and the app icons from `scripts/`; change the scripts, never the generated files.
 - `just skills`: export Apple's SwiftUI skills into the gitignored `.agents/skills/apple/`; run it when that folder is missing.
 
 When a build or test fails, read the full log in `build/logs/`; the terminal shows a shortened version.
@@ -53,8 +54,7 @@ The per-ticket code review checks every change against these rules. Where a skil
 12. Weights come only from the PowerBlock table, chosen with − and + or the weight menu. There is never a free-entry weight field.
 13. Every interactive element has an `accessibilityIdentifier` following the convention below.
     TODO(ticket 06): the identifier convention goes here.
-14. Every interaction follows the design rules for motion, haptics and sound.
-    TODO(ticket 05): `docs/design.md` doesn't exist yet; ticket 05 writes it and replaces this line with a pointer to it.
+14. Every screen and interaction follows `docs/design.md`: color, type, motion, haptics, sound and accessibility. Read it before writing a view.
 15. Once ticket 06 ships, the user's phone holds real data. A change to `App/Model` must be one SwiftData migrates automatically (adding a model, or adding an optional field), or it must come with a versioned-schema migration and a test that opens a store written by the previous version. Ask the user before any such change.
 
 ## Ticket workflow
