@@ -43,6 +43,22 @@ test-ui: generate
 test-one identifier: generate
     @just _xcb test-one -scheme Blocklog -destination "id=$(just _udid)" "-only-testing:{{identifier}}" {{no_diag}} test
 
+# CI and local test run for one scheme: BlocklogUnit or BlocklogUI.
+ci-test scheme: generate
+    #!/usr/bin/env bash
+    set -euo pipefail
+    udid=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for r,ds in d.items() if r.endswith("iOS-27-0") for x in ds if x["name"]=="iPhone 17"))')
+    extra=()
+    [[ "{{scheme}}" == BlocklogUI ]] && extra=(-retry-tests-on-failure -test-iterations 2)
+    renderer=()
+    [[ -n "${GITHUB_ACTIONS:-}" ]] && renderer=(--renderer github-actions)
+    mkdir -p build/logs build/results
+    rm -rf "build/results/{{scheme}}.xcresult"
+    xcodebuild test -project {{project}} -scheme "{{scheme}}" -destination "platform=iOS Simulator,id=$udid" \
+        CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO -parallel-testing-enabled NO -showBuildTimingSummary \
+        -derivedDataPath {{derived}} -resultBundlePath "build/results/{{scheme}}.xcresult" "${extra[@]}" \
+        2>&1 | tee "build/logs/{{scheme}}.log" | {{xcbeautify}} "${renderer[@]}"
+
 # Build, install and launch on the simulator.
 run: build
     #!/usr/bin/env bash
