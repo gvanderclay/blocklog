@@ -72,6 +72,9 @@ ci-test scheme: generate
     #!/usr/bin/env bash
     set -euo pipefail
     udid=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for r,ds in d.items() if r.endswith("iOS-27-0") for x in ds if x["name"]=="iPhone 17"))')
+    # Boot first and wait, so xcodebuild never cold-boots the simulator. CI run 37690858618's UI
+    # test runner stalled before its first test after a cold boot inside xcodebuild.
+    xcrun simctl bootstatus "$udid" -b >/dev/null
     extra=()
     [[ "{{scheme}}" == BlocklogUI ]] && extra=(-retry-tests-on-failure -test-iterations 2)
     renderer=()
