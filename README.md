@@ -47,6 +47,10 @@ Free-account provisioning expires after 7 days and allows at most 3 sideloaded a
 
 With Xcode 27.0 (build 27A266a), XcodeGen 2.46.0 passed: project generation, builds, unit and UI tests, screenshots, and signed device installation work, so Tuist was not needed. The Xcode 27 install this was tested on has no `Simulator.app`, so the simulator runs headless and `just run` saves `build/run.png`. `devicectl list devices` also lists simulators, so `just device` filters for physical devices. It builds for the phone's own ID rather than `generic/platform=iOS` because a free team's provisioning profile needs the device registered, which happens with a device-specific build. Test recipes pass `-collect-test-diagnostics never` because a failing test otherwise starts a minutes-long `simctl diagnose`.
 
+## CI
+
+`.github/workflows/ci.yml` runs `just ci-test BlocklogUnit` and `just ci-test BlocklogUI` as parallel jobs on the `xcode-27` runner for every push to `main` and every pull request that changes more than `docs/**` or `*.md` files. The same recipes run locally. The first green run (image `macos27` 20260928.0222.1, Xcode 27.0) used Apple Swift 6.4. Unit tests hosted in the app ran with signing disabled (`hostedInApp()` passed). The `unit` job took 3m06s and the `ui` job took 6m00s. A failed job uploads `build/logs/` and `build/results/` for 7 days.
+
 ## License
 
 MIT; see [LICENSE](LICENSE).
