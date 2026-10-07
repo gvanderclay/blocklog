@@ -1,18 +1,34 @@
+import SwiftData
 import SwiftUI
 
 @main
 struct BlocklogApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
+    private let container: ModelContainer
+
+    init() {
+        do {
+            container = try Self.makeContainer(
+                inMemory: CommandLine.arguments.contains("-ui-testing"))
+        } catch {
+            fatalError("Could not open the store: \(error)")
         }
     }
-}
 
-struct ContentView: View {
-    var body: some View {
-        Text("Blocklog")
-            .font(.largeTitle)
-            .accessibilityIdentifier("placeholder")
+    var body: some Scene {
+        WindowGroup {
+            RootView()
+        }
+        .modelContainer(container)
+    }
+
+    /// The store with every model, seeded with the starter exercises when it has none.
+    /// In memory for UI tests (the `-ui-testing` launch argument) and unit tests; on disk otherwise.
+    static func makeContainer(inMemory: Bool) throws -> ModelContainer {
+        let container = try ModelContainer(
+            for: Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
+            RoutineExercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: inMemory))
+        try StarterExercises.seedIfEmpty(container.mainContext)
+        return container
     }
 }

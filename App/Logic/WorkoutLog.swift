@@ -1,0 +1,199 @@
+import Foundation
+import SwiftData
+
+/// Starts, edits, finishes and discards workouts. Every change saves at once, so killing the app loses nothing.
+@MainActor
+struct WorkoutLog {
+    let context: ModelContext
+
+    // MARK: Reading
+
+    /// The workout with no end date. At most one exists.
+    func inProgressWorkout() -> Workout? {
+        var descriptor = FetchDescriptor<Workout>(predicate: #Predicate { $0.endDate == nil })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+
+    /// How many workouts have an end date.
+    func finishedWorkoutCount() -> Int {
+        (try? context.fetchCount(
+            FetchDescriptor<Workout>(predicate: #Predicate { $0.endDate != nil })))
+            ?? 0
+    }
+
+    /// The workout's exercises in position order.
+    static func orderedExercises(of workout: Workout) -> [WorkoutExercise] {
+        workout.exercises.sorted { $0.position < $1.position }
+    }
+
+    /// The workout exercise's sets in position order.
+    static func orderedSets(of workoutExercise: WorkoutExercise) -> [WorkoutSet] {
+        workoutExercise.sets.sorted { $0.position < $1.position }
+    }
+
+    /// "Morning Workout" for a start from 5:00 to 11:59, "Afternoon Workout" from 12:00 to 16:59, otherwise "Evening Workout".
+    static func defaultTitle(startingAt date: Date, calendar: Calendar = .current) -> String {
+        switch calendar.component(.hour, from: date) {
+        case 5..<12: "Morning Workout"
+        case 12..<17: "Afternoon Workout"
+        default: "Evening Workout"
+        }
+    }
+
+    /// A set's number: its 1-based place among its workout exercise's sets in position order.
+    static func setNumber(of set: WorkoutSet) -> Int {
+        guard let workoutExercise = set.workoutExercise else { return 1 }
+        return (orderedSets(of: workoutExercise).firstIndex { $0 === set } ?? 0) + 1
+    }
+
+    /// The exercises Add Exercise offers, sorted by name.
+    /// TODO(ticket 08): offer duration exercises once their sets log seconds instead of reps.
+    static var addableExercises: FetchDescriptor<Exercise> {
+        let duration = ExerciseKind.duration.rawValue
+        return FetchDescriptor(
+            predicate: #Predicate { $0.kindRawValue != duration }, sortBy: [SortDescriptor(\.name)])
+    }
+
+    /// A set can be checked off only once it has reps.
+    static func canCheckOff(_ set: WorkoutSet) -> Bool {
+        (set.reps ?? 0) > 0
+    }
+
+    /// Whether Finish can save the workout: it needs at least one checked set.
+    static func hasCheckedSet(_ workout: Workout) -> Bool {
+        workout.exercises.contains { $0.sets.contains(where: \.isCompleted) }
+    }
+
+    /// The first set after the given one, in workout order, whose reps are empty. Nil when there is none.
+    static func nextEmptyRepsSet(after setID: UUID, in workout: Workout) -> WorkoutSet? {
+        let sets = orderedExercises(of: workout).flatMap(orderedSets(of:))
+        guard let index = sets.firstIndex(where: { $0.id == setID }) else { return nil }
+        return sets[(index + 1)...].first { $0.reps == nil }
+    }
+
+    // MARK: Changing
+
+    /// Starts an empty workout titled for its start time. Nil while another workout is in progress.
+    func startEmptyWorkout(at date: Date = .now) throws -> Workout? {
+        guard inProgressWorkout() == nil else { return nil }
+        let workout = Workout(title: Self.defaultTitle(startingAt: date), startDate: date)
+        context.insert(workout)
+        try save()
+        return workout
+    }
+
+    /// Appends the exercise to the workout with one first set. Does nothing for an exercise
+    /// `addableExercises` leaves out.
+    func addExercise(_ exercise: Exercise, to workout: Workout) throws {
+        guard exercise.kind != .duration else { return }  // TODO(ticket 08): log duration sets.
+        let workoutExercise = WorkoutExercise(exercise: exercise, position: workout.exercises.count)
+        context.insert(workoutExercise)
+        workout.exercises.append(workoutExercise)
+        appendSet(to: workoutExercise)
+        try save()
+    }
+
+    /// Appends a set copying the last set's type and values, or a first set when there is none.
+    func addSet(to workoutExercise: WorkoutExercise) throws {
+        appendSet(to: workoutExercise)
+        try save()
+    }
+
+    /// Sets the weight, which must be a PowerBlock setting.
+    func setWeight(_ weight: Double, of set: WorkoutSet) throws {
+        guard PowerBlockTable.setup(for: weight) != nil else { return }
+        set.weight = weight
+        try save()
+    }
+
+    /// Checks the set off, if it can be, or unchecks it.
+    func toggleCompleted(_ set: WorkoutSet) throws {
+        guard set.isCompleted || Self.canCheckOff(set) else { return }
+        set.isCompleted.toggle()
+        try save()
+    }
+
+    /// Deletes unchecked sets and the exercises left with none, renumbers what remains, sets the title
+    /// (the default title when blank, line breaks becoming spaces) and the end date, and saves.
+    /// Nil, changing nothing, when no set is checked. Throws when saving fails, returning no summary.
+    func finish(_ workout: Workout, title: String, at date: Date = .now) throws -> WorkoutSummary? {
+        guard Self.hasCheckedSet(workout) else { return nil }
+        for workoutExercise in workout.exercises {
+            let unchecked = workoutExercise.sets.filter { !$0.isCompleted }
+            workoutExercise.sets.removeAll { !$0.isCompleted }
+            unchecked.forEach(context.delete)
+        }
+        let empty = workout.exercises.filter(\.sets.isEmpty)
+        workout.exercises.removeAll(where: \.sets.isEmpty)
+        empty.forEach(context.delete)
+        for (position, workoutExercise) in Self.orderedExercises(of: workout).enumerated() {
+            workoutExercise.position = position
+            for (setPosition, set) in Self.orderedSets(of: workoutExercise).enumerated() {
+                set.position = setPosition
+            }
+        }
+        let trimmed = title.split(whereSeparator: \.isNewline).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+        workout.title = trimmed.isEmpty ? Self.defaultTitle(startingAt: workout.startDate) : trimmed
+        workout.endDate = date
+        try save()
+        return WorkoutSummary(
+            workoutNumber: finishedWorkoutCount(),
+            title: workout.title,
+            duration: .seconds(date.timeIntervalSince(workout.startDate)),
+            completedSetCount: workout.exercises.reduce(0) { $0 + $1.sets.count },
+            exerciseCount: workout.exercises.count)
+    }
+
+    /// Deletes the workout with its exercises and sets.
+    func discard(_ workout: Workout) throws {
+        context.delete(workout)
+        try save()
+    }
+
+    /// Saves pending changes, such as a reps value a set row bound directly.
+    func save() throws {
+        try context.save()
+    }
+
+    /// A first set starts at 5 lb for weight × reps, with empty reps; later sets copy the last one.
+    private func appendSet(to workoutExercise: WorkoutExercise) {
+        let last = Self.orderedSets(of: workoutExercise).last
+        let firstWeight =
+            workoutExercise.exercise?.kind == .weightReps ? PowerBlockTable.weights[0] : nil
+        let set = WorkoutSet(
+            position: workoutExercise.sets.count,
+            setType: last?.setType ?? .normal,
+            weight: last == nil ? firstWeight : last?.weight,
+            reps: last?.reps,
+            durationSeconds: last?.durationSeconds)
+        context.insert(set)
+        workoutExercise.sets.append(set)
+    }
+}
+
+/// What the finish summary shows about a just-finished workout.
+@MainActor
+struct WorkoutSummary {
+    /// The count of all finished workouts, this one included.
+    let workoutNumber: Int
+    let title: String
+    let duration: Duration
+    let completedSetCount: Int
+    let exerciseCount: Int
+}
+
+@MainActor
+extension WorkoutSet {
+    /// The reps as the text a reps field edits: digits only, at most three, empty for none.
+    /// Clearing the reps (or entering 0) unchecks the set, so a checked set always has reps.
+    /// A set row binds its field to this and saves when `reps` changes.
+    var repsText: String {
+        get { reps.map(String.init) ?? "" }
+        set {
+            reps = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(3)))
+            if !WorkoutLog.canCheckOff(self) { isCompleted = false }
+        }
+    }
+}

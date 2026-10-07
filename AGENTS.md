@@ -48,12 +48,12 @@ The per-ticket code review checks every change against these rules. Where a skil
 6. Ask the user before adding a Swift package.
 7. Before writing a helper, search `App/` with `rg` for an existing one and reuse it.
 8. One module per file: a main type plus small types only it uses, named after the main type. A file over about 400 lines is a review flag that it may hold two modules.
-9. Swift 6 strict concurrency: views, models and logic are `@MainActor`. `project.yml` sets no default isolation, so write `@MainActor` on each type in `App/Model`, `App/Logic` and `App/PowerBlock`. Every `@unchecked Sendable` and `nonisolated(unsafe)` has a comment saying why it is safe.
+9. Swift 6 strict concurrency: views and logic are `@MainActor`. `project.yml` sets no default isolation, so write `@MainActor` on each type in `App/Logic` and `App/PowerBlock`. `App/Model` is the exception: `@MainActor` on a `@Model` class breaks its generated `PersistentModel` conformance and `#Predicate` key paths, so model classes and their raw-value enums stay nonisolated, and only main-actor code (views, `App/Logic`, the main `ModelContext`) touches them. Every `@unchecked Sendable` and `nonisolated(unsafe)` has a comment saying why it is safe.
 10. Tests check behaviour through public interfaces, never private helpers or view internals. A test is never weakened, skipped or deleted to make a change pass.
 11. Names in code, tests and UI text follow `CONTEXT.md`, the glossary; read it before naming a type, property or test. A new domain term goes into `CONTEXT.md` in the same change.
 12. Weights come only from the PowerBlock table, chosen with − and + or the weight menu. There is never a free-entry weight field.
 13. Every interactive element has an `accessibilityIdentifier` following the convention below.
-    TODO(ticket 06): the identifier convention goes here.
+    Identifiers are dot-separated lowerCamel words, `<screen>.<element>`, such as `workout.finish` or `finish.save`. Repeated rows add their zero-based position after the collection's name: `workout.exercise.<e>.set.<s>.<element>`, such as `workout.exercise.0.set.1.reps`. A row named by its content uses the name instead: `exercisePicker.row.<exercise name>`. Keyboard toolbar buttons use `keyboard.<element>`.
 14. Every screen and interaction follows `docs/design.md`: color, type, motion, haptics, sound and accessibility. Read it before writing a view.
 15. Once ticket 06 ships, the user's phone holds real data. A change to `App/Model` must be one SwiftData migrates automatically (adding a model, or adding an optional field), or it must come with a versioned-schema migration and a test that opens a store written by the previous version. Ask the user before any such change.
 

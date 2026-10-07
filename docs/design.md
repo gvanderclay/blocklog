@@ -89,6 +89,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Rest time | `timer` |
 | Progression note | `arrow.up.circle.fill` |
 | Finish summary | `checkmark.seal.fill` |
+| More actions menu | `ellipsis.circle` |
 
 ## Accessibility
 
