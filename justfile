@@ -8,6 +8,10 @@ xcodegen := "mise exec -- xcodegen"
 xcbeautify := "mise exec -- xcbeautify"
 # A failing test otherwise starts a slow `simctl diagnose` that blocks for minutes.
 no_diag := "-collect-test-diagnostics never"
+# A hung test fails in minutes (allowances round up to whole minutes).
+timeouts := "-test-timeouts-enabled YES -default-test-execution-time-allowance 240 -maximum-test-execution-time-allowance 300"
+# Screenshots run only through `just screenshot`.
+skip_shots := "-skip-testing:BlocklogUITests/ScreenshotTests"
 
 default:
     @just --list
@@ -55,17 +59,17 @@ build: generate
 
 # Run every test (unit and UI) on the simulator.
 test: generate
-    @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} test
+    @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} test
 
 test-unit: generate
-    @just _xcb test-unit -scheme BlocklogUnit -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} test
+    @just _xcb test-unit -scheme BlocklogUnit -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
 
 test-ui: generate
-    @just _xcb test-ui -scheme BlocklogUI -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} test
+    @just _xcb test-ui -scheme BlocklogUI -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} test
 
 # Run one test, e.g. `just test-one BlocklogTests/hostedInApp()`.
 test-one identifier: generate
-    @just _xcb test-one -scheme Blocklog -destination "id=$(just _udid)" "-only-testing:{{identifier}}" -parallel-testing-enabled NO {{no_diag}} test
+    @just _xcb test-one -scheme Blocklog -destination "id=$(just _udid)" "-only-testing:{{identifier}}" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
 
 # CI and local test run for one scheme: BlocklogUnit or BlocklogUI.
 ci-test scheme: generate
@@ -115,7 +119,7 @@ ci-test scheme: generate
     prepare_simulator &
     prep=$!
     extra=()
-    [[ "{{scheme}}" == BlocklogUI ]] && extra=(-retry-tests-on-failure -test-iterations 2)
+    [[ "{{scheme}}" == BlocklogUI ]] && extra=(-retry-tests-on-failure -test-iterations 2 -skip-testing:BlocklogUITests/ScreenshotTests)
     renderer=()
     [[ -n "${GITHUB_ACTIONS:-}" ]] && renderer=(--renderer github-actions)
     rm -rf "build/results/{{scheme}}.xcresult" "build/results/{{scheme}}-retry.xcresult"
@@ -142,7 +146,7 @@ ci-test scheme: generate
     result="build/results/{{scheme}}.xcresult"
     while ((status == 0)); do
         xcodebuild test-without-building "${common[@]}" -resultBundlePath "$result" -parallel-testing-enabled NO \
-            {{no_diag}} ${extra[@]+"${extra[@]}"} 2>&1 | tee -a "$log" | "${xcb[@]}" || status=$?
+            {{no_diag}} {{timeouts}} ${extra[@]+"${extra[@]}"} 2>&1 | tee -a "$log" | "${xcb[@]}" || status=$?
         say "tests exited $status"
         # A simulator's first boot keeps it busy for minutes, and on CI the test runner then started too
         # slowly to bootstrap (killed or aborted before any test ran). Retry that, once, on the warmer simulator.

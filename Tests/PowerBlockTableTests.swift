@@ -14,6 +14,8 @@ struct PowerBlockTableTests {
     }
 
     @Test func stepsUpAcrossTheGaps() {
+        #expect(PowerBlockTable.next(after: 5) == 7.5)
+        #expect(PowerBlockTable.next(after: 7.5) == 10)
         #expect(PowerBlockTable.next(after: 10) == 15)
         #expect(PowerBlockTable.next(after: 20) == 25)
         #expect(PowerBlockTable.next(after: 87.5) == 90)

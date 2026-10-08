@@ -6,12 +6,12 @@ extension XCUIApplication {
     @MainActor
     func pickExercise(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
         let search = searchFields["Search exercises"]
-        XCTAssertTrue(search.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertTrue(search.appears(), file: file, line: line)
         search.tap()
         search.typeText(name)
         search.typeText("\n")
         let row = buttons["exercisePicker.row.\(name)"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertTrue(row.appears(), file: file, line: line)
         row.tap()
     }
 }

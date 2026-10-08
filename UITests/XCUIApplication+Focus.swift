@@ -14,7 +14,7 @@ extension XCUIApplication {
     func focus(_ field: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         field.tap()
         let done = buttons["keyboard.done"]
-        if done.waitForExistence(timeout: 5) { return }
+        if done.appears() { return }
         XCTContext.runActivity(
             named:
                 "Keyboard didn't appear after the first tap; re-tapping (cold-simulator keyboard arbiter drop, see XCUIApplication+Focus.swift)"
@@ -23,7 +23,7 @@ extension XCUIApplication {
             field.tap()
         }
         XCTAssertTrue(
-            done.waitForExistence(timeout: 10),
+            done.appears(timeout: 10),
             "\(field.identifier) has no keyboard focus after a second tap", file: file, line: line)
     }
 }

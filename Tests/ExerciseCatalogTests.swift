@@ -76,4 +76,37 @@ struct ExerciseCatalogTests {
             named: "Hollow Hold", muscleGroup: .core, equipment: .bodyweight, kind: .duration)
         #expect(duration?.kind == .duration)
     }
+
+    // Moved from the UI suite (ticket 10a): the same expectations against the seeded starter list.
+
+    private func starterNames(matching text: String = "", equipment: Equipment? = nil) throws
+        -> [String]
+    {
+        let all = try container.mainContext.fetch(FetchDescriptor<Exercise>())
+        return ExerciseCatalog.sections(from: all, matching: text, equipment: equipment)
+            .flatMap(\.exercises).map(\.name)
+    }
+
+    @Test func searchingCurlFindsOnlyNamesContainingCurl() throws {
+        let names = try starterNames(matching: "curl")
+        #expect(names.contains("Dumbbell Curl"))
+        #expect(!names.contains("Dumbbell Bench Press"))
+        #expect(!names.isEmpty)
+        #expect(names.allSatisfy { $0.localizedCaseInsensitiveContains("curl") })
+    }
+
+    @Test func pullUpBarFilterKeepsTheFiveStarterPullUpBarExercises() throws {
+        #expect(
+            Set(try starterNames(equipment: .pullUpBar))
+                == ["Chin-up", "Pull-up", "Hanging Knee Raise", "Hanging Leg Raise", "Dead Hang"])
+    }
+
+    @Test func aCreatedShouldersExerciseListsAloneUnderShoulders() throws {
+        _ = try catalog.createCustomExercise(
+            named: "Test Row", muscleGroup: .shoulders, equipment: .dumbbell, kind: .weightReps)
+        let all = try container.mainContext.fetch(FetchDescriptor<Exercise>())
+        let sections = ExerciseCatalog.sections(from: all, matching: "Test Row", equipment: nil)
+        #expect(sections.map(\.muscleGroup) == [.shoulders])
+        #expect(sections.flatMap(\.exercises).map(\.name) == ["Test Row"])
+    }
 }
