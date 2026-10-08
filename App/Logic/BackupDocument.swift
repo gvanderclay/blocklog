@@ -183,6 +183,8 @@ struct BackupDocument: Codable, Equatable {
     /// Throws `BackupError` naming the first problem. Nothing is stored from a document that fails.
     func validate() throws {
         guard version == Self.currentVersion else { throw BackupError.unsupportedVersion(version) }
+        // A store always holds at least one exercise; an empty one would be re-seeded with the starters at launch.
+        guard !exercises.isEmpty else { throw BackupError.invalid("The backup has no exercises.") }
         var ids = Set<UUID>()
         func claim(_ id: UUID, for owner: String) throws {
             guard ids.insert(id).inserted else {

@@ -361,6 +361,28 @@ struct BackupTests {
             data: document.encoded(), containing: fragment, sourceLocation: sourceLocation)
     }
 
+    @Test func aBackupWithNoExercisesIsRejectedSoLaunchSeedingCannotUndoTheRestore() throws {
+        var document = try exported(makeSource())
+        document.exercises = []
+        document.routines = []
+        document.workouts = []
+        let target = try makeSource()
+        let before = try exported(target)
+        let storedBefore = try Backup(context: target.mainContext).storedCounts()
+        do {
+            let rejected = try BackupDocument.read(document.encoded())
+            try Backup(context: target.mainContext).replaceAll(with: rejected)
+            Issue.record("The document was accepted.")
+        } catch {
+            #expect(error.localizedDescription.contains("no exercises"))
+        }
+        #expect(try exported(target) == before)
+        #expect(try Backup(context: target.mainContext).storedCounts() == storedBefore)
+        try StarterExercises.seedIfEmpty(target.mainContext)
+        #expect(try exported(target) == before)
+        #expect(try Backup(context: target.mainContext).storedCounts() == storedBefore)
+    }
+
     private func expectRejected(
         data: Data, containing fragment: String, sourceLocation: SourceLocation = #_sourceLocation
     ) throws {
