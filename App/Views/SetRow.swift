@@ -8,6 +8,8 @@ struct SetRow: View {
     /// `workout.exercise.<e>.set.<s>`.
     let identifierPrefix: String
     let focusedRepsSetID: FocusState<UUID?>.Binding
+    /// The set's workout, which decides where focus goes after the set is checked off.
+    let workout: Workout
     /// Called after the set is deleted, so the screen plays the delete haptic.
     let onDelete: () -> Void
 
@@ -75,6 +77,7 @@ struct SetRow: View {
                         .frame(width: fieldWidth * 1.5)
                         .frame(minHeight: 44)
                         .focused(focusedRepsSetID, equals: set.id)
+                        .accessibilityLabel("Seconds")
                         .accessibilityIdentifier("\(identifierPrefix).duration")
                     // The field's own label says "Seconds", so the unit isn't read a second time.
                     Text("s").foregroundStyle(.secondary).accessibilityHidden(true)
@@ -89,13 +92,20 @@ struct SetRow: View {
                     .frame(width: fieldWidth)
                     .frame(minHeight: 44)
                     .focused(focusedRepsSetID, equals: set.id)
+                    .accessibilityLabel("Reps")
                     .accessibilityIdentifier("\(identifierPrefix).reps")
             }
             Button {
                 withAnimation {
-                    attempt { try $0.toggleCompleted(set) }
+                    if set.isCompleted {
+                        attempt { try $0.toggleCompleted(set) }
+                    } else {
+                        attempt {
+                            focusedRepsSetID.wrappedValue = try $0.checkOffAndAdvance(
+                                set, in: workout)?.id
+                        }
+                    }
                 }
-                if set.isCompleted { checkOffCount += 1 }
             } label: {
                 Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
@@ -118,6 +128,8 @@ struct SetRow: View {
         .sensoryFeedback(trigger: set.isCompleted) { _, isCompleted in
             isCompleted ? .success : .impact(weight: .light)
         }
+        // Also fires when the keyboard's Done checks the set off, so the bounce matches the checkmark.
+        .onChange(of: set.isCompleted) { if set.isCompleted { checkOffCount += 1 } }
         .sensoryFeedback(.selection, trigger: set.setType)
         .sensoryFeedback(.selection, trigger: previousCopyCount)
         .swipeActions(edge: .trailing) {

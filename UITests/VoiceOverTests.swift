@@ -34,7 +34,6 @@ final class VoiceOverTests: XCTestCase {
             let plus = app.buttons["workout.exercise.0.set.0.weightPlus"]
             for _ in 0..<3 { plus.tap() }
             app.type("10", into: "workout.exercise.0.set.0.reps")
-            app.buttons["workout.exercise.0.set.0.check"].tap()
         }
 
         var spoken: [String] = []

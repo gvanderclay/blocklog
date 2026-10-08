@@ -25,12 +25,7 @@ final class SettingsJourneyTests: XCTestCase {
                     .exists)
         }
 
-        auditAccessibility(of: app, screen: "Settings") {
-            $0.isSecondaryText([
-                "Exports your exercises, routines and finished workouts. A workout in progress is left out.",
-                "Importing replaces all data on this phone with a backup file.",
-            ])
-        }
+        auditAccessibility(of: app, screen: "Settings")
 
         step("Start a workout, minimize it and see Import switched off with its reason") {
             app.buttons["tabs.workout"].tap()

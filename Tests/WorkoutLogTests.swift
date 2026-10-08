@@ -196,6 +196,37 @@ struct WorkoutLogTests {
         #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) == nil)
     }
 
+    @Test func checkingOffAdvancesToTheNextEmptySetThenTheNextExerciseThenNothing() throws {
+        let workout = try workout(sets: 2)
+        try log.addExercise(try exercise("Hammer Curl"), to: workout)
+        let bench = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        let curl = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[1])
+        for set in bench + curl { set.repsText = "10" }
+        bench[1].repsText = ""
+        curl[0].repsText = ""
+
+        #expect(try log.checkOffAndAdvance(bench[0], in: workout) === bench[1])
+        bench[1].repsText = "8"
+        #expect(try log.checkOffAndAdvance(bench[1], in: workout) === curl[0])
+        curl[0].repsText = "5"
+        #expect(try log.checkOffAndAdvance(curl[0], in: workout) == nil)
+        #expect(curl[0].isCompleted)
+    }
+
+    @Test func checkOffAndAdvanceLeavesUncheckableAndCheckedSetsAlone() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        sets[0].repsText = ""
+        #expect(try log.checkOffAndAdvance(sets[0], in: workout) == nil)
+        #expect(!sets[0].isCompleted)
+
+        sets[0].repsText = "10"
+        try log.toggleCompleted(sets[0])
+        sets[1].repsText = ""
+        #expect(try log.checkOffAndAdvance(sets[0], in: workout) === sets[1])
+        #expect(sets[0].isCompleted)
+    }
+
     @Test func setsAreNumberedInPositionOrderAndRenumberedAfterFinish() throws {
         let workout = try workout(sets: 3)
         let sets = WorkoutLog.orderedSets(of: try #require(workout.exercises.first))

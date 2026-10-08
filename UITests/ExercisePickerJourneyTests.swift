@@ -23,7 +23,6 @@ final class ExercisePickerJourneyTests: XCTestCase {
         auditAccessibility(of: app, screen: "the exercise picker (unfiltered)") {
             $0.isSystemToolbarItem(["exercisePicker.cancel"])
                 || $0.isSystemControl(["Search exercises"])
-                || $0.isSecondaryText(["Back", "Forearms", "Core", "Chest"])
                 || $0.isPickerRowUnderBottomBar("exercisePicker.row.Chin-up")
         }
 
@@ -39,7 +38,6 @@ final class ExercisePickerJourneyTests: XCTestCase {
         auditAccessibility(of: app, screen: "the exercise picker") {
             $0.isSystemToolbarItem(["exercisePicker.cancel"])
                 || $0.isSystemControl(["Search exercises"])
-                || $0.isSecondaryText(["Back", "Forearms", "Core"])
         }
 
         step("All brings the dumbbell exercises back") {

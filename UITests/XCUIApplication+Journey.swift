@@ -31,13 +31,14 @@ extension XCUIApplication {
             staticTexts["workout.exercise.\(index).name"].appears(), file: file, line: line)
     }
 
-    /// Types digits into a field and dismisses the keyboard, which would otherwise stall later taps.
+    /// Types digits into a field, then taps keyboard Done. Done checks the set off and may move focus to the next
+    /// empty set instead of closing the keyboard, so callers must not assume the keyboard is gone.
     @MainActor
     func type(_ digits: String, into identifier: String) {
         let field = textFields[identifier]
         focus(field)
         field.typeText(digits)
-        buttons["keyboard.done"].tap()
+        buttons["keyboard.done"].tap()  // also checks the set off, when it can be
     }
 
     /// Swipes until the element of the lazy list is hittable.

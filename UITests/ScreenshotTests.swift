@@ -27,7 +27,6 @@ final class ScreenshotTests: XCTestCase {
         app.type("10", into: "workout.exercise.0.set.0.reps")
         app.buttons["workout.exercise.0.addSet"].tap()
         let check = app.buttons["workout.exercise.0.set.0.check"]
-        check.tap()
         XCTAssertEqual(check.value as? String, "done")
         snap(app, "workout-screen")
 

@@ -87,6 +87,17 @@ struct WorkoutLog {
 
     // MARK: Changing
 
+    /// Checks the set off when it can be, then returns the set to focus next, chosen as `nextEmptySet` does;
+    /// an already checked set is left as it is. Nil, meaning close the keyboard, when there is no next set
+    /// or the set can't be checked off.
+    func checkOffAndAdvance(_ set: WorkoutSet, in workout: Workout) throws -> WorkoutSet? {
+        if !set.isCompleted {
+            guard Self.canCheckOff(set) else { return nil }
+            try toggleCompleted(set)
+        }
+        return Self.nextEmptySet(after: set.id, in: workout)
+    }
+
     /// Starts an empty workout titled for its start time. Nil while another workout is in progress.
     func startEmptyWorkout(at date: Date = .now) throws -> Workout? {
         guard inProgressWorkout() == nil else { return nil }

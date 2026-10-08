@@ -24,11 +24,22 @@ struct WorkoutScreen: View {
                     index, workoutExercise in
                     ExerciseSection(
                         workoutExercise: workoutExercise, exerciseIndex: index,
-                        focusedRepsSetID: $focusedRepsSetID, deleteCount: $deleteCount)
+                        workout: workout, focusedRepsSetID: $focusedRepsSetID,
+                        deleteCount: $deleteCount)
                 }
                 Section {
                     Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
                         .accessibilityIdentifier("workout.addExercise")
+                }
+                Section {
+                    Button("Finish Workout") { isFinishing = true }
+                        .font(.headline)
+                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("workout.finishBottom")
+                    Button("Discard Workout", role: .destructive) { isConfirmingDiscard = true }
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("workout.discardBottom")
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -72,7 +83,7 @@ struct WorkoutScreen: View {
                         }
                     }
                     .accessibilityIdentifier("keyboard.next")
-                    Button("Done") { focusedRepsSetID = nil }
+                    Button("Done") { checkOffFocusedSet() }
                         .accessibilityIdentifier("keyboard.done")
                 }
             }
@@ -117,12 +128,32 @@ struct WorkoutScreen: View {
             }
         }
     }
+
+    /// Keyboard Done: checks off the focused set and moves on like Next; closes the keyboard when it can't.
+    private func checkOffFocusedSet() {
+        guard let id = focusedRepsSetID,
+            let set = WorkoutLog.orderedExercises(of: workout).flatMap(WorkoutLog.orderedSets(of:))
+                .first(where: { $0.id == id })
+        else {
+            focusedRepsSetID = nil
+            return
+        }
+        withAnimation(reduceMotion ? nil : .default) {
+            do {
+                focusedRepsSetID = try WorkoutLog(context: modelContext)
+                    .checkOffAndAdvance(set, in: workout)?.id
+            } catch {
+                saveFailed = true
+            }
+        }
+    }
 }
 
 /// One workout exercise: its sets and an Add Set button.
 private struct ExerciseSection: View {
     let workoutExercise: WorkoutExercise
     let exerciseIndex: Int
+    let workout: Workout
     let focusedRepsSetID: FocusState<UUID?>.Binding
     /// Bumped on every deletion, so the screen plays the delete haptic.
     @Binding var deleteCount: Int
@@ -139,7 +170,8 @@ private struct ExerciseSection: View {
                 SetRow(
                     set: set,
                     identifierPrefix: "workout.exercise.\(exerciseIndex).set.\(setIndex)",
-                    focusedRepsSetID: focusedRepsSetID, onDelete: { deleteCount += 1 })
+                    focusedRepsSetID: focusedRepsSetID, workout: workout,
+                    onDelete: { deleteCount += 1 })
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {

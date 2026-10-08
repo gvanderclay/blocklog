@@ -35,20 +35,22 @@ final class LogAndFinishJourneyTests: XCTestCase {
         }
 
         step("Check both sets off") {
-            app.buttons["workout.exercise.0.set.0.check"].tap()
+            // Done on the keyboard already checked the first set off.
+            XCTAssertEqual(app.buttons["workout.exercise.0.set.0.check"].value as? String, "done")
             app.buttons["workout.exercise.0.set.1.check"].tap()
             XCTAssertEqual(app.buttons["workout.exercise.0.set.1.check"].value as? String, "done")
         }
 
         step("Finish and save, see Workout 1, return to an idle Workout tab") {
-            app.buttons["workout.finish"].tap()
+            let finish = app.buttons["workout.finishBottom"]
+            app.reveal(finish, swiping: { $0.swipeUp() })
+            finish.tap()
             app.buttons["finish.save"].tap()
             let workoutNumber = app.staticTexts["summary.workoutNumber"]
             XCTAssertTrue(workoutNumber.appears())
             XCTAssertEqual(workoutNumber.label, "Workout 1")
             auditAccessibility(of: app, screen: "the finish summary") {
                 $0.isSystemToolbarItem(["summary.done"])
-                    || $0.isSecondaryText(["Duration", "Sets", "Exercises"])
             }
             app.buttons["summary.done"].tap()
             let start = app.buttons["workoutTab.startEmpty"]

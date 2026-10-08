@@ -20,7 +20,6 @@ final class EditWorkoutJourneyTests: XCTestCase {
 
         auditAccessibility(of: app, screen: "the workout screen") {
             $0.isSystemToolbarItem(["workout.finish", "workout.elapsed"])
-                || $0.isSecondaryText(["s"])
         }
 
         step("Remove an exercise with no checked set without a confirmation") {
@@ -34,8 +33,7 @@ final class EditWorkoutJourneyTests: XCTestCase {
                 app.buttons["workout.exercise.0.set.0.addedWeightValue"].value as? String,
                 "bodyweight")
             XCTAssertFalse(app.buttons["workout.exercise.0.set.0.addedWeightMinus"].isEnabled)
-            app.type("8", into: "workout.exercise.0.set.0.reps")
-            app.buttons["workout.exercise.0.set.0.check"].tap()
+            app.type("8", into: "workout.exercise.0.set.0.reps")  // Done also checks the set off
             app.buttons["workout.exercise.0.addSet"].tap()
             let second = app.buttons["workout.exercise.0.set.1.addedWeightValue"]
             XCTAssertEqual(second.value as? String, "bodyweight")
@@ -49,8 +47,7 @@ final class EditWorkoutJourneyTests: XCTestCase {
             let check = app.buttons["workout.exercise.1.set.0.check"]
             XCTAssertFalse(check.isEnabled)
             app.type("45", into: "workout.exercise.1.set.0.duration")
-            XCTAssertTrue(check.isEnabled)
-            check.tap()
+            XCTAssertTrue(check.isEnabled)  // Done on the keyboard has checked it off
             for id in [
                 "workout.exercise.0.set.0.check", "workout.exercise.0.set.1.check",
                 "workout.exercise.1.set.0.check",
@@ -60,7 +57,9 @@ final class EditWorkoutJourneyTests: XCTestCase {
         }
 
         step("Remove an exercise with checked sets only after confirming") {
-            app.buttons["workout.exercise.0.menu"].tap()
+            let menu = app.buttons["workout.exercise.0.menu"]
+            app.reveal(menu, swiping: { $0.swipeDown() })
+            menu.tap()
             app.buttons["workout.exercise.0.remove"].tap()
             let confirm = app.buttons["workout.exercise.0.removeConfirm"].firstMatch
             XCTAssertTrue(confirm.appears())
