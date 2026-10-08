@@ -15,6 +15,12 @@ final class ScreenshotTests: XCTestCase {
         start.tap()
         app.buttons["workout.addExercise"].tap()
         XCTAssertTrue(app.buttons["exercisePicker.cancel"].waitForExistence(timeout: 5))
+        snap(app, "exercise-picker")
+        app.buttons["exercisePicker.new"].tap()
+        XCTAssertTrue(app.textFields["newExercise.name"].waitForExistence(timeout: 5))
+        snap(app, "new-exercise")
+        app.navigationBars.buttons["Add Exercise"].tap()
+        XCTAssertTrue(app.buttons["exercisePicker.cancel"].waitForExistence(timeout: 5))
         // The list is lazy: rows below the fold exist only once scrolled to.
         let row = app.buttons["exercisePicker.row.Dumbbell Bench Press"]
         for _ in 0..<15 where !row.isHittable {

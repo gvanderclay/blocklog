@@ -90,6 +90,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Progression note | `arrow.up.circle.fill` |
 | Finish summary | `checkmark.seal.fill` |
 | More actions menu | `ellipsis.circle` |
+| Filter the exercise list | `line.3.horizontal.decrease.circle` |
 
 ## Accessibility
 

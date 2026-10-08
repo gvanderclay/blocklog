@@ -1,29 +1,73 @@
 import SwiftData
 import SwiftUI
 
-/// The exercises a workout can add, sorted by name; tapping one adds it to the workout.
+/// The exercises a workout can add, grouped by muscle group and filtered by name and equipment. Tapping one
+/// adds it to the workout; New Exercise creates a custom one.
 struct ExercisePicker: View {
     let onPick: (Exercise) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Query(WorkoutLog.addableExercises) private var exercises: [Exercise]
+    @State private var query = ""
+    @State private var equipment: Equipment?
+    @State private var isCreating = false
+
+    private var sections: [ExerciseCatalog.Section] {
+        ExerciseCatalog.sections(from: exercises, matching: query, equipment: equipment)
+    }
 
     var body: some View {
         NavigationStack {
-            List(exercises) { exercise in
-                Button(exercise.name) {
+            List {
+                ForEach(sections) { section in
+                    Section(section.muscleGroup.title) {
+                        ForEach(section.exercises) { exercise in
+                            Button(exercise.name) {
+                                onPick(exercise)
+                                dismiss()
+                            }
+                            .foregroundStyle(.primary)
+                            .accessibilityIdentifier("exercisePicker.row.\(exercise.name)")
+                        }
+                    }
+                }
+            }
+            .animation(.default, value: query)
+            .animation(.default, value: equipment)
+            .overlay {
+                if sections.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                }
+            }
+            .searchable(text: $query, prompt: "Search exercises")
+            .navigationTitle("Add Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $isCreating) {
+                NewExerciseForm { exercise in
                     onPick(exercise)
                     dismiss()
                 }
-                .foregroundStyle(.primary)
-                .accessibilityIdentifier("exercisePicker.row.\(exercise.name)")
             }
-            .navigationTitle("Add Exercise")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                         .accessibilityIdentifier("exercisePicker.cancel")
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Menu("Equipment", systemImage: "line.3.horizontal.decrease.circle") {
+                        Picker("Equipment", selection: $equipment) {
+                            Text("All").tag(Equipment?.none)
+                            ForEach(Equipment.allCases, id: \.self) { option in
+                                Text(option.title).tag(Equipment?.some(option))
+                            }
+                        }
+                    }
+                    .accessibilityValue(equipment?.title ?? "All")
+                    .accessibilityIdentifier("exercisePicker.equipmentFilter")
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New Exercise", systemImage: "plus") { isCreating = true }
+                        .accessibilityIdentifier("exercisePicker.new")
                 }
             }
         }

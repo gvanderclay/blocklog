@@ -5,6 +5,8 @@ The domain terms Blocklog uses in code, tests and UI text. A term in parentheses
 ## Workouts
 
 - **Exercise** (`Exercise`): a movement the user can log, from the starter list or custom. It has a muscle group, equipment, an exercise kind and an optional rest override.
+- **Custom exercise**: an exercise the user creates from the exercise picker (`isCustom`). It is listed and logged like a starter exercise.
+- **Exercise picker** (`ExercisePicker`): the Add Exercise sheet. It lists exercises by muscle group, searches and filters them by equipment, and creates custom exercises.
 - **Workout** (`Workout`): one training session: a title, a start date, an end date once finished, and its ordered workout exercises. Finished workouts are the history that previous numbers and progression read.
 - **In-progress workout**: the workout with no end date. At most one exists; the app reopens into it at launch, and starting another workout is disabled while it exists.
 - **Freeform workout**: a workout started empty rather than from a routine. It has no routine link, so it gets no progression note and never asks to update a routine.
