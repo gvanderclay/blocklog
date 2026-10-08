@@ -51,7 +51,8 @@ final class ExercisePickerTests: XCTestCase {
         let name = app.textFields["newExercise.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         name.tap()
-        name.typeText("Test Row")
+        // Return dismisses the keyboard; pushing with it up stalls XCTest's idle wait for 60 s.
+        name.typeText("Test Row\n")
         app.buttons["newExercise.muscleGroup"].tap()
         // Shoulders, not Back: a "Back" row is ambiguous with the navigation back button.
         app.buttons["Shoulders"].tap()
