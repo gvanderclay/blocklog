@@ -2,3 +2,4 @@
 xcodegen = "2.46.0"
 just = "1.58.0"
 xcbeautify = "3.2.1"
+"github:MobAI-App/simslim" = "0.11.0"

@@ -13,6 +13,7 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 - `just test-unit` / `just test-ui`: run one test bundle while working on that side.
 - `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogTests/hostedInApp()`.
 - `just ci-test <BlocklogUnit|BlocklogUI>`: the exact command CI runs; use it to reproduce a CI failure.
+- `just ci-report <run-id>`: download a failed CI run's artifacts and print its test failures, crash reports and log tail; use it first when CI fails.
 - `just run`: install and launch on the simulator and save `build/run.png`, for a manual check.
 - `just screenshot`: capture `ScreenshotTests` into `build/screenshots/{light,dark,ax-large}/`, for design reviews.
 - `just device`: build, sign and install on the connected iPhone; checkpoints use it.

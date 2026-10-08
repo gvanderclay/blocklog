@@ -23,7 +23,7 @@ final class ScreenshotTests: XCTestCase {
         row.tap()
         let reps = app.textFields["workout.exercise.0.set.0.reps"]
         XCTAssertTrue(reps.waitForExistence(timeout: 5))
-        reps.tap()
+        app.focus(reps)
         reps.typeText("10")
         app.buttons["keyboard.done"].tap()
         app.buttons["workout.exercise.0.addSet"].tap()

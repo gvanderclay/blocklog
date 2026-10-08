@@ -20,7 +20,7 @@ final class WorkoutFlowTests: XCTestCase {
         XCTAssertEqual(weight.value as? String, "15 pounds")
 
         let reps = app.textFields["workout.exercise.0.set.0.reps"]
-        reps.tap()
+        app.focus(reps)
         reps.typeText("10")
         app.buttons["keyboard.done"].tap()
         app.buttons["workout.exercise.0.addSet"].tap()
@@ -49,7 +49,7 @@ final class WorkoutFlowTests: XCTestCase {
     func testMinimizedWorkoutResumesWithItsSets() {
         let app = launchAndStartWorkout(adding: "Dumbbell Bench Press")
         let reps = app.textFields["workout.exercise.0.set.0.reps"]
-        reps.tap()
+        app.focus(reps)
         reps.typeText("8")
         app.buttons["keyboard.done"].tap()
         app.buttons["workout.exercise.0.set.0.check"].tap()
@@ -71,7 +71,7 @@ final class WorkoutFlowTests: XCTestCase {
         app.buttons["workout.exercise.0.addSet"].tap()
 
         let first = app.textFields["workout.exercise.0.set.0.reps"]
-        first.tap()
+        app.focus(first)
         first.typeText("10")
         app.buttons["keyboard.next"].tap()
         app.typeText("8")
