@@ -5,6 +5,8 @@ import SwiftData
 @MainActor
 struct WorkoutLog {
     let context: ModelContext
+    /// The rest timer that Finish and Discard stop. Nil where no timer is involved.
+    var restTimer: RestTimer?
 
     // MARK: Reading
 
@@ -233,6 +235,7 @@ struct WorkoutLog {
         let end = max(date, workout.startDate)
         workout.endDate = end
         try context.saveOrRollBack()
+        restTimer?.skip()
         return WorkoutSummary(
             workoutNumber: finishedWorkoutCount(),
             title: workout.title,
@@ -244,6 +247,13 @@ struct WorkoutLog {
     /// Deletes the workout with its exercises and sets.
     func discard(_ workout: Workout) throws {
         context.delete(workout)
+        try context.saveOrRollBack()
+        restTimer?.skip()
+    }
+
+    /// Sets the exercise's rest override, in every workout; nil uses the default rest.
+    func setRestOverride(_ seconds: Int?, of exercise: Exercise) throws {
+        exercise.restOverrideSeconds = seconds
         try context.saveOrRollBack()
     }
 

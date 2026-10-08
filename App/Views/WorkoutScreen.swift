@@ -8,6 +8,8 @@ struct WorkoutScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(RestTimer.self) private var restTimer
+    @AppStorage("defaultRestSeconds") private var defaultRest = 90
     @FocusState private var focusedRepsSetID: UUID?
     @State private var isPickingExercise = false
     @State private var isReordering = false
@@ -37,6 +39,14 @@ struct WorkoutScreen: View {
                         .accessibilityIdentifier("workout.discardBottom")
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                if restTimer.isRunning {
+                    RestTimerBar()
+                        .transition(
+                            reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.default, value: restTimer.isRunning)
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
             .toolbar {
@@ -119,7 +129,7 @@ struct WorkoutScreen: View {
             // shortcut: a failed save here has no screen left to alert on; discard rolls back, so the
             // workout stays in progress and the Workout tab offers it again. Alert there if this ever fails in practice.
             if isDiscarded {
-                try? WorkoutLog(context: modelContext).discard(workout)
+                try? WorkoutLog(context: modelContext, restTimer: restTimer).discard(workout)
             }
         }
     }
@@ -135,8 +145,9 @@ struct WorkoutScreen: View {
         }
         withAnimation(reduceMotion ? nil : .default) {
             do {
-                focusedRepsSetID = try WorkoutLog(context: modelContext)
-                    .checkOffAndAdvance(set, in: workout)?.id
+                focusedRepsSetID = try restTimer.checkOff(
+                    set, in: workout, using: WorkoutLog(context: modelContext),
+                    defaultRest: defaultRest)?.id
             } catch {
                 saveFailed = true
             }
@@ -155,6 +166,7 @@ private struct ExerciseSection: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("defaultRestSeconds") private var defaultRest = 90
     @State private var saveFailed = false
     @State private var isConfirmingRemove = false
 
@@ -186,6 +198,18 @@ private struct ExerciseSection: View {
                     .accessibilityIdentifier("workout.exercise.\(exerciseIndex).name")
                 Spacer()
                 Menu {
+                    if let exercise = workoutExercise.exercise {
+                        // A submenu, so the 19 choices don't push Remove Exercise off the menu.
+                        Menu("Rest Time…", systemImage: "timer") {
+                            Picker("Rest Time", selection: restOverride(of: exercise)) {
+                                Text("Default (\(RestTimer.clock(defaultRest)))").tag(Int?.none)
+                                ForEach(RestTimer.choices, id: \.self) {
+                                    Text(RestTimer.clock($0)).tag(Int?.some($0))
+                                }
+                            }
+                        }
+                        .accessibilityIdentifier("workout.exercise.\(exerciseIndex).restTime")
+                    }
                     Button("Remove Exercise", systemImage: "trash", role: .destructive) {
                         if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
                             isConfirmingRemove = true
@@ -213,6 +237,19 @@ private struct ExerciseSection: View {
             }
         }
         .headerProminence(.increased)
+    }
+
+    /// The exercise's rest override, saved when the picker changes it.
+    private func restOverride(of exercise: Exercise) -> Binding<Int?> {
+        Binding(
+            get: { exercise.restOverrideSeconds },
+            set: { seconds in
+                do {
+                    try WorkoutLog(context: modelContext).setRestOverride(seconds, of: exercise)
+                } catch {
+                    saveFailed = true
+                }
+            })
     }
 
     private func removeExercise() {

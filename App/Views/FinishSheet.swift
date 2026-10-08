@@ -8,6 +8,7 @@ struct FinishSheet: View {
     let onDone: () -> Void
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(RestTimer.self) private var restTimer
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var summary: WorkoutSummary?
@@ -51,7 +52,9 @@ struct FinishSheet: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
                             do {
-                                let saved = try WorkoutLog(context: modelContext).finish(
+                                let saved = try WorkoutLog(
+                                    context: modelContext, restTimer: restTimer
+                                ).finish(
                                     workout, title: title)
                                 withAnimation { summary = saved }
                             } catch {

@@ -1,13 +1,13 @@
 import XCTest
 
-/// Journey 1: log a workout, finish it, then start another and see and copy the previous numbers.
+/// Journey 1: log a workout with a rest timer, then finish it.
 final class LogAndFinishJourneyTests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
     }
 
     @MainActor
-    func testLogFinishAndCopyPreviousNumbers() {
+    func testLogRestAndFinish() {
         let app = XCUIApplication.launchedForTesting()
 
         step("Start a workout and add Dumbbell Bench Press") {
@@ -41,6 +41,12 @@ final class LogAndFinishJourneyTests: XCTestCase {
             XCTAssertEqual(app.buttons["workout.exercise.0.set.1.check"].value as? String, "done")
         }
 
+        step("See the rest timer after the check-off and skip it") {
+            XCTAssertTrue(app.staticTexts["restTimer.remaining"].appears())
+            app.buttons["restTimer.skip"].tap()
+            XCTAssertTrue(app.staticTexts["restTimer.remaining"].disappears())
+        }
+
         step("Finish and save, see Workout 1, return to an idle Workout tab") {
             app.buttons["workout.finish"].tap()
             app.buttons["finish.save"].tap()
@@ -55,6 +61,28 @@ final class LogAndFinishJourneyTests: XCTestCase {
             XCTAssertTrue(start.appears())
             XCTAssertTrue(start.isEnabled)
             XCTAssertFalse(app.buttons["workoutTab.resume"].exists)
+        }
+    }
+
+    /// Journey 1b: finish a workout, then start another and see and copy the previous numbers.
+    @MainActor
+    func testCopyPreviousNumbers() {
+        let app = XCUIApplication.launchedForTesting()
+
+        step("Log and finish a workout of 15 pounds times 10") {
+            app.startWorkout()
+            app.addExercise("Dumbbell Bench Press", as: 0)
+            let plus = app.buttons["workout.exercise.0.set.0.weightPlus"]
+            plus.tap()
+            plus.tap()
+            plus.tap()
+            app.type("10", into: "workout.exercise.0.set.0.reps")
+            app.buttons["workout.exercise.0.addSet"].tap()
+            app.buttons["workout.exercise.0.set.1.check"].tap()
+            app.buttons["workout.finish"].tap()
+            app.buttons["finish.save"].tap()
+            app.buttons["summary.done"].tap()
+            XCTAssertTrue(app.buttons["workoutTab.startEmpty"].appears())
         }
 
         step("Start another workout and see the previous numbers beside its sets") {

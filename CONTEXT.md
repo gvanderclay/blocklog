@@ -41,6 +41,10 @@ The domain terms Blocklog uses in code, tests and UI text. A term in parentheses
 - **Previous numbers**: what the user did last time, shown as "Previous" beside each set: the sets of the most recent finished workout containing the exercise, paired with the current sets by counted-set order. Warm-ups get none.
 - **Default rest**: the app-wide rest length, 90 seconds unless changed in Settings, stored with `@AppStorage`. It applies to every exercise without a rest override.
 - **Rest override**: an exercise's own rest length in seconds. It replaces the default rest for that exercise in every workout.
+- **Rest timer** (`RestTimer`): the countdown that starts when a set is checked off. It stores its end date and total length, never a ticking counter; ±15 moves both, Skip, Finish and Discard end it, and Minimize leaves it running.
+- **Overtime**: the rest timer after its end date. It counts up as "+m:ss" until Skip, the next check-off, Finish or Discard; reaching zero never ends the rest timer by itself.
+- **Rest notification**: the "Rest over" system notification (identifier `rest-timer`) scheduled at the rest timer's end date, so a locked or backgrounded phone still alerts. The app shows nothing for it in the foreground.
+- **Timer Sound**: the Settings switch for the rest chime, both in the foreground and on the rest notification. The haptics play either way.
 - **Backup document**: the versioned JSON file Export writes and Import reads, holding every exercise, routine and finished workout. Import validates the whole document, then replaces all data; it never merges.
 
 ## Process

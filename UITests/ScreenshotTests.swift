@@ -28,7 +28,15 @@ final class ScreenshotTests: XCTestCase {
         app.buttons["workout.exercise.0.addSet"].tap()
         let check = app.buttons["workout.exercise.0.set.0.check"]
         XCTAssertEqual(check.value as? String, "done")
-        snap(app, "workout-screen")
+        XCTAssertTrue(app.staticTexts["restTimer.remaining"].appears())
+        snap(app, "workout-screen-rest-timer")
+
+        app.buttons["workout.exercise.0.menu"].tap()
+        app.buttons["workout.exercise.0.restTime"].tap()
+        let defaultRest = app.buttons["Default (1:30)"]
+        XCTAssertTrue(defaultRest.appears())
+        snap(app, "exercise-rest-time-picker")
+        defaultRest.tap()
 
         app.buttons["workout.finish"].tap()
         XCTAssertTrue(app.buttons["finish.save"].appears())
@@ -48,6 +56,9 @@ final class ScreenshotTests: XCTestCase {
         app.buttons["tabs.settings"].tap()
         XCTAssertTrue(app.buttons["settings.export"].waitForExistence(timeout: 5))
         snap(app, "settings")
+        app.buttons["settings.defaultRest"].tap()
+        XCTAssertTrue(app.buttons["1:30"].appears())
+        snap(app, "settings-default-rest-picker")
     }
 
     /// A workout with one exercise of each kind, and the set-type menu open.

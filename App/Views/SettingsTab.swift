@@ -13,10 +13,24 @@ struct SettingsTab: View {
     /// Set when the stored data can't be exported, so Export is off until it is fixed.
     @State private var exportProblem: BackupFailure?
     @State private var importCount = 0
+    @Environment(RestTimer.self) private var restTimer
+    @AppStorage("defaultRestSeconds") private var defaultRest = 90
+    @AppStorage("timerSoundEnabled") private var timerSoundEnabled = true
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Picker("Default Rest", systemImage: "timer", selection: $defaultRest) {
+                        ForEach(RestTimer.choices, id: \.self) { Text(RestTimer.clock($0)) }
+                    }
+                    .accessibilityIdentifier("settings.defaultRest")
+                    Toggle("Timer Sound", isOn: $timerSoundEnabled)
+                        .accessibilityIdentifier("settings.timerSound")
+                        .onChange(of: timerSoundEnabled) { restTimer.timerSoundChanged() }
+                } footer: {
+                    Text("Exercises with their own rest time keep it.")
+                }
                 Section {
                     ShareLink(
                         item: BackupFile(container: modelContext.container),

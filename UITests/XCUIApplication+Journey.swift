@@ -10,6 +10,14 @@ extension XCUIApplication {
         return app
     }
 
+    /// Quits and launches the app again keeping its saved settings (`-keep-defaults`), on a fresh empty store.
+    @MainActor
+    func relaunchKeepingDefaults() {
+        terminate()
+        launchArguments = ["-ui-testing", "-keep-defaults"]
+        launch()
+    }
+
     /// Taps Start Empty Workout on the Workout tab.
     @MainActor
     func startWorkout(file: StaticString = #filePath, line: UInt = #line) {

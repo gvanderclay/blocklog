@@ -9,6 +9,12 @@ struct BlocklogApp: App {
     init() {
         // XCTest waits for UIKit animations to finish after every tap; with them off, UI tests don't idle.
         if uiTesting { UIView.setAnimationsEnabled(false) }
+        // Settings and the stored rest otherwise leak between UI tests; a test that relaunches passes -keep-defaults.
+        if uiTesting, !CommandLine.arguments.contains("-keep-defaults"),
+            let domain = Bundle.main.bundleIdentifier
+        {
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+        }
         do {
             container = try Self.makeContainer(inMemory: uiTesting)
         } catch {

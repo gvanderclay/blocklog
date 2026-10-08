@@ -14,6 +14,8 @@ struct SetRow: View {
     let onDelete: () -> Void
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(RestTimer.self) private var restTimer
+    @AppStorage("defaultRestSeconds") private var defaultRest = 90
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The reps and seconds fields grow with the text size, so a number and the placeholder never clip.
@@ -101,8 +103,8 @@ struct SetRow: View {
                         attempt { try $0.toggleCompleted(set) }
                     } else {
                         attempt {
-                            focusedRepsSetID.wrappedValue = try $0.checkOffAndAdvance(
-                                set, in: workout)?.id
+                            focusedRepsSetID.wrappedValue = try restTimer.checkOff(
+                                set, in: workout, using: $0, defaultRest: defaultRest)?.id
                         }
                     }
                 }
