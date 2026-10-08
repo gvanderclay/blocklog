@@ -52,6 +52,8 @@ final class EditWorkoutJourneyTests: XCTestCase {
                 "workout.exercise.0.set.0.check", "workout.exercise.0.set.1.check",
                 "workout.exercise.1.set.0.check",
             ] {
+                // The list scrolls down to the next empty field, so the first rows can be off screen.
+                app.reveal(app.buttons[id], swiping: { $0.swipeDown() })
                 XCTAssertEqual(app.buttons[id].value as? String, "done", id)
             }
         }
