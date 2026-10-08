@@ -11,6 +11,10 @@ final class SettingsJourneyTests: XCTestCase {
     func testExportAndImportRows() {
         let app = XCUIApplication.launchedForTesting()
 
+        auditAccessibility(of: app, screen: "the Workout tab") {
+            $0.isSystemControl(["Start Empty Workout"])
+        }
+
         step("Open Settings and see Export and Import offered") {
             app.buttons["tabs.settings"].tap()
             XCTAssertTrue(app.buttons["settings.export"].appears())
@@ -19,6 +23,13 @@ final class SettingsJourneyTests: XCTestCase {
             XCTAssertTrue(
                 app.staticTexts["Importing replaces all data on this phone with a backup file."]
                     .exists)
+        }
+
+        auditAccessibility(of: app, screen: "Settings") {
+            $0.isSecondaryText([
+                "Exports your exercises, routines and finished workouts. A workout in progress is left out.",
+                "Importing replaces all data on this phone with a backup file.",
+            ])
         }
 
         step("Start a workout, minimize it and see Import switched off with its reason") {

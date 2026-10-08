@@ -46,6 +46,10 @@ final class LogAndFinishJourneyTests: XCTestCase {
             let workoutNumber = app.staticTexts["summary.workoutNumber"]
             XCTAssertTrue(workoutNumber.appears())
             XCTAssertEqual(workoutNumber.label, "Workout 1")
+            auditAccessibility(of: app, screen: "the finish summary") {
+                $0.isSystemToolbarItem(["summary.done"])
+                    || $0.isSecondaryText(["Duration", "Sets", "Exercises"])
+            }
             app.buttons["summary.done"].tap()
             let start = app.buttons["workoutTab.startEmpty"]
             XCTAssertTrue(start.appears())

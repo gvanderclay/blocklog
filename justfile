@@ -12,6 +12,8 @@ no_diag := "-collect-test-diagnostics never"
 timeouts := "-test-timeouts-enabled YES -default-test-execution-time-allowance 240 -maximum-test-execution-time-allowance 300"
 # Screenshots run only through `just screenshot`.
 skip_shots := "-skip-testing:BlocklogUITests/ScreenshotTests"
+# VoiceOver speaks aloud from the simulator, so it runs only in CI (`ci-test BlocklogUI`), never locally.
+skip_voiceover := "-skip-testing:BlocklogUITests/VoiceOverTests"
 
 default:
     @just --list
@@ -63,13 +65,13 @@ build-tests: generate
 
 # Run every test (unit and UI) on the simulator.
 test: generate
-    @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} test
+    @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} {{skip_voiceover}} test
 
 test-unit: generate
     @just _xcb test-unit -scheme BlocklogUnit -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
 
 test-ui: generate
-    @just _xcb test-ui -scheme BlocklogUI -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} test
+    @just _xcb test-ui -scheme BlocklogUI -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} {{skip_voiceover}} test
 
 # Run one test, e.g. `just test-one BlocklogTests/hostedInApp()`.
 test-one identifier: generate

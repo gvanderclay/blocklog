@@ -45,7 +45,7 @@ struct WeightControl: View {
                     .fontDesign(.rounded)
                     .monospacedDigit()
                     .contentTransition(.numericText(value: weight ?? 0))
-                    .frame(minHeight: 44)
+                    .frame(minWidth: 44, minHeight: 44)
                     .fixedSize(horizontal: true, vertical: false)
             }
             .layoutPriority(1)

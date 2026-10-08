@@ -14,6 +14,8 @@ struct SetRow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The reps and seconds fields grow with the text size, so a number and the placeholder never clip.
+    @ScaledMetric(relativeTo: .body) private var fieldWidth = 64
     @State private var checkOffCount = 0
     @State private var previousCopyCount = 0
     @State private var saveFailed = false
@@ -25,7 +27,7 @@ struct SetRow: View {
         let previous = PreviousSetLookup(context: modelContext).previous(for: set)
         let layout =
             dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout())
+            ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout(spacing: 4))
         layout {
             Menu {
                 typeButtons(identifier: "setMenu.type")
@@ -33,7 +35,7 @@ struct SetRow: View {
                 Text(label)
                     .font(.body.weight(.semibold))
                     .monospacedDigit()
-                    .frame(minWidth: 28, minHeight: 44, alignment: .leading)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .contentShape(.rect)
             }
             .accessibilityLabel("Set type")
@@ -70,10 +72,12 @@ struct SetRow: View {
                         .textFieldStyle(.roundedBorder)
                         .fontDesign(.rounded)
                         .monospacedDigit()
-                        .frame(minWidth: 72, maxWidth: 96, minHeight: 44)
+                        .frame(width: fieldWidth * 1.5)
+                        .frame(minHeight: 44)
                         .focused(focusedRepsSetID, equals: set.id)
                         .accessibilityIdentifier("\(identifierPrefix).duration")
-                    Text("s").foregroundStyle(.secondary)
+                    // The field's own label says "Seconds", so the unit isn't read a second time.
+                    Text("s").foregroundStyle(.secondary).accessibilityHidden(true)
                 }
             } else {
                 TextField("Reps", text: $set.repsText)
@@ -82,7 +86,8 @@ struct SetRow: View {
                     .textFieldStyle(.roundedBorder)
                     .fontDesign(.rounded)
                     .monospacedDigit()
-                    .frame(minWidth: 56, maxWidth: 80, minHeight: 44)
+                    .frame(width: fieldWidth)
+                    .frame(minHeight: 44)
                     .focused(focusedRepsSetID, equals: set.id)
                     .accessibilityIdentifier("\(identifierPrefix).reps")
             }
@@ -150,12 +155,14 @@ struct SetRow: View {
             .foregroundStyle(Color.secondary)  // not .secondary, which fades the tint inside a button
             .fixedSize(horizontal: true, vertical: false)
             .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+            // `.accessibility` too: without it the element is only as big as the text, a hit-area audit failure.
+            .contentShape([.interaction, .accessibility], .rect)
         Group {
             if previous != nil, !set.isCompleted {
                 Button {
                     copyPrevious()
                 } label: {
-                    label.contentShape(.rect)
+                    label
                 }
                 .buttonStyle(.plain)  // keeps the secondary grey; .borderless tints the label
                 .accessibilityHint("Copies last time's values")

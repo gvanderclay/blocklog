@@ -19,11 +19,30 @@ final class ExercisePickerJourneyTests: XCTestCase {
             XCTAssertTrue(app.buttons["exercisePicker.cancel"].appears())
         }
 
-        step("The Pull-up bar filter hides dumbbell exercises, and All brings them back") {
+        // Audited in its default, unfiltered, scrolling state.
+        auditAccessibility(of: app, screen: "the exercise picker (unfiltered)") {
+            $0.isSystemToolbarItem(["exercisePicker.cancel"])
+                || $0.isSystemControl(["Search exercises"])
+                || $0.isSecondaryText(["Back", "Forearms", "Core", "Chest"])
+                || $0.isPickerRowUnderBottomBar("exercisePicker.row.Chin-up")
+        }
+
+        step("The Pull-up bar filter hides dumbbell exercises") {
             app.buttons["exercisePicker.equipmentFilter"].tap()
             app.buttons["Pull-up bar"].tap()
             XCTAssertTrue(app.buttons["exercisePicker.row.Pull-up"].appears())
             XCTAssertTrue(app.buttons["exercisePicker.row.Dumbbell Bench Press"].disappears())
+        }
+
+        // Audited with the short filtered list: in the full list the last visible row scrolls under the bottom bar,
+        // where the audit measures its contrast against the bar.
+        auditAccessibility(of: app, screen: "the exercise picker") {
+            $0.isSystemToolbarItem(["exercisePicker.cancel"])
+                || $0.isSystemControl(["Search exercises"])
+                || $0.isSecondaryText(["Back", "Forearms", "Core"])
+        }
+
+        step("All brings the dumbbell exercises back") {
             app.buttons["exercisePicker.equipmentFilter"].tap()
             app.buttons["All"].tap()
             XCTAssertTrue(app.buttons["exercisePicker.row.Dumbbell Bench Press"].appears())
@@ -43,8 +62,14 @@ final class ExercisePickerJourneyTests: XCTestCase {
             XCTAssertTrue(app.staticTexts["newExercise.error"].disappears())
         }
 
+        auditAccessibility(of: app, screen: "the new-exercise form") {
+            $0.isSystemToolbarItem(["newExercise.save"]) || $0.isSystemControl(["Weight × Reps"])
+        }
+
         step("Create Test Row under Shoulders and see it added to the workout") {
             let name = app.textFields["newExercise.name"]
+            // The audit dropped the keyboard focus.
+            name.tap()
             name.typeText("Test Row\n")
             app.buttons["newExercise.muscleGroup"].tap()
             // Shoulders, not Back: a "Back" row is ambiguous with the navigation back button.

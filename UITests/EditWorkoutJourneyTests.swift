@@ -18,6 +18,11 @@ final class EditWorkoutJourneyTests: XCTestCase {
             app.addExercise("Hammer Curl", as: 3)
         }
 
+        auditAccessibility(of: app, screen: "the workout screen") {
+            $0.isSystemToolbarItem(["workout.finish", "workout.elapsed"])
+                || $0.isSecondaryText(["s"])
+        }
+
         step("Remove an exercise with no checked set without a confirmation") {
             app.buttons["workout.exercise.3.menu"].tap()
             app.buttons["workout.exercise.3.remove"].tap()

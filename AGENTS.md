@@ -12,6 +12,7 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 - `just build-tests`: compile the app and both test bundles without running them, so a later test recipe only relinks; on the shared Mac this is the step that takes the build lock.
 - `just test`: run every unit and UI test except `ScreenshotTests`, which only `just screenshot` runs. CI runs the full suite on every push, so locally it is optional; see "Local checks" below.
 - `just test-unit` / `just test-ui`: run one test bundle while working on that side (`test-ui` also skips `ScreenshotTests`).
+- `VoiceOverTests` turns on the simulator's VoiceOver, which speaks aloud on this Mac, so `just test` and `just test-ui` skip it and only `just ci-test BlocklogUI` (CI) runs it. Never run it locally unless the user asks.
 - `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogUITests/SettingsJourneyTests` (quote an identifier that ends in `()`).
 
 Local checks: the UI journeys are slow, so run only what a change can break. While working, run `just test-unit` and the journey for the screen you are changing with `just test-one`. Before review and commit, `just test-unit` must pass, plus every journey whose screens or flows the change touches; a change to `App/Logic` or `App/PowerBlock` alone needs no journey. CI is the full gate: after the push, a failing journey is fixed in a follow-up commit.

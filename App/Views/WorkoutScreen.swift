@@ -158,7 +158,7 @@ private struct ExerciseSection: View {
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("workout.exercise.\(exerciseIndex).name")
                 Spacer()
-                Menu("Exercise Actions", systemImage: "ellipsis.circle") {
+                Menu {
                     Button("Remove Exercise", systemImage: "trash", role: .destructive) {
                         if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
                             isConfirmingRemove = true
@@ -167,9 +167,13 @@ private struct ExerciseSection: View {
                         }
                     }
                     .accessibilityIdentifier("workout.exercise.\(exerciseIndex).remove")
+                } label: {
+                    // The 44 × 44 frame belongs on the label: a frame outside the menu leaves its tap target small.
+                    Label("Exercise Actions", systemImage: "ellipsis.circle")
+                        .labelStyle(.iconOnly)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
                 }
-                .labelStyle(.iconOnly)
-                .frame(minWidth: 44, minHeight: 44)
                 .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
             }
             .confirmationDialog(

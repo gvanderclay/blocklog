@@ -75,6 +75,7 @@ private struct FinishSummary: View {
     let summary: WorkoutSummary
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var hasAppeared = false
 
     var body: some View {
@@ -91,12 +92,12 @@ private struct FinishSummary: View {
                     .accessibilityIdentifier("summary.workoutNumber")
                 Text(summary.title)
                     .font(.headline)
-                    .foregroundStyle(.secondary)
-                ViewThatFits {
-                    HStack(alignment: .top, spacing: 24) { stats }
-                    VStack(spacing: 16) { stats }
-                }
-                .padding(.top, 8)
+                let layout =
+                    dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(spacing: 16))
+                    : AnyLayout(HStackLayout(alignment: .top, spacing: 24))
+                layout { stats }
+                    .padding(.top, 8)
             }
             .multilineTextAlignment(.center)
             .padding()
