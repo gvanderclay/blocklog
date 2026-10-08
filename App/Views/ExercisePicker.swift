@@ -7,6 +7,7 @@ struct ExercisePicker: View {
     let onPick: (Exercise) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(WorkoutLog.addableExercises) private var exercises: [Exercise]
     @State private var query = ""
     @State private var equipment: Equipment?
@@ -32,8 +33,8 @@ struct ExercisePicker: View {
                     }
                 }
             }
-            .animation(.default, value: query)
-            .animation(.default, value: equipment)
+            .animation(reduceMotion ? nil : .default, value: query)
+            .animation(reduceMotion ? nil : .default, value: equipment)
             .overlay {
                 if sections.isEmpty {
                     ContentUnavailableView.search(text: query)

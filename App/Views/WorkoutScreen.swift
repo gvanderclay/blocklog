@@ -7,6 +7,7 @@ struct WorkoutScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var focusedRepsSetID: UUID?
     @State private var isPickingExercise = false
     @State private var isReordering = false
@@ -89,7 +90,7 @@ struct WorkoutScreen: View {
             }
             .sheet(isPresented: $isPickingExercise) {
                 ExercisePicker { exercise in
-                    withAnimation {
+                    withAnimation(reduceMotion ? nil : .default) {
                         do {
                             try WorkoutLog(context: modelContext).addExercise(exercise, to: workout)
                         } catch {
@@ -127,6 +128,7 @@ private struct ExerciseSection: View {
     @Binding var deleteCount: Int
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var saveFailed = false
     @State private var isConfirmingRemove = false
 
@@ -140,7 +142,7 @@ private struct ExerciseSection: View {
                     focusedRepsSetID: focusedRepsSetID, onDelete: { deleteCount += 1 })
             }
             Button("Add Set", systemImage: "plus") {
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     do {
                         try WorkoutLog(context: modelContext).addSet(to: workoutExercise)
                     } catch {
@@ -183,7 +185,7 @@ private struct ExerciseSection: View {
     }
 
     private func removeExercise() {
-        withAnimation {
+        withAnimation(reduceMotion ? nil : .default) {
             do {
                 try WorkoutLog(context: modelContext).removeExercise(workoutExercise)
                 deleteCount += 1

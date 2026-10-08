@@ -123,7 +123,7 @@ struct SetRow: View {
                 typeButtons(identifier: "setMenu.type")
             }
             Button("Duplicate", systemImage: "plus.square.on.square") {
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     attempt { try $0.duplicateSet(set) }
                 }
             }
@@ -181,7 +181,7 @@ struct SetRow: View {
 
     private var deleteButton: some View {
         Button("Delete", systemImage: "trash", role: .destructive) {
-            withAnimation {
+            withAnimation(reduceMotion ? nil : .default) {
                 attempt { try $0.deleteSet(set) }
             }
             onDelete()

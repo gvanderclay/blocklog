@@ -31,7 +31,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Rows and sections insert and remove with animation: change the data inside `withAnimation`.
 - Bars and banners (the rest timer bar) enter and leave from their edge with `.move(edge:).combined(with: .opacity)`.
 - Confirmations use SF Symbol effects, played once: `.symbolEffect(.bounce, value:)` on the checkmark when a set is checked off (not when unchecked), on the progression arrow when the workout opens, and on the finish summary's checkmark.
-- Reduce Motion: read `@Environment(\.accessibilityReduceMotion)`. When it is on, every transition is `.opacity`, sliding and scaling (rows, the timer bar, the diagram's pin and adders) become cross-fades, and symbol bounces don't play. Numeric-text transitions stay; the system already tones them down.
+- Reduce Motion: read `@Environment(\.accessibilityReduceMotion)`. When it is on, rows in lists are inserted, removed and filtered without animation (SwiftUI `List` gives no supported cross-fade for its rows; [Apple's guidance](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion) allows removing the animation): pass `reduceMotion ? nil : .default` to `withAnimation` and `.animation`. Every other transition is `.opacity`, so sliding and scaling (sheets, the timer bar, the diagram's pin and adders) become cross-fades, and symbol bounces don't play. Numeric-text transitions stay; the system already tones them down.
 - No looping, pulsing or attention-seeking animation. The rest ring drains continuously, which is information, not decoration.
 
 ## Haptics
@@ -124,7 +124,7 @@ Phase 1 (tickets 06–10):
 - [ ] Discard: it confirms first.
 - [ ] Search the exercise picker for nonsense: the empty search view shows.
 - [ ] Import: it confirms before replacing, then a success tap.
-- [ ] With Reduce Motion on, rows and sheets cross-fade instead of sliding.
+- [ ] With Reduce Motion on, list rows appear, disappear and filter without animation, and sheets cross-fade instead of sliding.
 - [ ] At the largest text size, set rows wrap and the toolbar fits.
 
 Phase 2 (tickets 13–15):
