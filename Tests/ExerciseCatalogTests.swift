@@ -65,14 +65,15 @@ struct ExerciseCatalogTests {
         #expect(saved.count == 1)
     }
 
-    @Test func refusesDuplicatesAndDurationKinds() throws {
+    @Test func refusesDuplicatesButCreatesDurationExercises() throws {
         let before = try container.mainContext.fetchCount(FetchDescriptor<Exercise>())
         let duplicate = try catalog.createCustomExercise(
             named: "plank", muscleGroup: .core, equipment: .bodyweight, kind: .bodyweightReps)
+        #expect(duplicate == nil)
+        #expect(try container.mainContext.fetchCount(FetchDescriptor<Exercise>()) == before)
+
         let duration = try catalog.createCustomExercise(
             named: "Hollow Hold", muscleGroup: .core, equipment: .bodyweight, kind: .duration)
-        #expect(duplicate == nil)
-        #expect(duration == nil)
-        #expect(try container.mainContext.fetchCount(FetchDescriptor<Exercise>()) == before)
+        #expect(duration?.kind == .duration)
     }
 }

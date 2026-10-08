@@ -37,3 +37,14 @@ extension ExerciseKind {
         }
     }
 }
+
+extension SetType {
+    var title: String {
+        switch self {
+        case .normal: "Normal"
+        case .warmUp: "Warm-up"
+        case .drop: "Drop"
+        case .failure: "Failure"
+        }
+    }
+}

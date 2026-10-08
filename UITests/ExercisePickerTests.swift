@@ -32,7 +32,7 @@ final class ExercisePickerTests: XCTestCase {
         app.buttons["exercisePicker.equipmentFilter"].tap()
         app.buttons["Pull-up bar"].tap()
 
-        // Only the four pull-up bar exercises in the starter list (Dead Hang is a duration exercise, left out).
+        // Only the five pull-up bar exercises in the starter list.
         XCTAssertTrue(app.buttons["exercisePicker.row.Pull-up"].waitForExistence(timeout: 5))
         XCTAssertTrue(
             app.buttons["exercisePicker.row.Dumbbell Bench Press"].waitForNonExistence(timeout: 5))
@@ -41,6 +41,7 @@ final class ExercisePickerTests: XCTestCase {
             [
                 "exercisePicker.row.Chin-up", "exercisePicker.row.Pull-up",
                 "exercisePicker.row.Hanging Knee Raise", "exercisePicker.row.Hanging Leg Raise",
+                "exercisePicker.row.Dead Hang",
             ])
     }
 

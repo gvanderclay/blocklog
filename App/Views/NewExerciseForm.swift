@@ -40,7 +40,7 @@ struct NewExerciseForm: View {
                 }
                 .accessibilityIdentifier("newExercise.equipment")
                 Picker("Kind", selection: $kind) {
-                    ForEach(ExerciseCatalog.creatableKinds, id: \.self) {
+                    ForEach(ExerciseKind.allCases, id: \.self) {
                         Text($0.title).tag($0)
                     }
                 }

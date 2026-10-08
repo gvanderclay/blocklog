@@ -9,6 +9,8 @@ struct WorkoutScreen: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedRepsSetID: UUID?
     @State private var isPickingExercise = false
+    @State private var isReordering = false
+    @State private var deleteCount = 0
     @State private var isFinishing = false
     @State private var isConfirmingDiscard = false
     @State private var isDiscarded = false
@@ -21,7 +23,7 @@ struct WorkoutScreen: View {
                     index, workoutExercise in
                     ExerciseSection(
                         workoutExercise: workoutExercise, exerciseIndex: index,
-                        focusedRepsSetID: $focusedRepsSetID)
+                        focusedRepsSetID: $focusedRepsSetID, deleteCount: $deleteCount)
                 }
                 Section {
                     Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
@@ -29,6 +31,7 @@ struct WorkoutScreen: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Minimize", systemImage: "chevron.down") { dismiss() }
@@ -48,6 +51,11 @@ struct WorkoutScreen: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Menu("More", systemImage: "ellipsis.circle") {
+                        Button("Reorder", systemImage: "arrow.up.arrow.down") {
+                            isReordering = true
+                        }
+                        .disabled(workout.exercises.count < 2)
+                        .accessibilityIdentifier("workout.reorder")
                         Button("Discard Workout", systemImage: "trash", role: .destructive) {
                             isConfirmingDiscard = true
                         }
@@ -59,7 +67,7 @@ struct WorkoutScreen: View {
                     Spacer()
                     Button("Next") {
                         focusedRepsSetID = focusedRepsSetID.flatMap {
-                            WorkoutLog.nextEmptyRepsSet(after: $0, in: workout)?.id
+                            WorkoutLog.nextEmptySet(after: $0, in: workout)?.id
                         }
                     }
                     .accessibilityIdentifier("keyboard.next")
@@ -90,6 +98,10 @@ struct WorkoutScreen: View {
                     }
                 }
             }
+            .sheet(isPresented: $isReordering) {
+                ReorderSheet(workout: workout)
+                    .interactiveDismissDisabled()
+            }
             .sheet(isPresented: $isFinishing) {
                 FinishSheet(workout: workout) { dismiss() }
             }
@@ -110,9 +122,12 @@ private struct ExerciseSection: View {
     let workoutExercise: WorkoutExercise
     let exerciseIndex: Int
     let focusedRepsSetID: FocusState<UUID?>.Binding
+    /// Bumped on every deletion, so the screen plays the delete haptic.
+    @Binding var deleteCount: Int
 
     @Environment(\.modelContext) private var modelContext
     @State private var saveFailed = false
+    @State private var isConfirmingRemove = false
 
     var body: some View {
         Section {
@@ -121,7 +136,7 @@ private struct ExerciseSection: View {
                 SetRow(
                     set: set,
                     identifierPrefix: "workout.exercise.\(exerciseIndex).set.\(setIndex)",
-                    focusedRepsSetID: focusedRepsSetID)
+                    focusedRepsSetID: focusedRepsSetID, onDelete: { deleteCount += 1 })
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation {
@@ -135,10 +150,90 @@ private struct ExerciseSection: View {
             .saveFailedAlert(isPresented: $saveFailed)
             .accessibilityIdentifier("workout.exercise.\(exerciseIndex).addSet")
         } header: {
-            Text(workoutExercise.exercise?.name ?? "Exercise")
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("workout.exercise.\(exerciseIndex).name")
+            HStack {
+                Text(workoutExercise.exercise?.name ?? "Exercise")
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).name")
+                Spacer()
+                Menu("Exercise Actions", systemImage: "ellipsis.circle") {
+                    Button("Remove Exercise", systemImage: "trash", role: .destructive) {
+                        if workoutExercise.sets.contains(where: \.isCompleted) {
+                            isConfirmingRemove = true
+                        } else {
+                            removeExercise()
+                        }
+                    }
+                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).remove")
+                }
+                .labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
+            }
+            .confirmationDialog(
+                "Remove this exercise?", isPresented: $isConfirmingRemove, titleVisibility: .visible
+            ) {
+                Button("Remove Exercise", role: .destructive) { removeExercise() }
+                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).removeConfirm")
+            } message: {
+                Text("Its sets will be deleted.")
+            }
         }
         .headerProminence(.increased)
+    }
+
+    private func removeExercise() {
+        withAnimation {
+            do {
+                try WorkoutLog(context: modelContext).removeExercise(workoutExercise)
+                deleteCount += 1
+            } catch {
+                saveFailed = true
+            }
+        }
+    }
+}
+
+/// A compact list of the exercise names to drag into a new order; Done applies it.
+private struct ReorderSheet: View {
+    let workout: Workout
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var order: [WorkoutExercise]
+    @State private var saveFailed = false
+
+    init(workout: Workout) {
+        self.workout = workout
+        _order = State(initialValue: WorkoutLog.orderedExercises(of: workout))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(order.enumerated(), id: \.element.id) { index, workoutExercise in
+                    Text(workoutExercise.exercise?.name ?? "Exercise")
+                        .accessibilityIdentifier("reorder.row.\(index)")
+                }
+                .onMove { order.move(fromOffsets: $0, toOffset: $1) }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Reorder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        do {
+                            try WorkoutLog(context: modelContext).reorderExercises(order)
+                            dismiss()
+                        } catch {
+                            saveFailed = true
+                        }
+                    }
+                    .accessibilityIdentifier("reorder.done")
+                }
+            }
+            .saveFailedAlert(isPresented: $saveFailed)
+        }
+        .presentationDetents([.medium])
     }
 }

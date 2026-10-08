@@ -21,12 +21,7 @@ final class ScreenshotTests: XCTestCase {
         snap(app, "new-exercise")
         app.navigationBars.buttons["Add Exercise"].tap()
         XCTAssertTrue(app.buttons["exercisePicker.cancel"].waitForExistence(timeout: 5))
-        // The list is lazy: rows below the fold exist only once scrolled to.
-        let row = app.buttons["exercisePicker.row.Dumbbell Bench Press"]
-        for _ in 0..<15 where !row.isHittable {
-            app.swipeUp()
-        }
-        row.tap()
+        app.pickExercise("Dumbbell Bench Press")
         let reps = app.textFields["workout.exercise.0.set.0.reps"]
         XCTAssertTrue(reps.waitForExistence(timeout: 5))
         app.focus(reps)
@@ -47,6 +42,49 @@ final class ScreenshotTests: XCTestCase {
         app.buttons["finish.save"].tap()
         XCTAssertTrue(app.staticTexts["summary.workoutNumber"].waitForExistence(timeout: 5))
         snap(app, "summary")
+    }
+
+    /// A workout with one exercise of each kind, and the set-type menu open.
+    @MainActor
+    func testWorkoutWithEveryKind() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        let start = app.buttons["workoutTab.startEmpty"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.tap()
+        for (index, name) in ["Dumbbell Bench Press", "Pull-up", "Plank"].enumerated() {
+            // At the largest text size the button sits below the fold of the lazy list.
+            reveal(app.buttons["workout.addExercise"], in: app, swiping: { $0.swipeUp() })
+            app.buttons["workout.addExercise"].tap()
+            XCTAssertTrue(app.buttons["exercisePicker.cancel"].waitForExistence(timeout: 5))
+            app.pickExercise(name)
+            let header = app.staticTexts["workout.exercise.\(index).name"]
+            XCTAssertTrue(header.waitForExistence(timeout: 5))
+        }
+        let plus = app.buttons["workout.exercise.1.set.0.addedWeightPlus"]
+        reveal(plus, in: app, swiping: { $0.swipeUp() })
+        plus.tap()
+        let duration = app.textFields["workout.exercise.2.set.0.duration"]
+        reveal(duration, in: app, swiping: { $0.swipeUp() })
+        app.focus(duration)
+        duration.typeText("45")
+        app.buttons["keyboard.done"].tap()
+        let typeMenu = app.buttons["workout.exercise.0.set.0.typeMenu"]
+        reveal(typeMenu, in: app, swiping: { $0.swipeDown() })
+        typeMenu.tap()
+        XCTAssertTrue(app.buttons["setMenu.type.warmUp"].waitForExistence(timeout: 5))
+        snap(app, "workout-every-kind-set-type-menu")
+    }
+
+    /// Swipes until the element of the lazy list is hittable.
+    @MainActor
+    private func reveal(
+        _ element: XCUIElement, in app: XCUIApplication, swiping swipe: (XCUIApplication) -> Void
+    ) {
+        for _ in 0..<15 where !element.isHittable {
+            swipe(app)
+        }
     }
 
     @MainActor

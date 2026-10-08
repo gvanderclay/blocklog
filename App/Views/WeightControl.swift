@@ -1,48 +1,61 @@
 import SwiftUI
 
 /// − and + step through the PowerBlock settings; tapping the value opens a menu of all of them.
+/// For a bodyweight set (`isAdded`), the value is the added weight, and nil shows "BW".
 struct WeightControl: View {
-    let weight: Double
+    let weight: Double?
+    /// True for the added weight of a bodyweight set, which can also be nil ("BW").
+    var isAdded = false
     /// `workout.exercise.<e>.set.<s>`.
     let identifierPrefix: String
-    let onChange: (Double) -> Void
+    let onChange: (Double?) -> Void
 
     var body: some View {
-        let previous = PowerBlockTable.previous(before: weight)
-        let next = PowerBlockTable.next(after: weight)
+        let previous =
+            isAdded
+            ? AddedWeight.previous(before: weight)
+            : weight.flatMap { PowerBlockTable.previous(before: $0) }
+        let next =
+            isAdded
+            ? AddedWeight.next(after: weight) : weight.flatMap { PowerBlockTable.next(after: $0) }
+        let canDecrease = isAdded ? AddedWeight.canDecrease(from: weight) : previous != nil
+        let name = isAdded ? "addedWeight" : "weight"
+        let options: [Double?] = (isAdded ? [nil] : []) + PowerBlockTable.weights.map { $0 }
         HStack(spacing: 0) {
             Button("Decrease weight", systemImage: "minus") {
-                if let previous { onChange(previous) }
+                onChange(previous)
             }
             .labelStyle(.iconOnly)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
-            .disabled(previous == nil)
-            .accessibilityIdentifier("\(identifierPrefix).weightMinus")
+            .disabled(!canDecrease)
+            .accessibilityIdentifier("\(identifierPrefix).\(name)Minus")
 
             Menu {
-                ForEach(PowerBlockTable.weights.enumerated(), id: \.element) { index, option in
+                ForEach(options.enumerated(), id: \.offset) { index, option in
                     Button {
                         onChange(option)
                     } label: {
                         if option == weight {
-                            Label("\(option, format: .number) lb", systemImage: "checkmark")
+                            Label(text(for: option), systemImage: "checkmark")
                         } else {
-                            Text("\(option, format: .number) lb")
+                            Text(text(for: option))
                         }
                     }
-                    .accessibilityIdentifier("\(identifierPrefix).weightOption.\(index)")
+                    .accessibilityIdentifier("\(identifierPrefix).\(name)Option.\(index)")
                 }
             } label: {
-                Text("\(weight, format: .number) lb")
+                Text(text(for: weight))
                     .fontDesign(.rounded)
                     .monospacedDigit()
-                    .contentTransition(.numericText(value: weight))
+                    .contentTransition(.numericText(value: weight ?? 0))
                     .frame(minHeight: 44)
             }
-            .accessibilityLabel("Weight")
-            .accessibilityValue("\(weight, format: .number) pounds")
-            .accessibilityIdentifier("\(identifierPrefix).weightValue")
+            .accessibilityLabel(isAdded ? "Added weight" : "Weight")
+            .accessibilityValue(
+                weight.map { "\($0.formatted()) pounds" } ?? "bodyweight"
+            )
+            .accessibilityIdentifier("\(identifierPrefix).\(name)Value")
 
             Button("Increase weight", systemImage: "plus") {
                 if let next { onChange(next) }
@@ -51,9 +64,13 @@ struct WeightControl: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
             .disabled(next == nil)
-            .accessibilityIdentifier("\(identifierPrefix).weightPlus")
+            .accessibilityIdentifier("\(identifierPrefix).\(name)Plus")
         }
         .buttonStyle(.borderless)
         .sensoryFeedback(.selection, trigger: weight)
+    }
+
+    private func text(for weight: Double?) -> String {
+        isAdded ? AddedWeight.label(for: weight) : "\((weight ?? 0).formatted()) lb"
     }
 }

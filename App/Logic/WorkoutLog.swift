@@ -41,23 +41,17 @@ struct WorkoutLog {
         }
     }
 
-    /// A set's number: its 1-based place among its workout exercise's sets in position order.
-    static func setNumber(of set: WorkoutSet) -> Int {
-        guard let workoutExercise = set.workoutExercise else { return 1 }
-        return (orderedSets(of: workoutExercise).firstIndex { $0 === set } ?? 0) + 1
-    }
-
     /// The exercises Add Exercise offers, sorted by name.
-    /// TODO(ticket 08): offer duration exercises once their sets log seconds instead of reps.
     static var addableExercises: FetchDescriptor<Exercise> {
-        let duration = ExerciseKind.duration.rawValue
-        return FetchDescriptor(
-            predicate: #Predicate { $0.kindRawValue != duration }, sortBy: [SortDescriptor(\.name)])
+        FetchDescriptor(sortBy: [SortDescriptor(\.name)])
     }
 
-    /// A set can be checked off only once it has reps.
+    /// A set can be checked off only once it has reps, or seconds for a duration exercise.
     static func canCheckOff(_ set: WorkoutSet) -> Bool {
-        (set.reps ?? 0) > 0
+        if set.workoutExercise?.exercise?.kind == .duration {
+            return (set.durationSeconds ?? 0) > 0
+        }
+        return (set.reps ?? 0) > 0
     }
 
     /// Whether Finish can save the workout: it needs at least one checked set.
@@ -65,11 +59,15 @@ struct WorkoutLog {
         workout.exercises.contains { $0.sets.contains(where: \.isCompleted) }
     }
 
-    /// The first set after the given one, in workout order, whose reps are empty. Nil when there is none.
-    static func nextEmptyRepsSet(after setID: UUID, in workout: Workout) -> WorkoutSet? {
+    /// The first set after the given one, in workout order, whose field is empty: reps, or seconds for a
+    /// duration exercise. Nil when there is none.
+    static func nextEmptySet(after setID: UUID, in workout: Workout) -> WorkoutSet? {
         let sets = orderedExercises(of: workout).flatMap(orderedSets(of:))
         guard let index = sets.firstIndex(where: { $0.id == setID }) else { return nil }
-        return sets[(index + 1)...].first { $0.reps == nil }
+        return sets[(index + 1)...].first {
+            $0.workoutExercise?.exercise?.kind == .duration
+                ? $0.durationSeconds == nil : $0.reps == nil
+        }
     }
 
     // MARK: Changing
@@ -83,10 +81,8 @@ struct WorkoutLog {
         return workout
     }
 
-    /// Appends the exercise to the workout with one first set. Does nothing for an exercise
-    /// `addableExercises` leaves out.
+    /// Appends the exercise to the workout with one first set.
     func addExercise(_ exercise: Exercise, to workout: Workout) throws {
-        guard exercise.kind != .duration else { return }  // TODO(ticket 08): log duration sets.
         let workoutExercise = WorkoutExercise(exercise: exercise, position: workout.exercises.count)
         context.insert(workoutExercise)
         workout.exercises.append(workoutExercise)
@@ -104,6 +100,63 @@ struct WorkoutLog {
     func setWeight(_ weight: Double, of set: WorkoutSet) throws {
         guard PowerBlockTable.setup(for: weight) != nil else { return }
         set.weight = weight
+        try save()
+    }
+
+    /// Sets the added weight of a bodyweight set: nil for none ("BW"), else a PowerBlock setting.
+    func setAddedWeight(_ weight: Double?, of set: WorkoutSet) throws {
+        if let weight, PowerBlockTable.setup(for: weight) == nil { return }
+        set.weight = weight
+        try save()
+    }
+
+    /// Sets the set's type.
+    func setType(_ type: SetType, of set: WorkoutSet) throws {
+        set.setType = type
+        try save()
+    }
+
+    /// Deletes the set and renumbers the positions of the exercise's remaining sets.
+    func deleteSet(_ set: WorkoutSet) throws {
+        if let workoutExercise = set.workoutExercise {
+            workoutExercise.sets.removeAll { $0 === set }
+            Self.renumberSets(of: workoutExercise)
+        }
+        context.delete(set)
+        try save()
+    }
+
+    /// Inserts an unchecked copy of the set right after it.
+    func duplicateSet(_ set: WorkoutSet) throws {
+        guard let workoutExercise = set.workoutExercise else { return }
+        for later in workoutExercise.sets where later.position > set.position {
+            later.position += 1
+        }
+        let copy = WorkoutSet(
+            position: set.position + 1, setType: set.setType, weight: set.weight, reps: set.reps,
+            durationSeconds: set.durationSeconds)
+        context.insert(copy)
+        workoutExercise.sets.append(copy)
+        try save()
+    }
+
+    /// Deletes the workout exercise with its sets and renumbers the remaining exercises.
+    func removeExercise(_ workoutExercise: WorkoutExercise) throws {
+        if let workout = workoutExercise.workout {
+            workout.exercises.removeAll { $0 === workoutExercise }
+            for (position, other) in Self.orderedExercises(of: workout).enumerated() {
+                other.position = position
+            }
+        }
+        context.delete(workoutExercise)
+        try save()
+    }
+
+    /// Gives the exercises the positions of their place in `ordered`.
+    func reorderExercises(_ ordered: [WorkoutExercise]) throws {
+        for (position, workoutExercise) in ordered.enumerated() {
+            workoutExercise.position = position
+        }
         try save()
     }
 
@@ -157,6 +210,12 @@ struct WorkoutLog {
         try context.save()
     }
 
+    private static func renumberSets(of workoutExercise: WorkoutExercise) {
+        for (position, set) in orderedSets(of: workoutExercise).enumerated() {
+            set.position = position
+        }
+    }
+
     /// A first set starts at 5 lb for weight × reps, with empty reps; later sets copy the last one.
     private func appendSet(to workoutExercise: WorkoutExercise) {
         let last = Self.orderedSets(of: workoutExercise).last
@@ -193,6 +252,19 @@ extension WorkoutSet {
         get { reps.map(String.init) ?? "" }
         set {
             reps = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(3)))
+            if !WorkoutLog.canCheckOff(self) { isCompleted = false }
+        }
+    }
+}
+
+@MainActor
+extension WorkoutSet {
+    /// The duration as the text a seconds field edits: digits only, at most four, empty for none.
+    /// Clearing the duration (or entering 0) unchecks the set, like `repsText`.
+    var durationText: String {
+        get { durationSeconds.map(String.init) ?? "" }
+        set {
+            durationSeconds = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(4)))
             if !WorkoutLog.canCheckOff(self) { isCompleted = false }
         }
     }

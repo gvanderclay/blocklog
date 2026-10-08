@@ -18,10 +18,6 @@ struct ExerciseCatalog {
         var id: MuscleGroup { muscleGroup }
     }
 
-    // TODO(ticket 08): offer duration once its sets log seconds instead of reps.
-    /// The kinds a custom exercise can take: the ones a workout can log now.
-    static let creatableKinds: [ExerciseKind] = [.weightReps, .bodyweightReps]
-
     let context: ModelContext
 
     /// The exercises whose name contains the query, ignoring case and diacritics, and that use the
@@ -52,14 +48,12 @@ struct ExerciseCatalog {
     }
 
     /// Creates a custom exercise with the trimmed name and saves it. Nil, creating nothing, when the name
-    /// has a problem or the kind isn't one of `creatableKinds`.
+    /// has a problem.
     func createCustomExercise(
         named name: String, muscleGroup: MuscleGroup, equipment: Equipment, kind: ExerciseKind
     ) throws -> Exercise? {
         let existing = try context.fetch(FetchDescriptor<Exercise>())
-        guard Self.nameProblem(for: name, among: existing) == nil,
-            Self.creatableKinds.contains(kind)
-        else { return nil }
+        guard Self.nameProblem(for: name, among: existing) == nil else { return nil }
         let exercise = Exercise(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines), muscleGroup: muscleGroup,
             equipment: equipment, kind: kind, isCustom: true)

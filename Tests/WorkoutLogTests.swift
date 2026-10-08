@@ -161,37 +161,121 @@ struct WorkoutLogTests {
         #expect(set.repsText == "")
     }
 
-    @Test func nextEmptyRepsSetSkipsFilledSetsAcrossExercises() throws {
+    @Test func nextEmptySetSkipsFilledSetsAcrossExercises() throws {
         let workout = try workout(sets: 2)
         try log.addExercise(try exercise("Hammer Curl"), to: workout)
         let bench = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
         let curl = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[1])
 
-        #expect(WorkoutLog.nextEmptyRepsSet(after: bench[0].id, in: workout) === curl[0])
-        #expect(WorkoutLog.nextEmptyRepsSet(after: curl[0].id, in: workout) == nil)
+        #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) === curl[0])
+        #expect(WorkoutLog.nextEmptySet(after: curl[0].id, in: workout) == nil)
+    }
+
+    @Test func nextEmptySetFindsEmptyDurationFieldsAndSkipsFilledOnes() throws {
+        let workout = try workout(sets: 1)
+        try log.addExercise(try exercise("Plank"), to: workout)
+        let bench = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        let plank = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[1])
+        #expect(plank[0].durationSeconds == nil)
+        #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) === plank[0])
+
+        plank[0].durationText = "45"
+        #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) == nil)
     }
 
     @Test func setsAreNumberedInPositionOrderAndRenumberedAfterFinish() throws {
         let workout = try workout(sets: 3)
         let sets = WorkoutLog.orderedSets(of: try #require(workout.exercises.first))
-        #expect(sets.map(WorkoutLog.setNumber(of:)) == [1, 2, 3])
+        #expect(sets.map(SetNumbering.countedNumber(of:)) == [1, 2, 3])
 
         try log.toggleCompleted(sets[0])
         try log.toggleCompleted(sets[2])
         _ = try log.finish(workout, title: "Push Day")
-        #expect([sets[0], sets[2]].map(WorkoutLog.setNumber(of:)) == [1, 2])
+        #expect([sets[0], sets[2]].map(SetNumbering.countedNumber(of:)) == [1, 2])
     }
 
-    @Test func addExerciseLeavesOutDurationExercisesButKeepsBodyweight() throws {
+    @Test func addableExercisesIncludeDurationAndBodyweightSortedByName() throws {
         let addable = try container.mainContext.fetch(WorkoutLog.addableExercises)
-        #expect(!addable.isEmpty)
-        #expect(!addable.contains { $0.kind == .duration })
+        #expect(addable.contains { $0.kind == .duration })
         #expect(addable.contains { $0.name == "Push-up" })
         #expect(addable.map(\.name) == addable.map(\.name).sorted())
 
         let workout = try #require(try log.startEmptyWorkout())
         try log.addExercise(try exercise("Plank"), to: workout)
-        #expect(workout.exercises.isEmpty)
+        #expect(workout.exercises.count == 1)
+    }
+
+    @Test func firstSetsStartEmptyForBodyweightAndDuration() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        try log.addExercise(try exercise("Pull-up"), to: workout)
+        try log.addExercise(try exercise("Plank"), to: workout)
+        let exercises = WorkoutLog.orderedExercises(of: workout)
+        let pullUp = try #require(WorkoutLog.orderedSets(of: exercises[0]).first)
+        let plank = try #require(WorkoutLog.orderedSets(of: exercises[1]).first)
+        #expect(pullUp.weight == nil && pullUp.reps == nil)
+        #expect(plank.durationSeconds == nil)
+        #expect(!WorkoutLog.canCheckOff(plank))
+
+        plank.durationText = "45"
+        try log.toggleCompleted(plank)
+        #expect(plank.isCompleted)
+        plank.durationText = ""
+        #expect(!plank.isCompleted)
+
+        try log.setAddedWeight(5, of: pullUp)
+        try log.addSet(to: exercises[0])
+        #expect(WorkoutLog.orderedSets(of: exercises[0]).last?.weight == 5)
+        try log.setAddedWeight(12.5, of: pullUp)
+        #expect(pullUp.weight == 5)
+        try log.setAddedWeight(nil, of: pullUp)
+        #expect(pullUp.weight == nil)
+    }
+
+    @Test func deletingASetRenumbersPositions() throws {
+        let workout = try workout(sets: 3)
+        let workoutExercise = try #require(workout.exercises.first)
+        let sets = WorkoutLog.orderedSets(of: workoutExercise)
+        try log.deleteSet(sets[1])
+        #expect(WorkoutLog.orderedSets(of: workoutExercise).map(\.position) == [0, 1])
+        #expect(WorkoutLog.orderedSets(of: workoutExercise).map(\.reps) == [1, 3])
+    }
+
+    @Test func duplicatingASetInsertsAnUncheckedCopyRightAfterIt() throws {
+        let workout = try workout(sets: 3)
+        let workoutExercise = try #require(workout.exercises.first)
+        let sets = WorkoutLog.orderedSets(of: workoutExercise)
+        sets[0].setType = .drop
+        try log.toggleCompleted(sets[0])
+        try log.duplicateSet(sets[0])
+        let after = WorkoutLog.orderedSets(of: workoutExercise)
+        #expect(after.map(\.reps) == [1, 1, 2, 3])
+        #expect(after.map(\.position) == [0, 1, 2, 3])
+        #expect(after[1].setType == .drop)
+        #expect(!after[1].isCompleted)
+    }
+
+    @Test func removingAnExerciseRenumbersTheOthersAndReorderingAppliesPositions() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        for name in ["Dumbbell Bench Press", "Hammer Curl", "Plank"] {
+            try log.addExercise(try exercise(name), to: workout)
+        }
+        let ordered = WorkoutLog.orderedExercises(of: workout)
+        let (bench, curl, plank) = (ordered[0], ordered[1], ordered[2])
+        try log.reorderExercises([plank, bench, curl])
+        #expect(
+            WorkoutLog.orderedExercises(of: workout).map { $0.exercise?.name }
+                == ["Plank", "Dumbbell Bench Press", "Hammer Curl"])
+        try log.removeExercise(bench)
+        let remaining = WorkoutLog.orderedExercises(of: workout)
+        #expect(remaining.map(\.position) == [0, 1])
+        #expect(remaining.map { $0.exercise?.name } == ["Plank", "Hammer Curl"])
+    }
+
+    @Test func settingATypeChangesTheNumbering() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: try #require(workout.exercises.first))
+        try log.setType(.warmUp, of: sets[0])
+        #expect(sets.map(SetNumbering.label(of:)) == ["W", "1"])
     }
 
     @Test func clearingTheRepsOfACheckedSetUnchecksIt() throws {
