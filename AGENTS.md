@@ -10,9 +10,11 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 - `just generate`: regenerate `Blocklog.xcodeproj` from `project.yml`. Run it after adding, moving or deleting a file; the build and test recipes also run it first.
 - `just build`: compile for the simulator, the fastest check that the code builds.
 - `just build-tests`: compile the app and both test bundles without running them, so a later test recipe only relinks; on the shared Mac this is the step that takes the build lock.
-- `just test`: run every unit and UI test except `ScreenshotTests`, which only `just screenshot` runs; it must pass before every review and commit.
+- `just test`: run every unit and UI test except `ScreenshotTests`, which only `just screenshot` runs. CI runs the full suite on every push, so locally it is optional; see "Local checks" below.
 - `just test-unit` / `just test-ui`: run one test bundle while working on that side (`test-ui` also skips `ScreenshotTests`).
-- `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogTests/hostedInApp()`.
+- `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogUITests/SettingsJourneyTests` (quote an identifier that ends in `()`).
+
+Local checks: the UI journeys are slow, so run only what a change can break. While working, run `just test-unit` and the journey for the screen you are changing with `just test-one`. Before review and commit, `just test-unit` must pass, plus every journey whose screens or flows the change touches; a change to `App/Logic` or `App/PowerBlock` alone needs no journey. CI is the full gate: after the push, a failing journey is fixed in a follow-up commit.
 - `just ci-test <BlocklogUnit|BlocklogUI>`: the exact command CI runs (it also skips `ScreenshotTests`); use it to reproduce a CI failure.
 - Every test recipe turns on test timeouts (240 s per test, 300 s at most), so a hung test fails in minutes.
 - `just ci-report <run-id>`: download a failed CI run's artifacts and print its test failures, crash reports and log tail; use it first when CI fails.
@@ -66,9 +68,9 @@ The per-ticket code review checks every change against these rules. Where a skil
 Tickets live in the untracked `.scratch/blocklog/issues/`.
 
 1. Read the ticket and every file its "Read first" names.
-2. Implement it. Run `just fmt`, then `just test` until it passes.
+2. Implement it. Run `just fmt`, then the local checks above until they pass.
 3. Review: hand the uncommitted change to a `reviewer` delegate, telling it to run the code-review skill with the ticket file as the spec. If you can't delegate, stop before committing and report "ready for review" to the session that gave you the ticket; it runs the review.
-4. Fix the findings you agree with, then run `just test` again. Answer each remaining finding in the commit message, one line each.
+4. Fix the findings you agree with, then run the local checks again. Answer each remaining finding in the commit message, one line each.
 5. Commit and push. Don't commit before the review.
 6. Wait for CI with `gh run watch` until the run is green. CI skips pushes that change only `docs/` or Markdown files, so those have no run.
 
