@@ -32,11 +32,6 @@ struct WorkoutScreen: View {
                         .accessibilityIdentifier("workout.addExercise")
                 }
                 Section {
-                    Button("Finish Workout") { isFinishing = true }
-                        .font(.headline)
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("workout.finishBottom")
                     Button("Discard Workout", role: .destructive) { isConfirmingDiscard = true }
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("workout.discardBottom")

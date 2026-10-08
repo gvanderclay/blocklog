@@ -42,9 +42,7 @@ final class LogAndFinishJourneyTests: XCTestCase {
         }
 
         step("Finish and save, see Workout 1, return to an idle Workout tab") {
-            let finish = app.buttons["workout.finishBottom"]
-            app.reveal(finish, swiping: { $0.swipeUp() })
-            finish.tap()
+            app.buttons["workout.finish"].tap()
             app.buttons["finish.save"].tap()
             let workoutNumber = app.staticTexts["summary.workoutNumber"]
             XCTAssertTrue(workoutNumber.appears())
