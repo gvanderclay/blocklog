@@ -97,4 +97,13 @@ struct PowerBlockTableTests {
     @Test func noChangeLineForEqualWeights() {
         #expect(PowerBlockTable.changeLine(from: 27.5, to: 27.5) == nil)
     }
+
+    @Test func weightedStepsStopAtTheEndsAndNeedAWeight() {
+        #expect(PowerBlockTable.stepUp(from: 5) == 7.5)
+        #expect(PowerBlockTable.stepUp(from: 90) == nil)
+        #expect(PowerBlockTable.stepUp(from: nil) == nil)
+        #expect(PowerBlockTable.stepDown(from: 10) == 7.5)
+        #expect(PowerBlockTable.stepDown(from: 5) == nil)
+        #expect(PowerBlockTable.stepDown(from: nil) == nil)
+    }
 }

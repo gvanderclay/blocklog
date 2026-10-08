@@ -19,4 +19,9 @@ struct AddedWeightTests {
         #expect(AddedWeight.previous(before: nil) == nil)
         #expect(!AddedWeight.canDecrease(from: nil))
     }
+
+    @Test func menuOffersBodyweightThenEveryPowerBlockSetting() {
+        #expect(AddedWeight.options == [nil] + PowerBlockTable.weights.map { Optional($0) })
+        #expect(AddedWeight.options.count == 28)
+    }
 }

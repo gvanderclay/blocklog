@@ -7,8 +7,7 @@ struct WorkoutTab: View {
     let present: (Workout) -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Workout> { $0.endDate == nil }) private var inProgressWorkouts:
-        [Workout]
+    @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
     @State private var saveFailed = false
 
     var body: some View {

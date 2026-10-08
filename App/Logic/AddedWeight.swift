@@ -8,6 +8,9 @@ enum AddedWeight {
         weight.map { "+\($0.formatted()) lb" } ?? "BW"
     }
 
+    /// The weight menu's choices: BW, then every PowerBlock setting.
+    static let options: [Double?] = [nil] + PowerBlockTable.weights
+
     /// The step up: 5 lb from BW, else the next PowerBlock setting. Nil at 90 lb.
     static func next(after weight: Double?) -> Double? {
         guard let weight else { return PowerBlockTable.weights[0] }

@@ -57,6 +57,10 @@ _xcb name *args:
 build: generate
     @just _xcb build -scheme Blocklog -destination "id=$(just _udid)" build
 
+# Compile the app and both test bundles without running them; the test recipes then only relink.
+build-tests: generate
+    @just _xcb build-tests -scheme Blocklog -destination "id=$(just _udid)" build-for-testing
+
 # Run every test (unit and UI) on the simulator.
 test: generate
     @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} test
@@ -194,7 +198,7 @@ screenshot: generate
         result="build/results/screenshot-$mode-$(date +%Y%m%d-%H%M%S).xcresult"
         mkdir -p build/logs build/results "build/screenshots/$mode"
         xcodebuild -project {{project}} -derivedDataPath {{derived}} -resultBundlePath "$result" \
-            -scheme BlocklogUI -destination "id=$udid" -only-testing:BlocklogUITests/ScreenshotTests -parallel-testing-enabled NO {{no_diag}} test -jobs 2 COMPILER_INDEX_STORE_ENABLE=NO \
+            -scheme BlocklogUI -destination "id=$udid" -only-testing:BlocklogUITests/ScreenshotTests -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test -jobs 2 COMPILER_INDEX_STORE_ENABLE=NO \
             2>&1 | tee "build/logs/screenshot-$mode.log" | {{xcbeautify}}
         xcrun xcresulttool export attachments --path "$result" --output-path "build/screenshots/$mode"
         # Exports are named by UUID; rename each to <screen-name>.png from the manifest.

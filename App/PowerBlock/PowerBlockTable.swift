@@ -84,6 +84,16 @@ enum PowerBlockTable {
         settings.last { $0.weight < weight }?.weight
     }
 
+    /// The step up from a weight, or nil with no weight or at 90 lb; what + does on a weighted set.
+    static func stepUp(from weight: Double?) -> Double? {
+        weight.flatMap { next(after: $0) }
+    }
+
+    /// The step down from a weight, or nil with no weight or at 5 lb; what − does on a weighted set.
+    static func stepDown(from weight: Double?) -> Double? {
+        weight.flatMap { previous(before: $0) }
+    }
+
     /// The setup for a weight, or nil when the weight is not a setting.
     static func setup(for weight: Double) -> Setup? {
         settings.first { $0.weight == weight }?.setup

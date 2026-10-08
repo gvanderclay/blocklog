@@ -339,4 +339,36 @@ struct WorkoutLogTests {
         #expect(log.inProgressWorkout() == nil)
         #expect(try container.mainContext.fetchCount(FetchDescriptor<WorkoutSet>()) == 0)
     }
+
+    @Test func removingAnExerciseNeedsConfirmationOnlyWithACheckedSet() throws {
+        let workout = try workout(sets: 2)
+        let bench = try #require(workout.exercises.first)
+        #expect(!WorkoutLog.needsRemovalConfirmation(bench))
+
+        try log.toggleCompleted(WorkoutLog.orderedSets(of: bench)[1])
+        #expect(WorkoutLog.needsRemovalConfirmation(bench))
+
+        try log.toggleCompleted(WorkoutLog.orderedSets(of: bench)[1])
+        #expect(!WorkoutLog.needsRemovalConfirmation(bench))
+    }
+
+    @Test func reorderingNeedsAtLeastTwoExercises() throws {
+        let workout = try workout(sets: 1)
+        #expect(!WorkoutLog.canReorder(workout))
+
+        try log.addExercise(try exercise("Hammer Curl"), to: workout)
+        #expect(WorkoutLog.canReorder(workout))
+    }
+
+    @Test func theInProgressDescriptorFindsOnlyAWorkoutWithNoEndDate() throws {
+        let context = container.mainContext
+        #expect(try context.fetch(WorkoutLog.inProgressWorkouts).isEmpty)
+
+        let workout = try workout(sets: 1)
+        #expect(try context.fetch(WorkoutLog.inProgressWorkouts) == [workout])
+
+        try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
+        _ = try log.finish(workout, title: "Push Day")
+        #expect(try context.fetch(WorkoutLog.inProgressWorkouts).isEmpty)
+    }
 }

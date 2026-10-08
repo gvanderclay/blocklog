@@ -5,8 +5,7 @@ import UniformTypeIdentifiers
 /// Export and import of the backup document.
 struct SettingsTab: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Workout> { $0.endDate == nil }) private var inProgressWorkouts:
-        [Workout]
+    @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
     @State private var isChoosingFile = false
     /// A validated document waiting for the user's confirmation.
     @State private var pendingImport: BackupDocument?

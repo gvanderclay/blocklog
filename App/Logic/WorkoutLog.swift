@@ -8,9 +8,14 @@ struct WorkoutLog {
 
     // MARK: Reading
 
+    /// The workouts with no end date; at most one exists. Views use it in `@Query`.
+    static var inProgressWorkouts: FetchDescriptor<Workout> {
+        FetchDescriptor(predicate: #Predicate { $0.endDate == nil })
+    }
+
     /// The workout with no end date. At most one exists.
     func inProgressWorkout() -> Workout? {
-        var descriptor = FetchDescriptor<Workout>(predicate: #Predicate { $0.endDate == nil })
+        var descriptor = Self.inProgressWorkouts
         descriptor.fetchLimit = 1
         return try? context.fetch(descriptor).first
     }
@@ -39,6 +44,16 @@ struct WorkoutLog {
         case 12..<17: "Afternoon Workout"
         default: "Evening Workout"
         }
+    }
+
+    /// Removing a workout exercise asks for confirmation only when it has a checked set to lose.
+    static func needsRemovalConfirmation(_ workoutExercise: WorkoutExercise) -> Bool {
+        workoutExercise.sets.contains(where: \.isCompleted)
+    }
+
+    /// Reordering needs at least two exercises.
+    static func canReorder(_ workout: Workout) -> Bool {
+        workout.exercises.count >= 2
     }
 
     /// The exercises Add Exercise offers, sorted by name.

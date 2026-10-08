@@ -9,11 +9,12 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 - `just` (the `default` recipe): list the recipes.
 - `just generate`: regenerate `Blocklog.xcodeproj` from `project.yml`. Run it after adding, moving or deleting a file; the build and test recipes also run it first.
 - `just build`: compile for the simulator, the fastest check that the code builds.
+- `just build-tests`: compile the app and both test bundles without running them, so a later test recipe only relinks; on the shared Mac this is the step that takes the build lock.
 - `just test`: run every unit and UI test except `ScreenshotTests`, which only `just screenshot` runs; it must pass before every review and commit.
 - `just test-unit` / `just test-ui`: run one test bundle while working on that side (`test-ui` also skips `ScreenshotTests`).
 - `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogTests/hostedInApp()`.
 - `just ci-test <BlocklogUnit|BlocklogUI>`: the exact command CI runs (it also skips `ScreenshotTests`); use it to reproduce a CI failure.
-- Every test recipe turns on test timeouts (180 s per test, 300 s at most), so a hung test fails in minutes.
+- Every test recipe turns on test timeouts (240 s per test, 300 s at most), so a hung test fails in minutes.
 - `just ci-report <run-id>`: download a failed CI run's artifacts and print its test failures, crash reports and log tail; use it first when CI fails.
 - `just run`: install and launch on the simulator and save `build/run.png`, for a manual check.
 - `just screenshot`: capture `ScreenshotTests` into `build/screenshots/{light,dark,ax-large}/`, for design reviews.
@@ -43,7 +44,7 @@ When a build or test fails, read the full log in `build/logs/`; the terminal sho
 The per-ticket code review checks every change against these rules. Where a skill's advice conflicts with them, these rules win.
 
 1. Every rule the app applies (anything describable as "when X, the app does Y", such as set numbering or the default workout title) lives in `App/Logic` or `App/PowerBlock`, as a plain type tested through its public interface. Views call these types and render the results; they never compute a rule inline.
-2. Changes to stored data go through `App/Logic` functions that also save, so killing the app loses nothing. Views don't edit model properties directly, except binding a single field of the row they show, such as a set's reps, which the view saves when it changes.
+2. Changes to stored data go through `App/Logic` functions that also save, so killing the app loses nothing. When the save throws, the function rolls the context back before rethrowing, so a failed change leaves nothing pending for a later save to commit. Views don't edit model properties directly, except binding a single field of the row they show, such as a set's reps, which the view saves when it changes.
 3. `App/Model` types hold stored data and relationships only; behaviour goes in `App/Logic`.
 4. A protocol or injected dependency exists only where tests must replace a system service: the clock and notifications. There is no other protocol with a single implementation, no factory, and no wrapper that only delegates; tests use the real type, such as the PowerBlock table.
 5. There are no singletons and no global mutable state: pass what a type needs into it. App-wide settings use `@AppStorage`.

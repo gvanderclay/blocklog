@@ -54,7 +54,7 @@ struct WorkoutScreen: View {
                         Button("Reorder", systemImage: "arrow.up.arrow.down") {
                             isReordering = true
                         }
-                        .disabled(workout.exercises.count < 2)
+                        .disabled(!WorkoutLog.canReorder(workout))
                         .accessibilityIdentifier("workout.reorder")
                         Button("Discard Workout", systemImage: "trash", role: .destructive) {
                             isConfirmingDiscard = true
@@ -157,7 +157,7 @@ private struct ExerciseSection: View {
                 Spacer()
                 Menu("Exercise Actions", systemImage: "ellipsis.circle") {
                     Button("Remove Exercise", systemImage: "trash", role: .destructive) {
-                        if workoutExercise.sets.contains(where: \.isCompleted) {
+                        if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
                             isConfirmingRemove = true
                         } else {
                             removeExercise()

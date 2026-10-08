@@ -4,11 +4,16 @@ import Foundation
 /// in order, and warm-ups don't advance the count.
 @MainActor
 enum SetNumbering {
+    /// Whether a set of this type is a counted set: every type except a warm-up.
+    static func isCounted(_ type: SetType) -> Bool {
+        type != .warmUp
+    }
+
     /// The counted number of each set, or nil for a warm-up.
     static func countedNumbers(for types: [SetType]) -> [Int?] {
         var count = 0
         return types.map { type in
-            guard type != .warmUp else { return nil }
+            guard isCounted(type) else { return nil }
             count += 1
             return count
         }

@@ -29,7 +29,9 @@ struct PreviousSetLookup {
                 $0.exercise === exercise
             })
         else { return nil }
-        let previousSets = WorkoutLog.orderedSets(of: match).filter { $0.setType != .warmUp }
+        let previousSets = WorkoutLog.orderedSets(of: match).filter {
+            SetNumbering.isCounted($0.setType)
+        }
         guard previousSets.indices.contains(number - 1) else { return nil }
         let previousSet = previousSets[number - 1]
         return PreviousValues(

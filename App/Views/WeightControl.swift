@@ -12,15 +12,11 @@ struct WeightControl: View {
 
     var body: some View {
         let previous =
-            isAdded
-            ? AddedWeight.previous(before: weight)
-            : weight.flatMap { PowerBlockTable.previous(before: $0) }
-        let next =
-            isAdded
-            ? AddedWeight.next(after: weight) : weight.flatMap { PowerBlockTable.next(after: $0) }
+            isAdded ? AddedWeight.previous(before: weight) : PowerBlockTable.stepDown(from: weight)
+        let next = isAdded ? AddedWeight.next(after: weight) : PowerBlockTable.stepUp(from: weight)
         let canDecrease = isAdded ? AddedWeight.canDecrease(from: weight) : previous != nil
         let name = isAdded ? "addedWeight" : "weight"
-        let options: [Double?] = (isAdded ? [nil] : []) + PowerBlockTable.weights.map { $0 }
+        let options: [Double?] = isAdded ? AddedWeight.options : PowerBlockTable.weights.map { $0 }
         HStack(spacing: 0) {
             Button("Decrease weight", systemImage: "minus") {
                 onChange(previous)
