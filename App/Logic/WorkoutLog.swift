@@ -160,6 +160,19 @@ struct WorkoutLog {
         try save()
     }
 
+    /// Copies the previous values (weight, reps and duration) into an unchecked set. Returns false, changing
+    /// nothing, when the set is checked or has no previous set.
+    func copyPrevious(to set: WorkoutSet) throws -> Bool {
+        guard !set.isCompleted,
+            let previous = PreviousSetLookup(context: context).previous(for: set)
+        else { return false }
+        set.weight = previous.weight
+        set.reps = previous.reps
+        set.durationSeconds = previous.durationSeconds
+        try save()
+        return true
+    }
+
     /// Checks the set off, if it can be, or unchecks it.
     func toggleCompleted(_ set: WorkoutSet) throws {
         guard set.isCompleted || Self.canCheckOff(set) else { return }

@@ -50,7 +50,9 @@ struct WeightControl: View {
                     .monospacedDigit()
                     .contentTransition(.numericText(value: weight ?? 0))
                     .frame(minHeight: 44)
+                    .fixedSize(horizontal: true, vertical: false)
             }
+            .layoutPriority(1)
             .accessibilityLabel(isAdded ? "Added weight" : "Weight")
             .accessibilityValue(
                 weight.map { "\($0.formatted()) pounds" } ?? "bodyweight"

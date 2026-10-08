@@ -15,12 +15,14 @@ struct SetRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var checkOffCount = 0
+    @State private var previousCopyCount = 0
     @State private var saveFailed = false
 
     var body: some View {
         @Bindable var set = set
         let label = SetNumbering.label(of: set)
         let kind = set.workoutExercise?.exercise?.kind ?? .weightReps
+        let previous = PreviousSetLookup(context: modelContext).previous(for: set)
         let layout =
             dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout())
@@ -37,6 +39,7 @@ struct SetRow: View {
             .accessibilityLabel("Set type")
             .accessibilityValue(label)
             .accessibilityIdentifier("\(identifierPrefix).typeMenu")
+            previousValue(previous, kind: kind)
             switch kind {
             case .weightReps:
                 if let weight = set.weight {
@@ -111,6 +114,7 @@ struct SetRow: View {
             isCompleted ? .success : .impact(weight: .light)
         }
         .sensoryFeedback(.selection, trigger: set.setType)
+        .sensoryFeedback(.selection, trigger: previousCopyCount)
         .swipeActions(edge: .trailing) {
             deleteButton
         }
@@ -133,6 +137,46 @@ struct SetRow: View {
             attempt { try $0.save() }
         }
         .saveFailedAlert(isPresented: $saveFailed)
+    }
+
+    /// Last time's values: a button that copies them into an unchecked set, or plain text when it can't.
+    @ViewBuilder
+    private func previousValue(_ previous: PreviousValues?, kind: ExerciseKind) -> some View {
+        let text = previous?.text(for: kind) ?? "—"
+        let label = Text(text)
+            .font(.footnote)
+            .fontDesign(.rounded)
+            .monospacedDigit()
+            .foregroundStyle(Color.secondary)  // not .secondary, which fades the tint inside a button
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+        Group {
+            if previous != nil, !set.isCompleted {
+                Button {
+                    copyPrevious()
+                } label: {
+                    label.contentShape(.rect)
+                }
+                .buttonStyle(.plain)  // keeps the secondary grey; .borderless tints the label
+                .accessibilityHint("Copies last time's values")
+            } else {
+                label
+            }
+        }
+        .accessibilityLabel("Previous")
+        .accessibilityValue(previous?.spokenText(for: kind) ?? "none")
+        .accessibilityIdentifier("\(identifierPrefix).previous")
+    }
+
+    /// Copies the previous values in, animated so the weight rolls. The selection tick comes from the weight
+    /// control when the weight changes, so this ticks only when the copy leaves the weight alone.
+    private func copyPrevious() {
+        let weightBefore = set.weight
+        var copied = false
+        withAnimation {
+            attempt { copied = try $0.copyPrevious(to: set) }
+        }
+        if copied, set.weight == weightBefore { previousCopyCount += 1 }
     }
 
     private var deleteButton: some View {

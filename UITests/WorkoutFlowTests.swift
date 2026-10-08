@@ -43,6 +43,33 @@ final class WorkoutFlowTests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         XCTAssertTrue(start.isEnabled)
         XCTAssertFalse(app.buttons["workoutTab.resume"].exists)
+
+        // Previous numbers: the finished workout's sets show beside the new workout's sets.
+        start.tap()
+        app.buttons["workout.addExercise"].tap()
+        XCTAssertTrue(app.buttons["exercisePicker.cancel"].waitForExistence(timeout: 5))
+        app.pickExercise("Dumbbell Bench Press")
+        XCTAssertTrue(
+            app.buttons["workout.exercise.0.set.0.weightValue"].waitForExistence(timeout: 5))
+        app.buttons["workout.exercise.0.addSet"].tap()
+        let previous = app.buttons["workout.exercise.0.set.0.previous"]
+        XCTAssertEqual(previous.value as? String, "15 pounds times 10")
+        XCTAssertEqual(
+            app.buttons["workout.exercise.0.set.1.previous"].value as? String,
+            "15 pounds times 10")
+        let newWeight = app.buttons["workout.exercise.0.set.0.weightValue"]
+        XCTAssertEqual(newWeight.value as? String, "5 pounds")
+        // The first set starts empty: the reps field reads its placeholder.
+        XCTAssertEqual(app.textFields["workout.exercise.0.set.0.reps"].value as? String, "Reps")
+        // The Previous column must not squeeze the weight value out of the row.
+        XCTAssertTrue(newWeight.exists)
+        XCTAssertGreaterThan(newWeight.frame.width, 0)
+
+        previous.tap()
+        XCTAssertEqual(
+            app.buttons["workout.exercise.0.set.0.weightValue"].value as? String, "15 pounds")
+        XCTAssertEqual(app.textFields["workout.exercise.0.set.0.reps"].value as? String, "10")
+        XCTAssertGreaterThan(newWeight.frame.width, 0)
     }
 
     @MainActor
