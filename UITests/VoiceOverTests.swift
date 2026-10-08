@@ -59,9 +59,13 @@ final class VoiceOverTests: XCTestCase {
             XCTAssertTrue(spokenElement("Set type", "1"), "set number: \(row)")
             XCTAssertTrue(spokenElement("Weight", "15 pounds"), "weight: \(row)")
             XCTAssertTrue(spokenElement("Reps", "10"), "reps: \(row)")
-            // "Set 1, not done" is the unchecked phrasing and also contains "done".
+            // VoiceOver drops the comma ("selected Set 1 done Button"), so match the words. "Set 1, not done"
+            // is the unchecked phrasing and also contains "done".
             XCTAssertTrue(
-                row.contains { $0.contains("Set 1, done") && !$0.contains("not done") },
+                row.contains {
+                    let words = $0.replacingOccurrences(of: ",", with: "")
+                    return words.contains("Set 1 done") && !words.contains("not done")
+                },
                 "check state: \(row)")
         }
     }

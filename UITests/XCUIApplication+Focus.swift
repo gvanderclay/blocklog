@@ -14,7 +14,10 @@ extension XCUIApplication {
     func focus(_ field: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         field.tap()
         let done = buttons["keyboard.done"]
-        if done.appears() { return }
+        if done.appears() {
+            waitForKeyboardToSettle()
+            return
+        }
         XCTContext.runActivity(
             named:
                 "Keyboard didn't appear after the first tap; re-tapping (cold-simulator keyboard arbiter drop, see XCUIApplication+Focus.swift)"
@@ -25,5 +28,24 @@ extension XCUIApplication {
         XCTAssertTrue(
             done.appears(timeout: 10),
             "\(field.identifier) has no keyboard focus after a second tap", file: file, line: line)
+        waitForKeyboardToSettle()
+    }
+
+    /// Waits until the keyboard, and so the toolbar's Done, has stopped sliding up.
+    ///
+    /// The keyboard enters the accessibility tree below the screen and takes about a second to rise, longer
+    /// at accessibility text sizes, where the field is also scrolled into view. Taps made meanwhile land
+    /// on the keyboard's keys instead of Done (seen in `just screenshot` at the largest accessibility text size).
+    @MainActor
+    private func waitForKeyboardToSettle() {
+        let keyboard = keyboards.firstMatch
+        let screenBottom = windows.firstMatch.frame.maxY
+        var previous = keyboard.frame
+        for _ in 0..<20 {
+            _ = XCTWaiter.wait(for: [XCTestExpectation()], timeout: 0.25)
+            let current = keyboard.frame
+            if current == previous, current.minY < screenBottom { return }
+            previous = current
+        }
     }
 }

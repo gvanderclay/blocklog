@@ -57,6 +57,11 @@ final class EditWorkoutJourneyTests: XCTestCase {
         }
 
         step("Remove an exercise with checked sets only after confirming") {
+            // Done on the Plank moved focus to the bench press's empty reps, under the keyboard. On CI that
+            // makes the list scroll to it once the menu opens, which takes the header (and the dialog it
+            // presents) off screen. Done on empty reps closes the keyboard.
+            if app.buttons["keyboard.done"].exists { app.buttons["keyboard.done"].tap() }
+            XCTAssertTrue(app.keyboards.firstMatch.disappears())
             let menu = app.buttons["workout.exercise.0.menu"]
             app.reveal(menu, swiping: { $0.swipeDown() })
             menu.tap()
