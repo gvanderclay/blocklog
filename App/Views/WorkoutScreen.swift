@@ -18,6 +18,8 @@ struct WorkoutScreen: View {
     @State private var isConfirmingDiscard = false
     @State private var isDiscarded = false
     @State private var saveFailed = false
+    /// Held here, not on the section header, so the dialog shows however far the list has scrolled.
+    @State private var exerciseToRemove: WorkoutExercise?
 
     var body: some View {
         NavigationStack {
@@ -27,7 +29,7 @@ struct WorkoutScreen: View {
                     ExerciseSection(
                         workoutExercise: workoutExercise, exerciseIndex: index,
                         workout: workout, focusedRepsSetID: $focusedRepsSetID,
-                        deleteCount: $deleteCount)
+                        deleteCount: $deleteCount, onRemove: remove)
                 }
                 Section {
                     Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
@@ -104,6 +106,16 @@ struct WorkoutScreen: View {
             } message: {
                 Text("Its sets will be deleted.")
             }
+            .confirmationDialog(
+                "Remove this exercise?", item: $exerciseToRemove, titleVisibility: .visible
+            ) { workoutExercise in
+                Button("Remove Exercise", role: .destructive) { removeExercise(workoutExercise) }
+                    .accessibilityIdentifier(
+                        "workout.exercise.\(WorkoutLog.orderedExercises(of: workout).firstIndex(of: workoutExercise) ?? 0).removeConfirm"
+                    )
+            } message: { _ in
+                Text("Its sets will be deleted.")
+            }
             .sheet(isPresented: $isPickingExercise) {
                 ExercisePicker { exercise in
                     withAnimation(reduceMotion ? nil : .default) {
@@ -130,6 +142,26 @@ struct WorkoutScreen: View {
             // workout stays in progress and the Workout tab offers it again. Alert there if this ever fails in practice.
             if isDiscarded {
                 try? WorkoutLog(context: modelContext, restTimer: restTimer).discard(workout)
+            }
+        }
+    }
+
+    /// Removes at once, or asks first when the exercise has a checked set.
+    private func remove(_ workoutExercise: WorkoutExercise) {
+        if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
+            exerciseToRemove = workoutExercise
+        } else {
+            removeExercise(workoutExercise)
+        }
+    }
+
+    private func removeExercise(_ workoutExercise: WorkoutExercise) {
+        withAnimation(reduceMotion ? nil : .default) {
+            do {
+                try WorkoutLog(context: modelContext).removeExercise(workoutExercise)
+                deleteCount += 1
+            } catch {
+                saveFailed = true
             }
         }
     }
@@ -163,12 +195,12 @@ private struct ExerciseSection: View {
     let focusedRepsSetID: FocusState<UUID?>.Binding
     /// Bumped on every deletion, so the screen plays the delete haptic.
     @Binding var deleteCount: Int
+    let onRemove: (WorkoutExercise) -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("defaultRestSeconds") private var defaultRest = 90
     @State private var saveFailed = false
-    @State private var isConfirmingRemove = false
 
     var body: some View {
         Section {
@@ -211,11 +243,7 @@ private struct ExerciseSection: View {
                         .accessibilityIdentifier("workout.exercise.\(exerciseIndex).restTime")
                     }
                     Button("Remove Exercise", systemImage: "trash", role: .destructive) {
-                        if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
-                            isConfirmingRemove = true
-                        } else {
-                            removeExercise()
-                        }
+                        onRemove(workoutExercise)
                     }
                     .accessibilityIdentifier("workout.exercise.\(exerciseIndex).remove")
                 } label: {
@@ -226,14 +254,6 @@ private struct ExerciseSection: View {
                         .contentShape(.rect)
                 }
                 .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
-            }
-            .confirmationDialog(
-                "Remove this exercise?", isPresented: $isConfirmingRemove, titleVisibility: .visible
-            ) {
-                Button("Remove Exercise", role: .destructive) { removeExercise() }
-                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).removeConfirm")
-            } message: {
-                Text("Its sets will be deleted.")
             }
         }
         .headerProminence(.increased)
@@ -250,17 +270,6 @@ private struct ExerciseSection: View {
                     saveFailed = true
                 }
             })
-    }
-
-    private func removeExercise() {
-        withAnimation(reduceMotion ? nil : .default) {
-            do {
-                try WorkoutLog(context: modelContext).removeExercise(workoutExercise)
-                deleteCount += 1
-            } catch {
-                saveFailed = true
-            }
-        }
     }
 }
 

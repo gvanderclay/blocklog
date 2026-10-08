@@ -59,11 +59,7 @@ final class EditWorkoutJourneyTests: XCTestCase {
         }
 
         step("Remove an exercise with checked sets only after confirming") {
-            // Done on the Plank moved focus to the bench press's empty reps, under the keyboard. On CI that
-            // makes the list scroll to it once the menu opens, which takes the header (and the dialog it
-            // presents) off screen. Done on empty reps closes the keyboard.
-            if app.buttons["keyboard.done"].exists { app.buttons["keyboard.done"].tap() }
-            XCTAssertTrue(app.keyboards.firstMatch.disappears())
+            // Focus stays on the bench press's empty reps below, so the header may scroll off screen.
             let menu = app.buttons["workout.exercise.0.menu"]
             app.reveal(menu, swiping: { $0.swipeDown() })
             menu.tap()
@@ -72,7 +68,9 @@ final class EditWorkoutJourneyTests: XCTestCase {
             XCTAssertTrue(confirm.appears())
             confirm.tap()
             // Plank is now first and the bench press second.
-            XCTAssertEqual(app.staticTexts["workout.exercise.0.name"].label, "Plank")
+            let name = app.staticTexts["workout.exercise.0.name"]
+            app.reveal(name, swiping: { $0.swipeDown() })
+            XCTAssertEqual(name.label, "Plank")
         }
 
         step("Make the bench press's first set a warm-up and see the numbering") {
@@ -82,8 +80,12 @@ final class EditWorkoutJourneyTests: XCTestCase {
             app.buttons["setMenu.type.warmUp"].tap()
             XCTAssertEqual(
                 app.buttons["workout.exercise.1.set.0.typeMenu"].value as? String, "W")
-            XCTAssertEqual(app.buttons["workout.exercise.1.set.1.typeMenu"].value as? String, "1")
-            XCTAssertEqual(app.buttons["workout.exercise.1.set.2.typeMenu"].value as? String, "2")
+            for (set, number) in [(1, "1"), (2, "2")] {
+                let menu = app.buttons["workout.exercise.1.set.\(set).typeMenu"]
+                // The list is lazy, so a row off screen doesn't exist yet.
+                for _ in 0..<5 where !menu.exists { app.swipeUp() }
+                XCTAssertEqual(menu.value as? String, number)
+            }
         }
 
         step("Swipe the last bench press set away") {
