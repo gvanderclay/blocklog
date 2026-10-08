@@ -31,7 +31,7 @@ struct WorkoutLogTests {
         for (index, set) in WorkoutLog.orderedSets(of: workoutExercise).enumerated() {
             set.reps = index + 1
         }
-        try log.save()
+        try log.context.saveOrRollBack()
         return workout
     }
 
@@ -287,7 +287,7 @@ struct WorkoutLogTests {
         try log.toggleCompleted(set)
         #expect(set.isCompleted)
         set.repsText = ""
-        try log.save()
+        try log.context.saveOrRollBack()
         #expect(set.isCompleted == false)
         #expect(try log.finish(workout, title: "Push Day") == nil)
 
@@ -305,32 +305,38 @@ struct WorkoutLogTests {
     }
 
     @Test func finishThrowsAndGivesNoSummaryWhenSavingFails() throws {
-        // A store opened read-only stands in for a full disk. Read-only needs an existing store file.
-        let url = URL.temporaryDirectory.appending(path: "\(UUID()).store")
-        defer { try? FileManager.default.removeItem(at: url) }
-        let schema = Schema([
-            Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
-            RoutineExercise.self,
-        ])
-        _ = try ModelContainer(
-            for: schema, configurations: ModelConfiguration(schema: schema, url: url))
-        let readOnly = try ModelContainer(
-            for: schema,
-            configurations: ModelConfiguration(schema: schema, url: url, allowsSave: false))
-        let context = readOnly.mainContext
-        let workout = Workout(title: "Push Day", startDate: .now)
-        let workoutExercise = WorkoutExercise(
-            exercise: Exercise(
-                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, kind: .weightReps),
-            position: 0)
-        let set = WorkoutSet(position: 0, weight: 20, reps: 10, isCompleted: true)
-        context.insert(workout)
-        workout.exercises.append(workoutExercise)
-        workoutExercise.sets.append(set)
+        let store = try ReadOnlyStore { context in
+            let workout = Workout(title: "Push Day", startDate: .now)
+            let workoutExercise = WorkoutExercise(
+                exercise: Exercise(
+                    name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell,
+                    kind: .weightReps),
+                position: 0)
+            let checked = WorkoutSet(position: 0, weight: 20, reps: 10, isCompleted: true)
+            let unchecked = WorkoutSet(position: 1, weight: 20, reps: 10)
+            context.insert(workout)
+            workout.exercises.append(workoutExercise)
+            workoutExercise.sets.append(contentsOf: [checked, unchecked])
+        }
+        defer { store.remove() }
+        let log = WorkoutLog(context: store.context)
+        let workout = try #require(log.inProgressWorkout())
+        let setIDs = Set(workout.exercises.flatMap(\.sets).map(\.id))
+        #expect(setIDs.count == 2)
 
         #expect(throws: (any Error).self) {
-            _ = try WorkoutLog(context: context).finish(workout, title: "Push Day")
+            _ = try log.finish(workout, title: "Leg Day")
         }
+
+        // The workout is still in progress, unchanged, and nothing is pending for a later save.
+        #expect(!store.context.hasChanges)
+        let resumed = try #require(log.inProgressWorkout())
+        #expect(resumed.id == workout.id)
+        #expect(resumed.title == "Push Day")
+        #expect(resumed.endDate == nil)
+        #expect(Set(resumed.exercises.flatMap(\.sets).map(\.id)) == setIDs)
+        #expect(try store.context.fetchCount(FetchDescriptor<WorkoutSet>()) == 2)
+        #expect(log.finishedWorkoutCount() == 0)
     }
 
     @Test func discardDeletesTheWorkoutWithItsSets() throws {

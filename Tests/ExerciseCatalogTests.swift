@@ -109,4 +109,26 @@ struct ExerciseCatalogTests {
         #expect(sections.map(\.muscleGroup) == [.shoulders])
         #expect(sections.flatMap(\.exercises).map(\.name) == ["Test Row"])
     }
+
+    @Test func aCustomExerciseWhoseSaveFailsLeavesNothingAndItsNameStaysFree() throws {
+        let store = try ReadOnlyStore()
+        defer { store.remove() }
+        let catalog = ExerciseCatalog(context: store.context)
+
+        #expect(throws: (any Error).self) {
+            _ = try catalog.createCustomExercise(
+                named: "Zottman Curl", muscleGroup: .biceps, equipment: .dumbbell,
+                kind: .weightReps)
+        }
+
+        #expect(!store.context.hasChanges)
+        let existing = try store.context.fetch(FetchDescriptor<Exercise>())
+        #expect(existing.isEmpty)
+        // Retrying gets as far as saving again; a pending leftover would make it return nil (a duplicate).
+        #expect(throws: (any Error).self) {
+            _ = try catalog.createCustomExercise(
+                named: "zottman curl", muscleGroup: .biceps, equipment: .dumbbell,
+                kind: .weightReps)
+        }
+    }
 }

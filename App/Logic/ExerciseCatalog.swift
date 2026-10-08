@@ -64,7 +64,7 @@ struct ExerciseCatalog {
             name: Self.normalized(name).trimmed, muscleGroup: muscleGroup,
             equipment: equipment, kind: kind, isCustom: true)
         context.insert(exercise)
-        try context.save()
+        try context.saveOrRollBack()
         return exercise
     }
 }

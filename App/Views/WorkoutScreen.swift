@@ -109,7 +109,8 @@ struct WorkoutScreen: View {
         }
         .onDisappear {
             // Deleted only once the screen is gone, so nothing renders a deleted workout.
-            // ponytail: a failed save here has no screen left to alert on; autosave retries the delete.
+            // shortcut: a failed save here has no screen left to alert on; discard rolls back, so the
+            // workout stays in progress and the Workout tab offers it again. Alert there if this ever fails in practice.
             if isDiscarded {
                 try? WorkoutLog(context: modelContext).discard(workout)
             }

@@ -128,7 +128,7 @@ struct PreviousSetLookupTests {
         let sourceSet = try #require(try sets(of: source).first)
         try log.setWeight(20, of: sourceSet)
         sourceSet.repsText = "12"
-        try log.save()
+        try log.context.saveOrRollBack()
 
         #expect(lookup(set)?.weight == 20)
         #expect(lookup(set)?.reps == 12)

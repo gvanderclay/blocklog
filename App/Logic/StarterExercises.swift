@@ -26,6 +26,6 @@ enum StarterExercises {
                     name: entry.name, muscleGroup: entry.muscleGroup, equipment: entry.equipment,
                     kind: entry.kind))
         }
-        try context.save()
+        try context.saveOrRollBack()
     }
 }

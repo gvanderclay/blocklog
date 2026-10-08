@@ -92,7 +92,7 @@ struct WorkoutLog {
         guard inProgressWorkout() == nil else { return nil }
         let workout = Workout(title: Self.defaultTitle(startingAt: date), startDate: date)
         context.insert(workout)
-        try save()
+        try context.saveOrRollBack()
         return workout
     }
 
@@ -102,33 +102,33 @@ struct WorkoutLog {
         context.insert(workoutExercise)
         workout.exercises.append(workoutExercise)
         appendSet(to: workoutExercise)
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Appends a set copying the last set's type and values, or a first set when there is none.
     func addSet(to workoutExercise: WorkoutExercise) throws {
         appendSet(to: workoutExercise)
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Sets the weight, which must be a PowerBlock setting.
     func setWeight(_ weight: Double, of set: WorkoutSet) throws {
         guard PowerBlockTable.setup(for: weight) != nil else { return }
         set.weight = weight
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Sets the added weight of a bodyweight set: nil for none ("BW"), else a PowerBlock setting.
     func setAddedWeight(_ weight: Double?, of set: WorkoutSet) throws {
         if let weight, PowerBlockTable.setup(for: weight) == nil { return }
         set.weight = weight
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Sets the set's type.
     func setType(_ type: SetType, of set: WorkoutSet) throws {
         set.setType = type
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Deletes the set and renumbers the positions of the exercise's remaining sets.
@@ -138,7 +138,7 @@ struct WorkoutLog {
             Self.renumberSets(of: workoutExercise)
         }
         context.delete(set)
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Inserts an unchecked copy of the set right after it.
@@ -152,7 +152,7 @@ struct WorkoutLog {
             durationSeconds: set.durationSeconds)
         context.insert(copy)
         workoutExercise.sets.append(copy)
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Deletes the workout exercise with its sets and renumbers the remaining exercises.
@@ -164,7 +164,7 @@ struct WorkoutLog {
             }
         }
         context.delete(workoutExercise)
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Gives the exercises the positions of their place in `ordered`.
@@ -172,7 +172,7 @@ struct WorkoutLog {
         for (position, workoutExercise) in ordered.enumerated() {
             workoutExercise.position = position
         }
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Copies the previous values (weight, reps and duration) into an unchecked set. Returns false, changing
@@ -184,7 +184,7 @@ struct WorkoutLog {
         set.weight = previous.weight
         set.reps = previous.reps
         set.durationSeconds = previous.durationSeconds
-        try save()
+        try context.saveOrRollBack()
         return true
     }
 
@@ -192,12 +192,13 @@ struct WorkoutLog {
     func toggleCompleted(_ set: WorkoutSet) throws {
         guard set.isCompleted || Self.canCheckOff(set) else { return }
         set.isCompleted.toggle()
-        try save()
+        try context.saveOrRollBack()
     }
 
     /// Deletes unchecked sets and the exercises left with none, renumbers what remains, sets the title
     /// (the default title when blank, line breaks becoming spaces) and the end date, and saves.
-    /// Nil, changing nothing, when no set is checked. Throws when saving fails, returning no summary.
+    /// Nil, changing nothing, when no set is checked. When saving fails it rolls everything back, leaving the
+    /// workout in progress as it was, and throws, returning no summary.
     func finish(_ workout: Workout, title: String, at date: Date = .now) throws -> WorkoutSummary? {
         guard Self.hasCheckedSet(workout) else { return nil }
         for workoutExercise in workout.exercises {
@@ -218,7 +219,7 @@ struct WorkoutLog {
             .trimmingCharacters(in: .whitespaces)
         workout.title = trimmed.isEmpty ? Self.defaultTitle(startingAt: workout.startDate) : trimmed
         workout.endDate = date
-        try save()
+        try context.saveOrRollBack()
         return WorkoutSummary(
             workoutNumber: finishedWorkoutCount(),
             title: workout.title,
@@ -230,12 +231,7 @@ struct WorkoutLog {
     /// Deletes the workout with its exercises and sets.
     func discard(_ workout: Workout) throws {
         context.delete(workout)
-        try save()
-    }
-
-    /// Saves pending changes, such as a reps value a set row bound directly.
-    func save() throws {
-        try context.save()
+        try context.saveOrRollBack()
     }
 
     private static func renumberSets(of workoutExercise: WorkoutExercise) {

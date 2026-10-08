@@ -131,10 +131,10 @@ struct SetRow: View {
             deleteButton
         }
         .onChange(of: set.reps) {
-            attempt { try $0.save() }
+            attempt { try $0.context.saveOrRollBack() }
         }
         .onChange(of: set.durationSeconds) {
-            attempt { try $0.save() }
+            attempt { try $0.context.saveOrRollBack() }
         }
         .saveFailedAlert(isPresented: $saveFailed)
     }
