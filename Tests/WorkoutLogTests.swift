@@ -47,6 +47,19 @@ struct WorkoutLogTests {
         #expect(sets.map(\.position) == [0, 1, 2, 3, 4])
     }
 
+    @Test func finishWithClockBeforeStartEndsAtStartAndStillExports() throws {
+        let workout = try workout(sets: 1)
+        try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
+
+        let summary = try #require(
+            try log.finish(
+                workout, title: "Push Day", at: workout.startDate.addingTimeInterval(-3600)))
+
+        #expect(workout.endDate == workout.startDate)
+        #expect(summary.duration == .zero)
+        _ = try Backup(context: container.mainContext).export(at: .now)
+    }
+
     @Test func finishDeletesUncheckedSetsAndEmptyExercises() throws {
         let workout = try workout(sets: 3)
         try log.addExercise(try exercise("Hammer Curl"), to: workout)
