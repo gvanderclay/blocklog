@@ -40,6 +40,17 @@ final class ScreenshotTests: XCTestCase {
         snap(app, "summary")
     }
 
+    /// The Settings tab with Export and Import.
+    @MainActor
+    func testSettings() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        app.buttons["tabs.settings"].tap()
+        XCTAssertTrue(app.buttons["settings.export"].waitForExistence(timeout: 5))
+        snap(app, "settings")
+    }
+
     /// A workout with one exercise of each kind, and the set-type menu open.
     @MainActor
     func testWorkoutWithEveryKind() {

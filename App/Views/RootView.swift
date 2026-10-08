@@ -18,7 +18,7 @@ struct RootView: View {
             }
             .accessibilityIdentifier("tabs.history")
             Tab("Settings", systemImage: "gearshape") {
-                PlaceholderTab(title: "Settings", systemImage: "gearshape")
+                SettingsTab()
             }
             .accessibilityIdentifier("tabs.settings")
         }

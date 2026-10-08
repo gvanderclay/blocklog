@@ -91,6 +91,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Finish summary | `checkmark.seal.fill` |
 | More actions menu | `ellipsis.circle` |
 | Filter the exercise list | `line.3.horizontal.decrease.circle` |
+| Export data / import data | `square.and.arrow.up` / `square.and.arrow.down` |
 
 ## Accessibility
 

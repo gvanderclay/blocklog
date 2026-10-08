@@ -38,12 +38,18 @@ struct ExerciseCatalog {
         }
     }
 
+    /// The name trimmed, and the key two names are compared by: the trimmed name ignoring case.
+    static func normalized(_ name: String) -> (trimmed: String, key: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmed, trimmed.folding(options: .caseInsensitive, locale: nil))
+    }
+
     /// Why the name can't name a new exercise alongside the existing ones, or nil when it can. The name is
     /// trimmed first, and it is a duplicate when an existing name matches it ignoring case.
     static func nameProblem(for name: String, among exercises: [Exercise]) -> NameProblem? {
-        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.isEmpty { return .empty }
-        let taken = exercises.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        let name = normalized(name)
+        if name.trimmed.isEmpty { return .empty }
+        let taken = exercises.contains { normalized($0.name).key == name.key }
         return taken ? .duplicate : nil
     }
 
@@ -55,7 +61,7 @@ struct ExerciseCatalog {
         let existing = try context.fetch(FetchDescriptor<Exercise>())
         guard Self.nameProblem(for: name, among: existing) == nil else { return nil }
         let exercise = Exercise(
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines), muscleGroup: muscleGroup,
+            name: Self.normalized(name).trimmed, muscleGroup: muscleGroup,
             equipment: equipment, kind: kind, isCustom: true)
         context.insert(exercise)
         try context.save()
