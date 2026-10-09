@@ -357,8 +357,11 @@ struct RestTimerTests {
             ).first)
         let workout = try #require(try log.startEmptyWorkout())
         try log.addExercise(exercise, to: workout)
-        let set = try #require(workout.exercises.first?.sets.first)
+        let workoutExercise = try #require(workout.exercises.first)
+        let set = try #require(workoutExercise.sets.first)
         set.reps = 10
+        // A second unchecked set, so checking off the first is not the last one (which starts no rest).
+        try log.addSet(to: workoutExercise)
         try log.context.saveOrRollBack()
         return (log, workout, set, exercise)
     }

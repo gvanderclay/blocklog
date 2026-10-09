@@ -62,7 +62,7 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 
 Each touch is specified in its feature ticket; this is the rule that ticket implements.
 
-- Reps and duration fields use `.keyboardType(.numberPad)` with a keyboard toolbar (`ToolbarItemGroup(placement: .keyboard)`): a spacer, then "Next", which focuses the next empty field in the workout or dismisses the keyboard when there is none, then "Done", which checks off the focused set (same haptic and animation as its checkmark) and then moves focus like Next; when the set can't be checked off, Done only dismisses the keyboard. Checking a set with its checkmark also moves focus like Next; unchecking never moves focus.
+- Reps and duration fields use `.keyboardType(.numberPad)` with a keyboard toolbar (`ToolbarItemGroup(placement: .keyboard)`): a spacer, then "Next", which focuses the next empty field in the workout or dismisses the keyboard when there is none, then "Done", which checks off the focused set (same haptic and animation as its checkmark) and then moves focus like Next; when the set can't be checked off, Done only dismisses the keyboard. Checking a set with its checkmark also moves focus like Next; unchecking never moves focus. Checking off the workout's last unchecked set, by either path, starts no rest and asks "All sets done" (Finish opens the finish sheet; Keep Going dismisses).
 - The workout screen ends, after Add Exercise, with a destructive "Discard Workout" button (the same confirmation as the ••• menu). Finish stays only in the toolbar: a prominent bottom Finish button was tried and removed at the user's request.
 - Set rows have a long-press `.contextMenu` (ticket 08) as well as swipe actions.
 - Empty states use `ContentUnavailableView` with an SF Symbol and one sentence; an empty search uses `ContentUnavailableView.search`.
@@ -120,6 +120,7 @@ Phase 1 (tickets 06–10):
 - [ ] Change a set's type from the label menu or the long-press menu: a selection tick.
 - [ ] Long-press a set row: the menu offers Set Type, Duplicate and Delete.
 - [ ] Reps keyboard: Next jumps to the next empty field; Done checks off the set and jumps the same way, closing the keyboard at the end. The checkmark also moves to the next empty field.
+- [ ] Check off the workout's last unchecked set: no rest starts, and "All sets done" offers Finish and Keep Going.
 - [ ] The bottom Discard Workout button opens the discard confirmation.
 - [ ] Elapsed time ticks without jitter.
 - [ ] Tap a Previous value: a selection tick, and the copied numbers roll.

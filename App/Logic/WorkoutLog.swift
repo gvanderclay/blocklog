@@ -68,6 +68,11 @@ struct WorkoutLog {
         workout.exercises.contains { $0.sets.contains(where: \.isCompleted) }
     }
 
+    /// Whether any set in the workout is still unchecked.
+    static func hasUncheckedSet(_ workout: Workout) -> Bool {
+        workout.exercises.contains { $0.sets.contains { !$0.isCompleted } }
+    }
+
     /// The first set after the given one, in workout order, whose field is empty: reps, or seconds for a
     /// duration exercise. Nil when there is none.
     static func nextEmptySet(after setID: UUID, in workout: Workout) -> WorkoutSet? {
@@ -90,18 +95,21 @@ struct WorkoutLog {
     }
 
     /// Checks the set off through `checkOffAndAdvance` and, once that has saved, starts the rest for its
-    /// exercise, as the checkmark and the keyboard's Done both do. An already checked set, one that can't be
-    /// checked off, or a failed save starts nothing. Returns the set to focus next.
-    func checkOff(_ set: WorkoutSet, in workout: Workout, defaultRest: Int) throws -> WorkoutSet? {
+    /// exercise, as the checkmark and the keyboard's Done both do. Checking off the workout's last unchecked
+    /// set starts no rest and reports `allSetsDone` instead. An already checked set, one that can't be checked
+    /// off, or a failed save starts nothing.
+    func checkOff(_ set: WorkoutSet, in workout: Workout, defaultRest: Int) throws
+        -> CheckOffOutcome
+    {
         let wasChecked = set.isCompleted
         let next = try checkOffAndAdvance(set, in: workout)
-        if !wasChecked, set.isCompleted {
-            let exercise = set.workoutExercise?.exercise
-            restTimer?.start(
-                duration: RestTimer.restSeconds(for: exercise, defaultRest: defaultRest),
-                exerciseName: exercise?.name, checkedSet: set)
-        }
-        return next
+        guard !wasChecked, set.isCompleted else { return .focus(next) }
+        guard Self.hasUncheckedSet(workout) else { return .allSetsDone }
+        let exercise = set.workoutExercise?.exercise
+        restTimer?.start(
+            duration: RestTimer.restSeconds(for: exercise, defaultRest: defaultRest),
+            exerciseName: exercise?.name, checkedSet: set)
+        return .focus(next)
     }
 
     /// Starts an empty workout titled for its start time. Nil while another workout is in progress.
@@ -272,6 +280,14 @@ struct WorkoutLog {
         context.insert(set)
         workoutExercise.sets.append(set)
     }
+}
+
+/// What a check-off leaves for the workout screen to do.
+enum CheckOffOutcome: Equatable {
+    /// Focus moves to the set (nil closes the keyboard), as Next does.
+    case focus(WorkoutSet?)
+    /// The workout's last unchecked set was checked off, so no rest started; the screen offers Finish.
+    case allSetsDone
 }
 
 /// What the finish summary shows about a just-finished workout.

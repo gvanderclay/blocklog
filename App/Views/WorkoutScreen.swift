@@ -18,6 +18,7 @@ struct WorkoutScreen: View {
     @State private var deleteCount = 0
     @State private var isFinishing = false
     @State private var isConfirmingDiscard = false
+    @State private var isOfferingFinish = false
     @State private var isDiscarded = false
     @State private var saveFailed = false
     /// Held here, not on the section header, so the dialog shows however far the list has scrolled.
@@ -31,7 +32,8 @@ struct WorkoutScreen: View {
                     ExerciseSection(
                         workoutExercise: workoutExercise, exerciseIndex: index,
                         workout: workout, focusedRepsSetID: $focusedRepsSetID,
-                        deleteCount: $deleteCount, progressions: $progressions, onRemove: remove)
+                        deleteCount: $deleteCount, progressions: $progressions, onRemove: remove,
+                        onAllSetsDone: { isOfferingFinish = true })
                 }
                 Section {
                     Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
@@ -109,6 +111,14 @@ struct WorkoutScreen: View {
                 Text("Its sets will be deleted.")
             }
             .confirmationDialog(
+                "All sets done", isPresented: $isOfferingFinish, titleVisibility: .visible
+            ) {
+                Button("Finish") { isFinishing = true }
+                    .accessibilityIdentifier("allSetsDone.finish")
+                Button("Keep Going", role: .cancel) {}
+                    .accessibilityIdentifier("allSetsDone.keepGoing")
+            }
+            .confirmationDialog(
                 "Remove this exercise?", item: $exerciseToRemove, titleVisibility: .visible
             ) { workoutExercise in
                 Button("Remove Exercise", role: .destructive) { removeExercise(workoutExercise) }
@@ -182,8 +192,15 @@ struct WorkoutScreen: View {
         }
         withAnimation(reduceMotion ? nil : .default) {
             do {
-                focusedRepsSetID = try WorkoutLog(context: modelContext, restTimer: restTimer)
-                    .checkOff(set, in: workout, defaultRest: defaultRest)?.id
+                switch try WorkoutLog(context: modelContext, restTimer: restTimer)
+                    .checkOff(set, in: workout, defaultRest: defaultRest)
+                {
+                case .focus(let next):
+                    focusedRepsSetID = next?.id
+                case .allSetsDone:
+                    focusedRepsSetID = nil
+                    isOfferingFinish = true
+                }
             } catch {
                 saveFailed = true
             }
@@ -201,6 +218,7 @@ private struct ExerciseSection: View {
     @Binding var deleteCount: Int
     @Binding var progressions: AppliedProgressions
     let onRemove: (WorkoutExercise) -> Void
+    let onAllSetsDone: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -217,7 +235,8 @@ private struct ExerciseSection: View {
                     set: set,
                     identifierPrefix: "workout.exercise.\(exerciseIndex).set.\(setIndex)",
                     focusedRepsSetID: focusedRepsSetID, workout: workout,
-                    progressions: $progressions, onDelete: { deleteCount += 1 })
+                    progressions: $progressions, onDelete: { deleteCount += 1 },
+                    onAllSetsDone: onAllSetsDone)
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {

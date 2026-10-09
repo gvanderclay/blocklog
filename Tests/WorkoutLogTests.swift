@@ -4,15 +4,33 @@ import Testing
 
 @testable import Blocklog
 
+/// A clock tests advance by hand.
+@MainActor
+private final class ManualClock {
+    var date = Date(timeIntervalSince1970: 1_000_000)
+    func advance(_ seconds: TimeInterval) { date.addTimeInterval(seconds) }
+}
+
+/// Lets the rest timer schedule without touching the system notification center.
+@MainActor
+private final class QuietNotifications: RestNotifying {
+    func schedule(at date: Date, exerciseName: String?) {}
+    func cancel() {}
+}
+
 /// Checks starting, logging and finishing workouts against an in-memory store seeded with the starters.
 @MainActor
 struct WorkoutLogTests {
+    private let clock = ManualClock()
     let container: ModelContainer
+    let restTimer: RestTimer
     let log: WorkoutLog
 
     init() throws {
         container = try BlocklogApp.makeContainer(inMemory: true)
-        log = WorkoutLog(context: container.mainContext)
+        let clock = clock
+        restTimer = RestTimer(now: { clock.date }, notifications: QuietNotifications())
+        log = WorkoutLog(context: container.mainContext, restTimer: restTimer)
     }
 
     private func exercise(_ name: String) throws -> Exercise {
@@ -539,5 +557,38 @@ struct WorkoutLogTests {
         try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
         _ = try log.finish(workout, title: "Push Day")
         #expect(try context.fetch(WorkoutLog.inProgressWorkouts).isEmpty)
+    }
+
+    @Test func checkingOffTheLastUncheckedSetStartsNoRestAndReportsAllSetsDone() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        sets[1].repsText = ""
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .focus(sets[1]))
+        #expect(restTimer.isRunning)
+        restTimer.skip()
+
+        sets[1].repsText = "5"
+        #expect(try log.checkOff(sets[1], in: workout, defaultRest: 90) == .allSetsDone)
+        #expect(sets[1].isCompleted)
+        #expect(!restTimer.isRunning)
+    }
+
+    @Test func checkingOffAnEarlierSetStartsTheRestAndReportsNoneDone() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        sets[1].repsText = ""
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .focus(sets[1]))
+        #expect(restTimer.isRunning)
+        #expect(restTimer.remaining == 90)
+        #expect(restTimer.checkedSet === sets[0])
+    }
+
+    @Test func aSetThatCannotBeCheckedOffChangesNothingAndStartsNoRest() throws {
+        let workout = try workout(sets: 1)
+        let set = try #require(workout.exercises.first?.sets.first)
+        set.repsText = ""
+        #expect(try log.checkOff(set, in: workout, defaultRest: 90) == .focus(nil))
+        #expect(!set.isCompleted)
+        #expect(!restTimer.isRunning)
     }
 }

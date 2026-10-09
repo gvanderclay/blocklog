@@ -13,6 +13,7 @@ Renames pending ticket 35: until it ships, the code calls a starter routine `Tem
 - **Workout** (`Workout`): the record of one training day you did or are doing: a title, a start date, an end date once finished, and its ordered workout exercises. Starting a routine or a starter routine creates one; a workout is never a plan. Finished workouts are the history that previous numbers and progression read.
 - **Total time**: a finished workout's end date minus its start date, shown on the finish summary as "Total Time".
 - **In-progress workout**: the workout with no end date. At most one exists; the app reopens into it at launch, and starting another workout is disabled while it exists.
+- **All sets done**: the prompt that appears when checking off a workout's last unchecked set. It offers Finish or Keep Going, and that check-off starts no rest.
 - **Freeform workout**: a workout started empty, from no routine or starter routine. It gets no progression note and never asks to update a routine. (A workout started from a starter routine, or whose routine was deleted, also has no routine link, so a missing link alone doesn't mean freeform.)
 - **Workout exercise** (`WorkoutExercise`): one exercise inside one workout, with its position and ordered sets. Doing the same exercise in two workouts gives two workout exercises.
 - **Exercise type** (`ExerciseType`): what a set of the exercise records: weight × reps (dumbbell weight and reps), bodyweight reps (reps, with optional added PowerBlock weight), or duration (seconds). The New Exercise form labels it "Type".

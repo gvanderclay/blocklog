@@ -14,6 +14,8 @@ struct SetRow: View {
     @Binding var progressions: AppliedProgressions
     /// Called after the set is deleted, so the screen plays the delete haptic.
     let onDelete: () -> Void
+    /// Called when checking the set off leaves no unchecked set in the workout.
+    let onAllSetsDone: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(RestTimer.self) private var restTimer
@@ -109,8 +111,13 @@ struct SetRow: View {
                             attempt { try $0.toggleCompleted(set) }
                         } else {
                             attempt(restTimer: restTimer) {
-                                focusedRepsSetID.wrappedValue = try $0.checkOff(
-                                    set, in: workout, defaultRest: defaultRest)?.id
+                                switch try $0.checkOff(set, in: workout, defaultRest: defaultRest) {
+                                case .focus(let next):
+                                    focusedRepsSetID.wrappedValue = next?.id
+                                case .allSetsDone:
+                                    focusedRepsSetID.wrappedValue = nil
+                                    onAllSetsDone()
+                                }
                             }
                         }
                     }
