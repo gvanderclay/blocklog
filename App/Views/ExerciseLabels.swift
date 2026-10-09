@@ -28,7 +28,7 @@ extension Equipment {
     }
 }
 
-extension ExerciseKind {
+extension ExerciseType {
     var title: String {
         switch self {
         case .weightReps: "Weight × Reps"
@@ -44,7 +44,7 @@ extension SetType {
         case .normal: "Normal"
         case .warmUp: "Warm-up"
         case .drop: "Drop"
-        case .failure: "Failure"
+        case .failure: "To failure"
         }
     }
 }

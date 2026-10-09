@@ -56,7 +56,7 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 - One sound only: `App/Resources/rest-chime.caf`, a soft two-tone chime (A5 then E6) of 0.6 seconds. `scripts/make-chime.swift` synthesizes it, and `just chime` regenerates it; never replace it with a downloaded file.
 - When the rest timer reaches zero with the app in the foreground, the app plays the chime with `AVAudioPlayer` through an `AVAudioSession` in the `.ambient` category. That category mixes with the user's music (never pausing or ducking it) and is silenced by the ring/silent switch.
 - The rest notification uses the same file: `UNNotificationSound(named: UNNotificationSoundName("rest-chime.caf"))`.
-- Settings has a "Timer Sound" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime and a notification with no sound; the haptics still play.
+- Settings has a "Timer Sounds" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime and a notification with no sound; the haptics still play.
 
 ## Small touches
 
@@ -87,7 +87,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Delete, discard, remove | `trash` |
 | Duplicate | `plus.square.on.square` |
 | Reorder | `arrow.up.arrow.down` |
-| Templates | `rectangle.stack` |
+| Starter Routines | `rectangle.stack` |
 | Rest time | `timer` |
 | Progression note | `arrow.up.circle.fill` |
 | Finish summary | `checkmark.seal.fill` |
@@ -139,7 +139,7 @@ Phase 2 (tickets 13–15):
 - [ ] Zero in the foreground: a warning buzz and the chime, then the bar drops away.
 - [ ] Zero with music playing: the chime plays over the music, which keeps its volume.
 - [ ] Zero with the silent switch on: no chime, the haptics still play.
-- [ ] Timer Sound off: no chime in the app, and the notification is silent.
+- [ ] Timer Sounds off: no chime in the app, and the notification is silent.
 - [ ] Rest with the app in the background: the notification arrives with the chime.
 - [ ] Skip: the bar leaves with no buzz or chime.
 - [ ] Change the weight in the diagram sheet: the pin slides and the adders fade.

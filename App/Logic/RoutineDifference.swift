@@ -41,7 +41,7 @@ struct RoutineDifference {
             } else {
                 routineExercise = RoutineExercise(
                     exercise: exercise, position: position, plannedSetTypes: types)
-                routineExercise.target = .standard(for: exercise.kind)
+                routineExercise.target = .standard(for: exercise.type)
                 context.insert(routineExercise)
                 routine.exercises.append(routineExercise)
             }

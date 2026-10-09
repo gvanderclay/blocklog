@@ -122,7 +122,7 @@ struct ProgressionTests {
         #expect(progressions.note(for: workoutExercise) == nil)
     }
 
-    @Test func noWorkingSetsLastTimeProgressesNothing() throws {
+    @Test func noProgressionSetsLastTimeProgressesNothing() throws {
         try logFinished(sets: [(.warmUp, 5, 12), (.drop, 10, 12)])
 
         let (workoutExercise, progressions) = try started(types: [.warmUp, .normal])

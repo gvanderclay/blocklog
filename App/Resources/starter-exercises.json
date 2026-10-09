@@ -3,396 +3,396 @@
     "name": "Dumbbell Bench Press",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Incline Dumbbell Bench Press",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Decline Dumbbell Bench Press",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Fly",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Incline Dumbbell Fly",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Floor Press",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Pullover",
     "muscleGroup": "chest",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Push-up",
     "muscleGroup": "chest",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Pull-up",
     "muscleGroup": "back",
     "equipment": "pullUpBar",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Chin-up",
     "muscleGroup": "back",
     "equipment": "pullUpBar",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "One-Arm Dumbbell Row",
     "muscleGroup": "back",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Bent-Over Dumbbell Row",
     "muscleGroup": "back",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Chest-Supported Dumbbell Row",
     "muscleGroup": "back",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Renegade Row",
     "muscleGroup": "back",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Shrug",
     "muscleGroup": "back",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Seated Dumbbell Shoulder Press",
     "muscleGroup": "shoulders",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Standing Dumbbell Shoulder Press",
     "muscleGroup": "shoulders",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Arnold Press",
     "muscleGroup": "shoulders",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Lateral Raise",
     "muscleGroup": "shoulders",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Front Raise",
     "muscleGroup": "shoulders",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Rear Delt Fly",
     "muscleGroup": "shoulders",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Pike Push-up",
     "muscleGroup": "shoulders",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Dumbbell Curl",
     "muscleGroup": "biceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Hammer Curl",
     "muscleGroup": "biceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Incline Dumbbell Curl",
     "muscleGroup": "biceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Concentration Curl",
     "muscleGroup": "biceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Preacher Curl",
     "muscleGroup": "biceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Overhead Dumbbell Triceps Extension",
     "muscleGroup": "triceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Skull Crusher",
     "muscleGroup": "triceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Triceps Kickback",
     "muscleGroup": "triceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Close-Grip Dumbbell Press",
     "muscleGroup": "triceps",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Bench Dip",
     "muscleGroup": "triceps",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Diamond Push-up",
     "muscleGroup": "triceps",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Dumbbell Wrist Curl",
     "muscleGroup": "forearms",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Reverse Wrist Curl",
     "muscleGroup": "forearms",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Reverse Dumbbell Curl",
     "muscleGroup": "forearms",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dead Hang",
     "muscleGroup": "forearms",
     "equipment": "pullUpBar",
-    "kind": "duration"
+    "type": "duration"
   },
   {
     "name": "Hanging Leg Raise",
     "muscleGroup": "core",
     "equipment": "pullUpBar",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Hanging Knee Raise",
     "muscleGroup": "core",
     "equipment": "pullUpBar",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Plank",
     "muscleGroup": "core",
     "equipment": "bodyweight",
-    "kind": "duration"
+    "type": "duration"
   },
   {
     "name": "Side Plank",
     "muscleGroup": "core",
     "equipment": "bodyweight",
-    "kind": "duration"
+    "type": "duration"
   },
   {
     "name": "Crunch",
     "muscleGroup": "core",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Dumbbell Russian Twist",
     "muscleGroup": "core",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Side Bend",
     "muscleGroup": "core",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Goblet Squat",
     "muscleGroup": "quads",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Front Squat",
     "muscleGroup": "quads",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Bulgarian Split Squat",
     "muscleGroup": "quads",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Lunge",
     "muscleGroup": "quads",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Step-up",
     "muscleGroup": "quads",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Squat",
     "muscleGroup": "quads",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Wall Sit",
     "muscleGroup": "quads",
     "equipment": "bodyweight",
-    "kind": "duration"
+    "type": "duration"
   },
   {
     "name": "Dumbbell Romanian Deadlift",
     "muscleGroup": "hamstrings",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Single-Leg Dumbbell Romanian Deadlift",
     "muscleGroup": "hamstrings",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Stiff-Leg Deadlift",
     "muscleGroup": "hamstrings",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Hip Thrust",
     "muscleGroup": "glutes",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Glute Bridge",
     "muscleGroup": "glutes",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Sumo Squat",
     "muscleGroup": "glutes",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Glute Bridge",
     "muscleGroup": "glutes",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   },
   {
     "name": "Dumbbell Calf Raise",
     "muscleGroup": "calves",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Single-Leg Dumbbell Calf Raise",
     "muscleGroup": "calves",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Seated Dumbbell Calf Raise",
     "muscleGroup": "calves",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Thruster",
     "muscleGroup": "fullBody",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Clean and Press",
     "muscleGroup": "fullBody",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Deadlift",
     "muscleGroup": "fullBody",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Dumbbell Snatch",
     "muscleGroup": "fullBody",
     "equipment": "dumbbell",
-    "kind": "weightReps"
+    "type": "weightReps"
   },
   {
     "name": "Burpee",
     "muscleGroup": "fullBody",
     "equipment": "bodyweight",
-    "kind": "bodyweightReps"
+    "type": "bodyweightReps"
   }
 ]

@@ -20,13 +20,18 @@ struct BlocklogApp: App {
         .modelContainer(container)
     }
 
+    /// Every model the store holds; tests open fixture stores with it too.
+    static let schema = Schema([
+        Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
+        RoutineExercise.self,
+    ])
+
     /// The store with every model, seeded with the starter exercises when it has none.
     /// In memory for unit tests; on disk otherwise.
+
     static func makeContainer(inMemory: Bool) throws -> ModelContainer {
         let container = try ModelContainer(
-            for: Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
-            RoutineExercise.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: inMemory))
+            for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: inMemory))
         try StarterExercises.seedIfEmpty(container.mainContext)
         return container
     }

@@ -10,7 +10,7 @@ struct NewExerciseForm: View {
     @State private var name = ""
     @State private var muscleGroup = MuscleGroup.chest
     @State private var equipment = Equipment.dumbbell
-    @State private var kind = ExerciseKind.weightReps
+    @State private var type = ExerciseType.weightReps
     @State private var saveFailed = false
 
     private var problem: ExerciseCatalog.NameProblem? {
@@ -39,12 +39,12 @@ struct NewExerciseForm: View {
                     ForEach(Equipment.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .accessibilityIdentifier("newExercise.equipment")
-                Picker("Kind", selection: $kind) {
-                    ForEach(ExerciseKind.allCases, id: \.self) {
+                Picker("Type", selection: $type) {
+                    ForEach(ExerciseType.allCases, id: \.self) {
                         Text($0.title).tag($0)
                     }
                 }
-                .accessibilityIdentifier("newExercise.kind")
+                .accessibilityIdentifier("newExercise.type")
             }
         }
         .navigationTitle("New Exercise")
@@ -63,7 +63,7 @@ struct NewExerciseForm: View {
         do {
             let catalog = ExerciseCatalog(context: modelContext)
             if let exercise = try catalog.createCustomExercise(
-                named: name, muscleGroup: muscleGroup, equipment: equipment, kind: kind)
+                named: name, muscleGroup: muscleGroup, equipment: equipment, type: type)
             {
                 onCreate(exercise)
             }

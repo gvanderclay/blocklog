@@ -19,7 +19,7 @@ struct RoutineDraft: Identifiable {
         init(exercise: Exercise, sets: [PlannedSet], target: RoutineTarget? = nil) {
             self.exercise = exercise
             self.sets = sets
-            self.target = .orStandard(target, for: exercise.kind)
+            self.target = .orStandard(target, for: exercise.type)
         }
 
         /// The low end of the rep range, for a stepper to bind to. A duration entry reads the standard

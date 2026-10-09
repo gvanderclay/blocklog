@@ -172,17 +172,17 @@ struct WorkoutLogTests {
         let store = try ReadOnlyStore { context in
             let workout = Workout(title: "Core", startDate: .now)
             context.insert(workout)
-            for (position, kind) in [ExerciseKind.duration, .weightReps].enumerated() {
+            for (position, type) in [ExerciseType.duration, .weightReps].enumerated() {
                 let workoutExercise = WorkoutExercise(
                     exercise: Exercise(
                         name: "Exercise \(position)", muscleGroup: .core, equipment: .dumbbell,
-                        kind: kind),
+                        type: type),
                     position: position)
                 workout.exercises.append(workoutExercise)
                 workoutExercise.sets.append(
                     WorkoutSet(
-                        position: 0, weight: kind == .weightReps ? 5 : nil,
-                        durationSeconds: kind == .duration ? 30 : nil))
+                        position: 0, weight: type == .weightReps ? 5 : nil,
+                        durationSeconds: type == .duration ? 30 : nil))
             }
         }
         defer { store.remove() }
@@ -291,7 +291,7 @@ struct WorkoutLogTests {
 
     @Test func addableExercisesIncludeDurationAndBodyweightSortedByName() throws {
         let addable = try container.mainContext.fetch(WorkoutLog.addableExercises)
-        #expect(addable.contains { $0.kind == .duration })
+        #expect(addable.contains { $0.type == .duration })
         #expect(addable.contains { $0.name == "Push-up" })
         #expect(addable.map(\.name) == addable.map(\.name).sorted())
 
@@ -491,7 +491,7 @@ struct WorkoutLogTests {
             let workoutExercise = WorkoutExercise(
                 exercise: Exercise(
                     name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell,
-                    kind: .weightReps),
+                    type: .weightReps),
                 position: 0)
             let checked = WorkoutSet(position: 0, weight: 20, reps: 10, isCompleted: true)
             let unchecked = WorkoutSet(position: 1, weight: 20, reps: 10)

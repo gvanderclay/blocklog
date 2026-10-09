@@ -209,10 +209,10 @@ struct RestTimerTests {
 
     @Test func exerciseOverrideBeatsTheDefault() {
         let withOverride = Exercise(
-            name: "A", muscleGroup: .chest, equipment: .dumbbell, kind: .weightReps,
+            name: "A", muscleGroup: .chest, equipment: .dumbbell, type: .weightReps,
             restOverrideSeconds: 120)
         let without = Exercise(
-            name: "B", muscleGroup: .chest, equipment: .dumbbell, kind: .weightReps)
+            name: "B", muscleGroup: .chest, equipment: .dumbbell, type: .weightReps)
         #expect(RestTimer.restSeconds(for: withOverride, defaultRest: 90) == 120)
         #expect(RestTimer.restSeconds(for: without, defaultRest: 90) == 90)
         #expect(RestTimer.restSeconds(for: nil, defaultRest: 90) == 90)
@@ -414,7 +414,7 @@ struct RestTimerTests {
             let workoutExercise = WorkoutExercise(
                 exercise: Exercise(
                     name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell,
-                    kind: .weightReps),
+                    type: .weightReps),
                 position: 0)
             context.insert(workout)
             workout.exercises.append(workoutExercise)

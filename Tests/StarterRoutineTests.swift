@@ -4,22 +4,22 @@ import Testing
 
 @testable import Blocklog
 
-/// Checks the bundled templates, and starting and adding them, against an in-memory store seeded with the
+/// Checks the bundled starter routines, and starting and adding them, against an in-memory store seeded with the
 /// starters.
 @MainActor
-struct TemplateTests {
+struct StarterRoutineTests {
     let container: ModelContainer
     let log: WorkoutLog
-    let library: TemplateLibrary
+    let library: StarterLibrary
 
     init() throws {
         container = try BlocklogApp.makeContainer(inMemory: true)
         log = WorkoutLog(context: container.mainContext)
-        library = TemplateLibrary(context: container.mainContext)
+        library = StarterLibrary(context: container.mainContext)
     }
 
-    private func template(_ name: String) throws -> Template {
-        try #require(try Template.load().first { $0.name == name })
+    private func starterRoutine(_ name: String) throws -> StarterRoutine {
+        try #require(try StarterRoutine.load().first { $0.name == name })
     }
 
     private func exercise(_ name: String) throws -> Exercise {
@@ -27,19 +27,18 @@ struct TemplateTests {
         return try #require(try container.mainContext.fetch(descriptor).first)
     }
 
-    @Test func theFileLoadsAndNamesOnlyStarterExercisesOfTheRightKind() throws {
-        let templates = try Template.load()
-        #expect(templates.count == 7)
-        #expect(Set(templates.map(\.name)).count == templates.count)
+    @Test func theFileLoadsAndNamesOnlyStarterExercisesOfTheRightType() throws {
+        let starterRoutines = try StarterRoutine.load()
+        #expect(starterRoutines.count == 7)
+        #expect(Set(starterRoutines.map(\.name)).count == starterRoutines.count)
         let starters = try container.mainContext.fetch(FetchDescriptor<Exercise>())
-        let kinds = Dictionary(uniqueKeysWithValues: starters.map { ($0.name, $0.kind) })
-        for template in templates {
-            #expect(!template.why.isEmpty)
-            #expect((template.programme == nil) == (template.kind == .oneOff))
-            for entry in template.exercises {
-                let kind = try #require(kinds[entry.exercise], "\(entry.exercise) isn't a starter")
+        let types = Dictionary(uniqueKeysWithValues: starters.map { ($0.name, $0.type) })
+        for starterRoutine in starterRoutines {
+            #expect(!starterRoutine.why.isEmpty)
+            for entry in starterRoutine.exercises {
+                let type = try #require(types[entry.exercise], "\(entry.exercise) isn't a starter")
                 #expect(!entry.sets.isEmpty)
-                if kind == .duration {
+                if type == .duration {
                     #expect(entry.target?.seconds != nil)
                 } else {
                     #expect(entry.target?.repRange != nil)
@@ -48,13 +47,13 @@ struct TemplateTests {
         }
     }
 
-    /// The one-entry template `{"exercise": "Plank", "sets": ["normal"], <fields>}` as JSON.
-    private func decoded(_ fields: String) throws -> Template {
+    /// The one-entry starter routine `{"exercise": "Plank", "sets": ["normal"], <fields>}` as JSON.
+    private func decoded(_ fields: String) throws -> StarterRoutine {
         let json = """
-            {"name": "T", "kind": "oneOff", "why": "w",
+            {"name": "T", "why": "w",
              "exercises": [{"exercise": "Plank", "sets": ["normal"]\(fields)}]}
             """
-        return try JSONDecoder().decode(Template.self, from: Data(json.utf8))
+        return try JSONDecoder().decode(StarterRoutine.self, from: Data(json.utf8))
     }
 
     @Test func anEntryReadsItsRepRangeOrDurationAsATarget() throws {
@@ -75,24 +74,30 @@ struct TemplateTests {
         #expect(throws: DecodingError.self) { try decoded(fields) }
     }
 
-    @Test func groupsProgrammesOneOffsAndSuggestions() throws {
-        let templates = try Template.load()
-        let programmes = Template.programmes(in: templates)
+    @Test func groupsProgrammesStandalonesAndSuggestions() throws {
+        let starterRoutines = try StarterRoutine.load()
+        let programmes = StarterRoutine.programmes(in: starterRoutines)
         #expect(programmes.map(\.name) == ["Full Body", "Upper/Lower", "Push/Pull/Legs"])
         #expect(
-            programmes.map { $0.sessions.map(\.name) } == [
+            programmes.map { $0.routines.map(\.name) } == [
                 ["Full Body"], ["Upper Body", "Lower Body"], ["Push", "Pull", "Legs"],
             ])
-        #expect(Template.oneOffs(in: templates).map(\.name) == ["Golden Six"])
-        #expect(Template.suggestions(in: templates).map(\.name) == ["Full Body", "Upper Body"])
+        #expect(StarterRoutine.standalone(in: starterRoutines).map(\.name) == ["Golden Six"])
         #expect(
-            Template.programme(of: try template("Lower Body"), in: templates)?.name
+            StarterRoutine.suggestions(in: starterRoutines).map(\.name) == [
+                "Full Body", "Upper Body",
+            ])
+        #expect(
+            StarterRoutine.programme(of: try starterRoutine("Lower Body"), in: starterRoutines)?
+                .name
                 == "Upper/Lower")
-        #expect(Template.programme(of: try template("Golden Six"), in: templates) == nil)
+        #expect(
+            StarterRoutine.programme(of: try starterRoutine("Golden Six"), in: starterRoutines)
+                == nil)
     }
 
     @Test func estimatesEverySetAsItsRestPlusFortySeconds() throws {
-        let fullBody = try template("Full Body")
+        let fullBody = try starterRoutine("Full Body")
         #expect(fullBody.setCount == 18)
         // 18 × (90 + 40) s = 39 min.
         #expect(fullBody.estimatedMinutes(restSeconds: 90) == 39)
@@ -101,7 +106,7 @@ struct TemplateTests {
         #expect(fullBody.summary(restSeconds: 90) == "7 exercises · about 39 min")
     }
 
-    @Test func startingAOneOffGivesAnUnlinkedWorkoutInOrderPrefilledFromHistory() throws {
+    @Test func startingAStandaloneGivesAnUnlinkedWorkoutInOrderPrefilledFromHistory() throws {
         let day = Date(timeIntervalSinceReferenceDate: 800_000_000)
         let past = try #require(try log.startEmptyWorkout(at: day))
         try log.addExercise(try exercise("Dumbbell Bench Press"), to: past)
@@ -110,7 +115,7 @@ struct TemplateTests {
         pastSet.repsText = "10"
         try log.toggleCompleted(pastSet)
         _ = try log.finish(past, title: "Logged", at: day.addingTimeInterval(3600))
-        let goldenSix = try template("Golden Six")
+        let goldenSix = try starterRoutine("Golden Six")
 
         let started = try #require(
             try library.startWorkout(from: goldenSix, at: day.addingTimeInterval(86_400)))
@@ -134,7 +139,7 @@ struct TemplateTests {
     }
 
     @Test func aTimedEntryStartsAtItsTargetDuration() throws {
-        let started = try #require(try library.startWorkout(from: try template("Full Body")))
+        let started = try #require(try library.startWorkout(from: try starterRoutine("Full Body")))
         let plank = try #require(
             WorkoutLog.orderedExercises(of: started.workout).first {
                 $0.exercise?.name == "Plank"
@@ -147,16 +152,18 @@ struct TemplateTests {
         container.mainContext.delete(try exercise("Chin-up"))
         try container.mainContext.save()
 
-        #expect(try library.startWorkout(from: try template("Golden Six")) == nil)
+        #expect(try library.startWorkout(from: try starterRoutine("Golden Six")) == nil)
 
         #expect(try container.mainContext.fetchCount(FetchDescriptor<Workout>()) == 1)
         #expect(log.inProgressWorkout() === inProgress)
         #expect(!container.mainContext.hasChanges)
     }
 
-    @Test func addProgrammeSavesEverySessionAsARoutine() throws {
+    @Test func addProgrammeSavesEveryRoutineAsARoutine() throws {
         let upperLower = try #require(
-            Template.programmes(in: try Template.load()).first { $0.name == "Upper/Lower" })
+            StarterRoutine.programmes(in: try StarterRoutine.load()).first {
+                $0.name == "Upper/Lower"
+            })
 
         try library.addProgramme(upperLower)
 
@@ -166,13 +173,13 @@ struct TemplateTests {
         let lower = try #require(routines.first)
         let entries = RoutineLibrary.orderedExercises(of: lower)
         #expect(
-            entries.map { $0.exercise?.name } == upperLower.sessions[1].exercises.map(\.exercise))
+            entries.map { $0.exercise?.name } == upperLower.routines[1].exercises.map(\.exercise))
         #expect(RoutineLibrary.summary(of: entries[0]) == "3 × 8–12")
         #expect(RoutineLibrary.summary(of: entries[5]) == "2 × 45 s")
     }
 
-    @Test func aDraftCarriesTheTemplateForTheEditor() throws {
-        let draft = try library.draft(of: try template("Full Body"))
+    @Test func aDraftCarriesTheStarterRoutineForTheEditor() throws {
+        let draft = try library.draft(of: try starterRoutine("Full Body"))
         #expect(draft.name == "Full Body")
         #expect(draft.canSave)
         #expect(draft.exercises.map(\.exercise.name).first == "Dumbbell Goblet Squat")
@@ -188,11 +195,11 @@ struct TemplateTests {
         try context.save()
         let count = try context.fetchCount(FetchDescriptor<Exercise>())
 
-        let started = try #require(try library.startWorkout(from: try template("Golden Six")))
+        let started = try #require(try library.startWorkout(from: try starterRoutine("Golden Six")))
 
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Exercise>()) == count + 1)
         let chinUp = try exercise("Chin-up")
-        #expect(chinUp.kind == .bodyweightReps)
+        #expect(chinUp.type == .bodyweightReps)
         #expect(!chinUp.isCustom)
         #expect(WorkoutLog.orderedExercises(of: started.workout)[2].exercise === chinUp)
     }
@@ -225,14 +232,14 @@ struct TemplateTests {
         #expect(try fresh.fetchCount(FetchDescriptor<Routine>()) == 0)
     }
 
-    // Each test starts from an empty store, so every starter the template names is inserted on use.
+    // Each test starts from an empty store, so every starter the starter routine names is inserted on use.
 
     @Test func aFailedDraftRollsBackTheInsertedStarters() throws {
         let store = try ReadOnlyStore()
         defer { store.remove() }
-        let failing = TemplateLibrary(context: store.context)
+        let failing = StarterLibrary(context: store.context)
 
-        #expect(throws: (any Error).self) { try failing.draft(of: try template("Full Body")) }
+        #expect(throws: (any Error).self) { try failing.draft(of: try starterRoutine("Full Body")) }
 
         try expectNothingSaved(in: store)
     }
@@ -240,10 +247,10 @@ struct TemplateTests {
     @Test func aFailedStartRollsBackTheInsertedStarters() throws {
         let store = try ReadOnlyStore()
         defer { store.remove() }
-        let failing = TemplateLibrary(context: store.context)
+        let failing = StarterLibrary(context: store.context)
 
         #expect(throws: (any Error).self) {
-            try failing.startWorkout(from: try template("Golden Six"))
+            try failing.startWorkout(from: try starterRoutine("Golden Six"))
         }
 
         try expectNothingSaved(in: store)
@@ -252,9 +259,11 @@ struct TemplateTests {
     @Test func aFailedAddProgrammeRollsBackTheInsertedStarters() throws {
         let store = try ReadOnlyStore()
         defer { store.remove() }
-        let failing = TemplateLibrary(context: store.context)
+        let failing = StarterLibrary(context: store.context)
         let upperLower = try #require(
-            Template.programmes(in: try Template.load()).first { $0.name == "Upper/Lower" })
+            StarterRoutine.programmes(in: try StarterRoutine.load()).first {
+                $0.name == "Upper/Lower"
+            })
 
         #expect(throws: (any Error).self) { try failing.addProgramme(upperLower) }
 

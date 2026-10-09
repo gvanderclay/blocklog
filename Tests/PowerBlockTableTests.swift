@@ -113,7 +113,7 @@ struct PowerBlockTableTests {
     }
 
     @Test func bodyweightAndDurationSetsHaveNoSetupLine() {
-        // Both kinds store no weight: "BW" is nil, and a duration set has none.
+        // Both types store no weight: "BW" is nil, and a duration set has none.
         #expect(PowerBlockTable.setupLine(for: nil) == nil)
         #expect(PowerBlockTable.setupLine(for: 12.5) == nil)
     }

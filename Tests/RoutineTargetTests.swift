@@ -9,7 +9,7 @@ import Testing
 struct RoutineTargetTests {
     @Test(arguments: [
         (
-            ExerciseKind.weightReps, Int?.some(6), Int?.some(10), Int?.some(45),
+            ExerciseType.weightReps, Int?.some(6), Int?.some(10), Int?.some(45),
             RoutineTarget?.some(.repRange(6...10))
         ),
         (.bodyweightReps, 5, 5, nil, .repRange(5...5)),
@@ -23,11 +23,11 @@ struct RoutineTargetTests {
         (.duration, 6, 10, nil, nil),
     ])
     func storedFieldsReadAsTheTargetOfTheirType(
-        kind: ExerciseKind, low: Int?, high: Int?, seconds: Int?, expected: RoutineTarget?
+        type: ExerciseType, low: Int?, high: Int?, seconds: Int?, expected: RoutineTarget?
     ) {
         #expect(
             RoutineTarget(
-                kind: kind, repRangeLow: low, repRangeHigh: high, durationSeconds: seconds)
+                type: type, repRangeLow: low, repRangeHigh: high, durationSeconds: seconds)
                 == expected)
     }
 
@@ -42,24 +42,24 @@ struct RoutineTargetTests {
         low: Int?, high: Int?, seconds: Int?, expected: RoutineTarget?
     ) {
         #expect(
-            RoutineTarget(kind: nil, repRangeLow: low, repRangeHigh: high, durationSeconds: seconds)
+            RoutineTarget(type: nil, repRangeLow: low, repRangeHigh: high, durationSeconds: seconds)
                 == expected)
     }
 
     @Test(arguments: [
-        (ExerciseKind.weightReps, RoutineTarget.repRange(8...12)),
+        (ExerciseType.weightReps, RoutineTarget.repRange(8...12)),
         (.bodyweightReps, .repRange(8...12)),
         (.duration, .duration(seconds: 30)),
     ])
     func aNewRoutineExerciseStartsAtEightToTwelveOrThirtySeconds(
-        kind: ExerciseKind, expected: RoutineTarget
+        type: ExerciseType, expected: RoutineTarget
     ) {
-        #expect(RoutineTarget.standard(for: kind) == expected)
+        #expect(RoutineTarget.standard(for: type) == expected)
     }
 
     @Test(arguments: [
         (
-            RoutineTarget?.some(.repRange(6...10)), ExerciseKind.weightReps,
+            RoutineTarget?.some(.repRange(6...10)), ExerciseType.weightReps,
             RoutineTarget.repRange(6...10)
         ),
         (.repRange(6...10), .bodyweightReps, .repRange(6...10)),
@@ -70,9 +70,9 @@ struct RoutineTargetTests {
         (nil, .duration, .duration(seconds: 30)),
     ])
     func aTargetOfTheOtherCaseOrNoneFallsBackToTheStandard(
-        target: RoutineTarget?, kind: ExerciseKind, expected: RoutineTarget
+        target: RoutineTarget?, type: ExerciseType, expected: RoutineTarget
     ) {
-        #expect(RoutineTarget.orStandard(target, for: kind) == expected)
+        #expect(RoutineTarget.orStandard(target, for: type) == expected)
     }
 
     @Test(arguments: [

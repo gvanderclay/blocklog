@@ -135,7 +135,7 @@ private struct FinishSummary: View {
         SummaryStat(
             value: summary.duration.formatted(
                 .units(allowed: [.hours, .minutes], width: .abbreviated)),
-            label: "Duration")
+            label: "Total Time")
         SummaryStat(value: summary.completedSetCount.formatted(), label: "Sets")
         SummaryStat(value: summary.exerciseCount.formatted(), label: "Exercises")
     }

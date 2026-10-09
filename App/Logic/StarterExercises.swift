@@ -9,10 +9,10 @@ enum StarterExercises {
         let name: String
         let muscleGroup: MuscleGroup
         let equipment: Equipment
-        let kind: ExerciseKind
+        let type: ExerciseType
 
         func makeExercise() -> Exercise {
-            Exercise(name: name, muscleGroup: muscleGroup, equipment: equipment, kind: kind)
+            Exercise(name: name, muscleGroup: muscleGroup, equipment: equipment, type: type)
         }
     }
 

@@ -17,7 +17,7 @@ struct NextSetTests {
     /// Adds an exercise whose sets have the given weights and checked states, at the next position.
     private func addExercise(_ sets: [(weight: Double?, done: Bool)]) -> [WorkoutSet] {
         let exercise = Exercise(
-            name: "X", muscleGroup: .biceps, equipment: .dumbbell, kind: .weightReps)
+            name: "X", muscleGroup: .biceps, equipment: .dumbbell, type: .weightReps)
         let workoutExercise = WorkoutExercise(exercise: exercise, position: workout.exercises.count)
         workoutExercise.workout = workout
         container.mainContext.insert(workoutExercise)

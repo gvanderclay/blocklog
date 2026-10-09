@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// How many of each kind of record a store or a backup document holds.
+/// How many of each sort of record a store or a backup document holds.
 @MainActor
 struct BackupCounts: Equatable {
     var workouts: Int
@@ -18,7 +18,7 @@ struct BackupCounts: Equatable {
     }
 }
 
-/// Exports every exercise, routine and finished workout as a `BackupDocument`, and replaces all data with
+/// Exports every exercise, routine and finished workout as a `BackupDocument`, and replaces all training data with
 /// a validated one.
 @MainActor
 struct Backup {
@@ -82,7 +82,7 @@ struct Backup {
             exercises: exercises.map { exercise in
                 .init(
                     id: exercise.id, name: exercise.name, muscleGroup: exercise.muscleGroupRawValue,
-                    equipment: exercise.equipmentRawValue, kind: exercise.kindRawValue,
+                    equipment: exercise.equipmentRawValue, type: exercise.typeRawValue,
                     restOverrideSeconds: exercise.restOverrideSeconds, isCustom: exercise.isCustom)
             },
             routines: routines.map { routine in
@@ -158,7 +158,7 @@ struct Backup {
             let exercise = Exercise(
                 id: record.id, name: record.name,
                 muscleGroup: try Self.parse(record.muscleGroup),
-                equipment: try Self.parse(record.equipment), kind: try Self.parse(record.kind),
+                equipment: try Self.parse(record.equipment), type: try Self.parse(record.type),
                 restOverrideSeconds: record.restOverrideSeconds, isCustom: record.isCustom)
             context.insert(exercise)
             exercises[record.id] = exercise

@@ -9,7 +9,7 @@ import Testing
 struct SetValuesTests {
     @Test(arguments: [
         (
-            ExerciseKind.weightReps, Double?.some(35), Int?.some(10), Int?.some(45),
+            ExerciseType.weightReps, Double?.some(35), Int?.some(10), Int?.some(45),
             SetValues.weightReps(weight: 35, reps: 10)
         ),
         (.weightReps, nil, nil, nil, .weightReps(weight: 5, reps: nil)),
@@ -19,20 +19,20 @@ struct SetValuesTests {
         (.duration, nil, nil, nil, .duration(seconds: nil)),
     ])
     func storedFieldsReadAsTheValuesOfTheirType(
-        kind: ExerciseKind, weight: Double?, reps: Int?, seconds: Int?, expected: SetValues
+        type: ExerciseType, weight: Double?, reps: Int?, seconds: Int?, expected: SetValues
     ) {
-        #expect(SetValues(kind: kind, weight: weight, reps: reps, seconds: seconds) == expected)
+        #expect(SetValues(type: type, weight: weight, reps: reps, seconds: seconds) == expected)
     }
 
     @Test(arguments: [
-        (ExerciseKind.weightReps, SetValues.weightReps(weight: 5, reps: nil)),
+        (ExerciseType.weightReps, SetValues.weightReps(weight: 5, reps: nil)),
         (.bodyweightReps, .bodyweightReps(addedWeight: nil, reps: nil)),
         (.duration, .duration(seconds: nil)),
     ])
     func aFirstSetStartsAtFivePoundsOrBodyweightOrEmptySeconds(
-        kind: ExerciseKind, expected: SetValues
+        type: ExerciseType, expected: SetValues
     ) {
-        #expect(SetValues.first(for: kind) == expected)
+        #expect(SetValues.first(for: type) == expected)
     }
 
     @Test(arguments: [
@@ -78,7 +78,7 @@ struct SetValuesTests {
     @Test(arguments: [
         // A duration set gets the target duration, or 30 s with none, whatever else is given.
         (
-            ExerciseKind.duration, SetValues?.none, (Double, Int)?.none, Int?.some(45),
+            ExerciseType.duration, SetValues?.none, (Double, Int)?.none, Int?.some(45),
             SetValues.duration(seconds: 45)
         ),
         (.duration, nil, nil, nil, .duration(seconds: 30)),
@@ -110,18 +110,18 @@ struct SetValuesTests {
         (.bodyweightReps, nil, nil, nil, .bodyweightReps(addedWeight: nil, reps: nil)),
     ])
     func preFillingFollowsItsPriorities(
-        kind: ExerciseKind, previous: SetValues?, progression: (Double, Int)?, target: Int?,
+        type: ExerciseType, previous: SetValues?, progression: (Double, Int)?, target: Int?,
         expected: SetValues
     ) {
         let progression = progression.map { (weight: $0.0, reps: $0.1) }
         #expect(
             SetValues.prefilled(
-                for: kind, previous: previous, progression: progression, targetSeconds: target)
+                for: type, previous: previous, progression: progression, targetSeconds: target)
                 == expected)
     }
 
     @Test(arguments: [
-        (ExerciseKind.weightReps, Double?.some(35), Int?.some(10), Int?.none, true),
+        (ExerciseType.weightReps, Double?.some(35), Int?.some(10), Int?.none, true),
         (.weightReps, nil, 10, nil, false),
         (.weightReps, 35, 0, nil, false),
         (.weightReps, 35, nil, nil, false),
@@ -136,10 +136,10 @@ struct SetValuesTests {
         (.duration, nil, 10, 45, false),
     ])
     func aFinishedSetHoldsExactlyItsTypesValues(
-        kind: ExerciseKind, weight: Double?, reps: Int?, seconds: Int?, isComplete: Bool
+        type: ExerciseType, weight: Double?, reps: Int?, seconds: Int?, isComplete: Bool
     ) {
         #expect(
-            (SetValues(complete: kind, weight: weight, reps: reps, seconds: seconds) != nil)
+            (SetValues(complete: type, weight: weight, reps: reps, seconds: seconds) != nil)
                 == isComplete)
     }
 
@@ -156,7 +156,7 @@ struct SetValuesTests {
     @Test func writingValuesToASetStoresThemAndClearsWhatItsTypeDoesNotRecord() throws {
         let container = try BlocklogApp.makeContainer(inMemory: true)
         let plank = Exercise(
-            name: "Plank", muscleGroup: .core, equipment: .bodyweight, kind: .duration)
+            name: "Plank", muscleGroup: .core, equipment: .bodyweight, type: .duration)
         let workoutExercise = WorkoutExercise(exercise: plank, position: 0)
         let set = WorkoutSet(position: 0, weight: 15, reps: 10)
         container.mainContext.insert(workoutExercise)

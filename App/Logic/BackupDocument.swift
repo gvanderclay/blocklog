@@ -15,7 +15,7 @@ enum BackupError: LocalizedError, Equatable {
         switch self {
         case .unreadable(let detail): detail
         case .unsupportedVersion(let version):
-            "This backup is version \(version); this app reads version \(BackupDocument.currentVersion)."
+            "This backup is version \(version); this app reads only version \(BackupDocument.currentVersion), so older backups can't be imported."
         case .invalid(let detail): detail
         case .workoutInProgress: "Finish or discard your workout in progress first."
         }
@@ -27,7 +27,7 @@ enum BackupError: LocalizedError, Equatable {
 /// with a message naming it. Records refer to each other by `id`.
 @MainActor
 struct BackupDocument: Codable, Equatable {
-    nonisolated static let currentVersion = 1
+    nonisolated static let currentVersion = 2
     /// The largest rep range value a routine exercise may have.
     static let maxRepRange = 50
 
@@ -43,7 +43,7 @@ struct BackupDocument: Codable, Equatable {
         var name: String
         var muscleGroup: String
         var equipment: String
-        var kind: String
+        var type: String
         var restOverrideSeconds: Int?
         var isCustom: Bool
     }
@@ -209,7 +209,7 @@ struct BackupDocument: Codable, Equatable {
             }
         }
 
-        var kinds: [UUID: ExerciseKind] = [:]
+        var types: [UUID: ExerciseType] = [:]
         var names = Set<String>()
         for exercise in exercises {
             let owner = "Exercise “\(exercise.name)”"
@@ -224,13 +224,13 @@ struct BackupDocument: Codable, Equatable {
             }
             try requireKnown(MuscleGroup.self, exercise.muscleGroup, "muscle group", owner)
             try requireKnown(Equipment.self, exercise.equipment, "equipment", owner)
-            try requireKnown(ExerciseKind.self, exercise.kind, "kind", owner)
+            try requireKnown(ExerciseType.self, exercise.type, "type", owner)
             if let rest = exercise.restOverrideSeconds,
                 rest <= 0 || rest > (RestTimer.choices.last ?? 0)
             {
                 throw BackupError.invalid("\(owner) has a rest time of \(rest) seconds.")
             }
-            kinds[exercise.id] = ExerciseKind(rawValue: exercise.kind)
+            types[exercise.id] = ExerciseType(rawValue: exercise.type)
         }
 
         for routine in routines {
@@ -239,7 +239,7 @@ struct BackupDocument: Codable, Equatable {
             try requireUniquePositions(routine.exercises.map(\.position), in: owner)
             for entry in routine.exercises {
                 try claim(entry.id, for: owner)
-                guard let kind = kinds[entry.exerciseID] else {
+                guard let type = types[entry.exerciseID] else {
                     throw BackupError.invalid("\(owner) uses an exercise that is not in the file.")
                 }
                 for type in entry.plannedSetTypes {
@@ -265,7 +265,7 @@ struct BackupDocument: Codable, Equatable {
                 // The stored fields must read as the exercise type's target, so a rep range on a timed exercise
                 // (or a duration on a rep exercise) is refused rather than imported as a mix.
                 let target = RoutineTarget(
-                    kind: kind, repRangeLow: entry.repRangeLow, repRangeHigh: entry.repRangeHigh,
+                    type: type, repRangeLow: entry.repRangeLow, repRangeHigh: entry.repRangeHigh,
                     durationSeconds: entry.targetDurationSeconds)
                 if entry.repRangeLow != nil, target?.repRange == nil {
                     throw BackupError.invalid("\(owner) has a rep range for a duration exercise.")
@@ -293,21 +293,21 @@ struct BackupDocument: Codable, Equatable {
             try requireUniquePositions(workout.exercises.map(\.position), in: owner)
             for entry in workout.exercises {
                 try claim(entry.id, for: owner)
-                guard let kind = kinds[entry.exerciseID] else {
+                guard let type = types[entry.exerciseID] else {
                     throw BackupError.invalid("\(owner) uses an exercise that is not in the file.")
                 }
                 try requireUniquePositions(entry.sets.map(\.position), in: owner)
                 for set in entry.sets {
                     try claim(set.id, for: owner)
                     try requireKnown(SetType.self, set.setType, "set type", owner)
-                    try Self.validate(set, of: kind, in: owner)
+                    try Self.validate(set, of: type, in: owner)
                 }
             }
         }
     }
 
-    /// A set must be completed and have exactly the fields its exercise kind records.
-    private static func validate(_ set: SetRecord, of kind: ExerciseKind, in owner: String) throws {
+    /// A set must be completed and have exactly the fields its exercise type records.
+    private static func validate(_ set: SetRecord, of type: ExerciseType, in owner: String) throws {
         func problem(_ text: String) -> BackupError { .invalid("\(owner) has a set \(text).") }
         guard set.isCompleted else { throw problem("that is not completed") }
         if let weight = set.weight, PowerBlockTable.setup(for: weight) == nil {
@@ -316,8 +316,8 @@ struct BackupDocument: Codable, Equatable {
         }
         guard
             SetValues(
-                complete: kind, weight: set.weight, reps: set.reps, seconds: set.durationSeconds)
+                complete: type, weight: set.weight, reps: set.reps, seconds: set.durationSeconds)
                 != nil
-        else { throw problem(SetValues.requirement(of: kind)) }
+        else { throw problem(SetValues.requirement(of: type)) }
     }
 }

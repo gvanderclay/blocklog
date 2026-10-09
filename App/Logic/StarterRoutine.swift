@@ -1,20 +1,13 @@
 import Foundation
 
-/// A bundled plan from `templates.json`, read-only: a programme session or a one-off workout. It starts a
-/// workout or seeds a routine through `TemplateLibrary`.
+/// A bundled routine from `starter-routines.json`, read-only: one of a starter programme's routines or a
+/// standalone one. It starts a workout or seeds a routine through `StarterLibrary`.
 @MainActor
-struct Template: Decodable, Identifiable {
+struct StarterRoutine: Decodable, Identifiable {
     /// The time a set takes besides its rest, for the estimate.
     static let secondsPerSet = 40
 
-    enum Kind: String, Decodable {
-        /// A session of a programme, meant to be kept as a routine.
-        case routine
-        /// A workout that stands on its own.
-        case oneOff
-    }
-
-    /// One exercise of the template, named as in `starter-exercises.json`, with a target: a rep range or a
+    /// One exercise of the starter routine, named as in `starter-exercises.json`, with a target: a rep range or a
     /// target duration.
     @MainActor
     struct Entry: @MainActor Decodable {
@@ -61,60 +54,53 @@ struct Template: Decodable, Identifiable {
         }
     }
 
-    /// The sessions of one programme, in file order.
-    @MainActor
-    struct Programme: Identifiable {
-        let name: String
-        let sessions: [Template]
-
-        nonisolated var id: String { name }
-    }
-
     let name: String
-    let kind: Kind
-    /// The programme the session belongs to, such as "Upper/Lower"; nil for a one-off.
+    /// The starter programme the routine belongs to, such as "Upper/Lower"; nil for a standalone routine.
     let programme: String?
-    /// Why the template is built the way it is, in one line.
+    /// Why the starter routine is built the way it is, in one line.
     let why: String
     let exercises: [Entry]
 
     nonisolated var id: String { name }
 
-    /// The templates in `templates.json`, or none when it can't be read (a unit test checks that it can).
-    static let bundled: [Template] = (try? load()) ?? []
+    /// The starter routines in `starter-routines.json`, or none when it can't be read (a unit test checks that it can).
+    static let bundled: [StarterRoutine] = (try? load()) ?? []
 
-    /// Reads `templates.json` from the app bundle.
-    static func load() throws -> [Template] {
-        guard let url = Bundle.main.url(forResource: "templates", withExtension: "json") else {
+    /// Reads `starter-routines.json` from the app bundle.
+    static func load() throws -> [StarterRoutine] {
+        guard let url = Bundle.main.url(forResource: "starter-routines", withExtension: "json")
+        else {
             throw CocoaError(.fileNoSuchFile)
         }
-        return try JSONDecoder().decode([Template].self, from: Data(contentsOf: url))
+        return try JSONDecoder().decode([StarterRoutine].self, from: Data(contentsOf: url))
     }
 
-    /// The programmes, in the order their first session appears.
-    static func programmes(in templates: [Template]) -> [Programme] {
+    /// The programmes, in the order their first routine appears.
+    static func programmes(in starterRoutines: [StarterRoutine]) -> [StarterProgramme] {
         var names: [String] = []
-        for case let name? in templates.map(\.programme) where !names.contains(name) {
+        for case let name? in starterRoutines.map(\.programme) where !names.contains(name) {
             names.append(name)
         }
         return names.map { name in
-            Programme(name: name, sessions: templates.filter { $0.programme == name })
+            StarterProgramme(name: name, routines: starterRoutines.filter { $0.programme == name })
         }
     }
 
-    /// The one-off workouts, in file order.
-    static func oneOffs(in templates: [Template]) -> [Template] {
-        templates.filter { $0.kind == .oneOff }
+    /// The standalone routines, in file order.
+    static func standalone(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
+        starterRoutines.filter { $0.programme == nil }
     }
 
-    /// What an empty routine list suggests: the first session of the first two programmes.
-    static func suggestions(in templates: [Template]) -> [Template] {
-        programmes(in: templates).prefix(2).compactMap(\.sessions.first)
+    /// What an empty routine list suggests: the first routine of the first two programmes.
+    static func suggestions(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
+        programmes(in: starterRoutines).prefix(2).compactMap(\.routines.first)
     }
 
-    /// The programme the template is a session of, or nil for a one-off.
-    static func programme(of template: Template, in templates: [Template]) -> Programme? {
-        programmes(in: templates).first { $0.name == template.programme }
+    /// The programme the starter routine belongs to, or nil for a standalone one.
+    static func programme(of starterRoutine: StarterRoutine, in starterRoutines: [StarterRoutine])
+        -> StarterProgramme?
+    {
+        programmes(in: starterRoutines).first { $0.name == starterRoutine.programme }
     }
 
     var setCount: Int { exercises.reduce(0) { $0 + $1.sets.count } }
@@ -129,4 +115,13 @@ struct Template: Decodable, Identifiable {
         let count = exercises.count == 1 ? "1 exercise" : "\(exercises.count) exercises"
         return "\(count) · about \(estimatedMinutes(restSeconds: restSeconds)) min"
     }
+}
+
+/// The routines of one starter programme, in file order.
+@MainActor
+struct StarterProgramme: Identifiable {
+    let name: String
+    let routines: [StarterRoutine]
+
+    nonisolated var id: String { name }
 }

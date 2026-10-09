@@ -56,13 +56,13 @@ struct ExerciseCatalog {
     /// Creates a custom exercise with the trimmed name and saves it. Nil, creating nothing, when the name
     /// has a problem.
     func createCustomExercise(
-        named name: String, muscleGroup: MuscleGroup, equipment: Equipment, kind: ExerciseKind
+        named name: String, muscleGroup: MuscleGroup, equipment: Equipment, type: ExerciseType
     ) throws -> Exercise? {
         let existing = try context.fetch(FetchDescriptor<Exercise>())
         guard Self.nameProblem(for: name, among: existing) == nil else { return nil }
         let exercise = Exercise(
             name: Self.normalized(name).trimmed, muscleGroup: muscleGroup,
-            equipment: equipment, kind: kind, isCustom: true)
+            equipment: equipment, type: type, isCustom: true)
         context.insert(exercise)
         try context.saveOrRollBack()
         return exercise

@@ -27,11 +27,13 @@ struct PreviousSetLookup {
         return lastTime(for: set, index: index, matching: { $0 == .warmUp })
     }
 
-    /// The values of every working set (normal and failure) in last time's workout exercise for
+    /// The values of every progression set (normal and failure) in last time's workout exercise for
     /// `workoutExercise`, in order; empty when there is no last time. Skips the exercise's own workout.
-    func lastWorkingSets(for workoutExercise: WorkoutExercise) -> [SetValues] {
+    func lastProgressionSets(for workoutExercise: WorkoutExercise) -> [SetValues] {
         guard let match = lastTime(of: workoutExercise) else { return [] }
-        return WorkoutLog.orderedSets(of: match).filter { SetNumbering.isWorking($0.setType) }.map(
+        return WorkoutLog.orderedSets(of: match).filter {
+            SetNumbering.isProgressionSet($0.setType)
+        }.map(
             \.values)
     }
 

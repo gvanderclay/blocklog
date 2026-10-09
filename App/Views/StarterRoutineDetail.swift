@@ -1,10 +1,10 @@
 import SwiftData
 import SwiftUI
 
-/// A template's exercises with their plans, such as "3 × 8–12", why it is built that way, and Start Workout,
-/// Add to My Routines and, for a programme of several sessions, Add Programme.
-struct TemplateDetail: View {
-    let template: Template
+/// A starter routine's exercises with their plans, such as "3 × 8–12", why it is built that way, and Start Workout,
+/// Add to My Routines and, for a programme of several routines, Add Programme.
+struct StarterRoutineDetail: View {
+    let starterRoutine: StarterRoutine
     /// Shows the started workout in the full-screen workout screen.
     let present: (RoutineStart.Started) -> Void
 
@@ -15,20 +15,20 @@ struct TemplateDetail: View {
     @State private var programmeAdded = false
     @State private var saveFailed = false
 
-    private var programme: Template.Programme? {
-        Template.programme(of: template, in: Template.bundled)
+    private var programme: StarterProgramme? {
+        StarterRoutine.programme(of: starterRoutine, in: StarterRoutine.bundled)
     }
 
     var body: some View {
         List {
             Section {
-                Text(template.why)
+                Text(starterRoutine.why)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             Section {
-                // The template never changes, so a position is a stable identity.
-                ForEach(template.exercises.enumerated(), id: \.offset) { index, entry in
+                // The starter routine never changes, so a position is a stable identity.
+                ForEach(starterRoutine.exercises.enumerated(), id: \.offset) { index, entry in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.exercise)
                         Text(
@@ -42,7 +42,7 @@ struct TemplateDetail: View {
                             RoutineLibrary.spokenSummary(
                                 setCount: entry.sets.count, target: entry.target)
                         )
-                        .accessibilityIdentifier("templateDetail.exercise.\(index).summary")
+                        .accessibilityIdentifier("starterRoutineDetail.exercise.\(index).summary")
                     }
                     .accessibilityElement(children: .combine)
                 }
@@ -50,9 +50,9 @@ struct TemplateDetail: View {
             Section {
                 Button("Start Workout") { start() }
                     .disabled(!inProgressWorkouts.isEmpty)
-                    .accessibilityIdentifier("templateDetail.start")
+                    .accessibilityIdentifier("starterRoutineDetail.start")
                 Button("Add to My Routines") { addToRoutines() }
-                    .accessibilityIdentifier("templateDetail.addToRoutines")
+                    .accessibilityIdentifier("starterRoutineDetail.addToRoutines")
             } footer: {
                 if !inProgressWorkouts.isEmpty {
                     Text("Finish or discard the workout in progress first.")
@@ -64,15 +64,15 @@ struct TemplateDetail: View {
                         add(programme)
                     }
                     .disabled(programmeAdded)
-                    .accessibilityIdentifier("templateDetail.addProgramme")
+                    .accessibilityIdentifier("starterRoutineDetail.addProgramme")
                 } footer: {
                     Text(
-                        "Adds \(programme.sessions.map(\.name).formatted(.list(type: .and))) as routines."
+                        "Adds \(programme.routines.map(\.name).formatted(.list(type: .and))) as routines."
                     )
                 }
             }
         }
-        .navigationTitle(template.name)
+        .navigationTitle(starterRoutine.name)
         .sheet(item: $draft) { draft in
             RoutineEditor(newFrom: draft)
         }
@@ -81,7 +81,8 @@ struct TemplateDetail: View {
 
     private func start() {
         do {
-            if let started = try TemplateLibrary(context: modelContext).startWorkout(from: template)
+            if let started = try StarterLibrary(context: modelContext).startWorkout(
+                from: starterRoutine)
             {
                 present(started)
             }
@@ -92,15 +93,15 @@ struct TemplateDetail: View {
 
     private func addToRoutines() {
         do {
-            draft = try TemplateLibrary(context: modelContext).draft(of: template)
+            draft = try StarterLibrary(context: modelContext).draft(of: starterRoutine)
         } catch {
             saveFailed = true
         }
     }
 
-    private func add(_ programme: Template.Programme) {
+    private func add(_ programme: StarterProgramme) {
         do {
-            try TemplateLibrary(context: modelContext).addProgramme(programme)
+            try StarterLibrary(context: modelContext).addProgramme(programme)
             programmeAdded = true
         } catch {
             saveFailed = true

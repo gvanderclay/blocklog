@@ -19,16 +19,16 @@ enum RoutineTarget: Equatable {
     static let durationStep = 5
 
     /// The target a new routine exercise of the type starts with: 8–12 reps, or 30 s for a duration exercise.
-    static func standard(for kind: ExerciseKind) -> RoutineTarget {
-        kind == .duration ? .duration(seconds: defaultDurationSeconds) : .repRange(defaultRepRange)
+    static func standard(for type: ExerciseType) -> RoutineTarget {
+        type == .duration ? .duration(seconds: defaultDurationSeconds) : .repRange(defaultRepRange)
     }
 
     /// `target` when it is of the exercise type's case, otherwise the type's standard target.
-    static func orStandard(_ target: RoutineTarget?, for kind: ExerciseKind) -> RoutineTarget {
-        switch (target, kind) {
+    static func orStandard(_ target: RoutineTarget?, for type: ExerciseType) -> RoutineTarget {
+        switch (target, type) {
         case (.duration?, .duration), (.repRange?, .weightReps), (.repRange?, .bodyweightReps):
-            target ?? standard(for: kind)
-        default: standard(for: kind)
+            target ?? standard(for: type)
+        default: standard(for: type)
         }
     }
 
@@ -37,8 +37,8 @@ enum RoutineTarget: Equatable {
     /// a low end above the high end (no screen writes one). A stored value outside the editor's bounds is kept.
     /// With no exercise type (the exercise was deleted), stored seconds read as a duration and anything else
     /// as a range.
-    init?(kind: ExerciseKind?, repRangeLow: Int?, repRangeHigh: Int?, durationSeconds: Int?) {
-        if kind.map({ $0 == .duration }) ?? (durationSeconds != nil) {
+    init?(type: ExerciseType?, repRangeLow: Int?, repRangeHigh: Int?, durationSeconds: Int?) {
+        if type.map({ $0 == .duration }) ?? (durationSeconds != nil) {
             guard let durationSeconds else { return nil }
             self = .duration(seconds: durationSeconds)
         } else {
@@ -113,7 +113,7 @@ extension RoutineExercise {
     var target: RoutineTarget? {
         get {
             RoutineTarget(
-                kind: exercise?.kind, repRangeLow: repRangeLow, repRangeHigh: repRangeHigh,
+                type: exercise?.type, repRangeLow: repRangeLow, repRangeHigh: repRangeHigh,
                 durationSeconds: targetDurationSeconds)
         }
         set {

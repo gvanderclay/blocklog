@@ -10,8 +10,9 @@ final class Exercise {
     var muscleGroupRawValue: String
     /// An `Equipment` raw value.
     var equipmentRawValue: String
-    /// An `ExerciseKind` raw value.
-    var kindRawValue: String
+    /// An `ExerciseType` raw value.
+    @Attribute(originalName: "kindRawValue")
+    var typeRawValue: String
     /// The exercise's own rest length, replacing the default rest. Nil uses the default rest.
     var restOverrideSeconds: Int?
     var isCustom: Bool
@@ -23,13 +24,13 @@ final class Exercise {
 
     init(
         id: UUID = UUID(), name: String, muscleGroup: MuscleGroup, equipment: Equipment,
-        kind: ExerciseKind, restOverrideSeconds: Int? = nil, isCustom: Bool = false
+        type: ExerciseType, restOverrideSeconds: Int? = nil, isCustom: Bool = false
     ) {
         self.id = id
         self.name = name
         self.muscleGroupRawValue = muscleGroup.rawValue
         self.equipmentRawValue = equipment.rawValue
-        self.kindRawValue = kind.rawValue
+        self.typeRawValue = type.rawValue
         self.restOverrideSeconds = restOverrideSeconds
         self.isCustom = isCustom
     }
@@ -45,9 +46,9 @@ final class Exercise {
         set { equipmentRawValue = newValue.rawValue }
     }
 
-    var kind: ExerciseKind {
-        get { ExerciseKind(rawValue: kindRawValue) ?? .weightReps }
-        set { kindRawValue = newValue.rawValue }
+    var type: ExerciseType {
+        get { ExerciseType(rawValue: typeRawValue) ?? .weightReps }
+        set { typeRawValue = newValue.rawValue }
     }
 }
 
@@ -63,7 +64,7 @@ enum Equipment: String, CaseIterable, Codable, Sendable {
 }
 
 /// What a set of the exercise records.
-enum ExerciseKind: String, CaseIterable, Codable, Sendable {
+enum ExerciseType: String, CaseIterable, Codable, Sendable {
     /// Dumbbell weight and reps.
     case weightReps
     /// Reps, with optional added PowerBlock weight.

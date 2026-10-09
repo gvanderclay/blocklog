@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// One training session. A workout with no end date is the in-progress workout.
+/// One workout, done or in progress. A workout with no end date is the in-progress workout.
 @Model
 final class Workout {
     var id: UUID

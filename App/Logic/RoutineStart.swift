@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Starts a workout from a routine or from a draft of one (a template's), with each set pre-filled from history.
+/// Starts a workout from a routine or from a draft of one (a starter routine's), with each set pre-filled from history.
 @MainActor
 struct RoutineStart {
     let context: ModelContext
@@ -80,13 +80,13 @@ struct RoutineStart {
             let progression = Progression(context: context).suggestion(for: workoutExercise)
             for set in workoutExercise.sets {
                 prefill(
-                    set, kind: exercise.kind,
+                    set, type: exercise.type,
                     target: plannedExercise.target, progression: progression)
             }
             if let progression {
                 let stepped =
                     progression.weight == nil
-                    ? [] : workoutExercise.sets.filter { SetNumbering.isWorking($0.setType) }
+                    ? [] : workoutExercise.sets.filter { SetNumbering.isProgressionSet($0.setType) }
                 progressions.record(progression, for: workoutExercise, prefilled: stepped)
             }
         }
@@ -96,7 +96,7 @@ struct RoutineStart {
 
     /// Reads history for the set, then writes the values it starts with.
     private func prefill(
-        _ set: WorkoutSet, kind: ExerciseKind, target: RoutineTarget?,
+        _ set: WorkoutSet, type: ExerciseType, target: RoutineTarget?,
         progression: Progression.Suggestion?
     ) {
         let lookup = PreviousSetLookup(context: context)
@@ -104,10 +104,10 @@ struct RoutineStart {
             suggestion.weight.map { (weight: $0, reps: suggestion.reps) }
         }
         set.values = SetValues.prefilled(
-            for: kind,
+            for: type,
             previous: set.setType == .warmUp
                 ? lookup.previousWarmUp(for: set) : lookup.previous(for: set),
-            progression: SetNumbering.isWorking(set.setType) ? stepUp : nil,
+            progression: SetNumbering.isProgressionSet(set.setType) ? stepUp : nil,
             targetSeconds: target?.seconds)
     }
 }

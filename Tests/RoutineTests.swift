@@ -304,9 +304,9 @@ struct RoutineTests {
     @Test func aFailedRoutineEditRollsBackAndThrows() throws {
         let store = try ReadOnlyStore { context in
             let curl = Exercise(
-                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, kind: .weightReps)
+                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, type: .weightReps)
             let fly = Exercise(
-                name: "Dumbbell Fly", muscleGroup: .chest, equipment: .dumbbell, kind: .weightReps)
+                name: "Dumbbell Fly", muscleGroup: .chest, equipment: .dumbbell, type: .weightReps)
             context.insert(curl)
             context.insert(fly)
             let routine = Routine(name: "Pull", creationDate: .now)

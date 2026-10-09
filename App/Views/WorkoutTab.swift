@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 /// Starts an empty workout or one from a routine, resumes the one in progress, lists the routines (or, with
-/// none, suggests templates) and opens the templates.
+/// none, suggests starter routines) and opens the starter routines.
 struct WorkoutTab: View {
     /// Shows a workout in the full-screen workout screen.
     let present: (Workout) -> Void
@@ -16,9 +16,9 @@ struct WorkoutTab: View {
     @State private var saveFailed = false
     @State private var isCreatingRoutine = false
     @State private var routineToDelete: Routine?
-    @State private var isShowingTemplates = false
-    /// A workout started from the Templates sheet, shown once the sheet has closed.
-    @State private var startedFromTemplates: RoutineStart.Started?
+    @State private var isShowingStarterRoutines = false
+    /// A workout started from the Starter Routines sheet, shown once the sheet has closed.
+    @State private var startedFromStarterRoutines: RoutineStart.Started?
 
     var body: some View {
         NavigationStack {
@@ -50,10 +50,13 @@ struct WorkoutTab: View {
                 }
                 Section {
                     if routines.isEmpty {
-                        ForEach(Template.suggestions(in: Template.bundled)) { template in
-                            TemplateLink(template: template, present: presentStarted)
-                                .accessibilityIdentifier(
-                                    "workoutTab.suggestedTemplate.\(template.name)")
+                        ForEach(StarterRoutine.suggestions(in: StarterRoutine.bundled)) {
+                            starterRoutine in
+                            StarterRoutineLink(
+                                starterRoutine: starterRoutine, present: presentStarted
+                            )
+                            .accessibilityIdentifier(
+                                "workoutTab.suggestedStarterRoutine.\(starterRoutine.name)")
                         }
                     }
                     ForEach(routines) { routine in
@@ -69,15 +72,15 @@ struct WorkoutTab: View {
                     }
                     Button("New Routine", systemImage: "plus") { isCreatingRoutine = true }
                         .accessibilityIdentifier("workoutTab.newRoutine")
-                    Button("Templates", systemImage: "rectangle.stack") {
-                        isShowingTemplates = true
+                    Button("Starter Routines", systemImage: "rectangle.stack") {
+                        isShowingStarterRoutines = true
                     }
-                    .accessibilityIdentifier("workoutTab.templates")
+                    .accessibilityIdentifier("workoutTab.starterRoutines")
                 } header: {
                     Text("Routines")
                 } footer: {
                     if routines.isEmpty {
-                        Text("No routines yet. Try a template, or make your own.")
+                        Text("No routines yet. Try a starter routine, or make your own.")
                     }
                 }
             }
@@ -88,11 +91,13 @@ struct WorkoutTab: View {
             .sheet(isPresented: $isCreatingRoutine) {
                 RoutineEditor(routine: nil)
             }
-            .sheet(isPresented: $isShowingTemplates, onDismiss: presentStartedFromTemplates) {
-                TemplatesSheet { started in
+            .sheet(
+                isPresented: $isShowingStarterRoutines, onDismiss: presentStartedFromStarterRoutines
+            ) {
+                StarterRoutinesSheet { started in
                     // The workout screen can't cover the tab while this sheet is up.
-                    startedFromTemplates = started
-                    isShowingTemplates = false
+                    startedFromStarterRoutines = started
+                    isShowingStarterRoutines = false
                 }
             }
             .confirmationDialog(
@@ -109,9 +114,9 @@ struct WorkoutTab: View {
 }
 
 extension WorkoutTab {
-    private func presentStartedFromTemplates() {
-        guard let started = startedFromTemplates else { return }
-        startedFromTemplates = nil
+    private func presentStartedFromStarterRoutines() {
+        guard let started = startedFromStarterRoutines else { return }
+        startedFromStarterRoutines = nil
         presentStarted(started)
     }
 

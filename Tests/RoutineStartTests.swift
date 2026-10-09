@@ -283,7 +283,7 @@ struct RoutineStartTests {
     @Test func aFailedStartRollsBackAndThrows() throws {
         let store = try ReadOnlyStore { context in
             let curl = Exercise(
-                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, kind: .weightReps)
+                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, type: .weightReps)
             context.insert(curl)
             let routine = Routine(name: "Pull", creationDate: .now)
             context.insert(routine)

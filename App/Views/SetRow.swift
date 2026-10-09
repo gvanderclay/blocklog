@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// One set: its type label, the fields its exercise kind records, and a check-off button.
+/// One set: its type label, the fields its exercise type records, and a check-off button.
 /// Swipe left deletes it; a long press opens its set-type, duplicate and delete menu.
 struct SetRow: View {
     let set: WorkoutSet

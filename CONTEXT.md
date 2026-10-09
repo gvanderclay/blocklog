@@ -2,7 +2,7 @@
 
 The domain terms Blocklog uses in code, tests and UI text. A term in parentheses is its type name in code. Each word names one thing: plans (routines, starter routines, programmes) are what you start from, and records (workouts, sets) are what you did. "Session" is not a Blocklog term; say routine or workout.
 
-Renames pending ticket 35: until it ships, the code calls a starter routine `Template`, a starter programme `Template.Programme`, an exercise type `ExerciseKind`, and a progression set a working set. Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/spec.md` (phases 4–8) and not built yet.
+Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/spec.md` (phases 4–8) and not built yet.
 
 ## Workouts
 

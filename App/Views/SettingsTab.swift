@@ -25,7 +25,7 @@ struct SettingsTab: View {
                         ForEach(RestTimer.choices, id: \.self) { Text(RestTimer.clock($0)) }
                     }
                     .accessibilityIdentifier("settings.defaultRest")
-                    Toggle("Timer Sound", isOn: $timerSoundEnabled)
+                    Toggle("Timer Sounds", isOn: $timerSoundEnabled)
                         .accessibilityIdentifier("settings.timerSound")
                         .onChange(of: timerSoundEnabled) { restTimer.timerSoundChanged() }
                 } footer: {
@@ -54,7 +54,7 @@ struct SettingsTab: View {
                 } footer: {
                     Text(
                         inProgressWorkouts.isEmpty
-                            ? "Importing replaces all data on this phone with a backup file."
+                            ? "Importing replaces training data on this phone with a backup file."
                             : "Finish or discard your workout in progress to import."
                     )
                 }
@@ -63,8 +63,8 @@ struct SettingsTab: View {
             .fileImporter(isPresented: $isChoosingFile, allowedContentTypes: [.json]) { result in
                 read(result)
             }
-            .alert("Replace all data?", item: $pendingImport) { document in
-                Button("Replace All Data", role: .destructive) { replaceAll(with: document) }
+            .alert("Replace training data?", item: $pendingImport) { document in
+                Button("Replace Training Data", role: .destructive) { replaceAll(with: document) }
                     .accessibilityIdentifier("import.confirm")
                 Button("Cancel", role: .cancel) {}
                     .accessibilityIdentifier("import.cancel")

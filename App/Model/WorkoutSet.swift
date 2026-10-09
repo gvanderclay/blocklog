@@ -35,7 +35,7 @@ final class WorkoutSet {
     }
 }
 
-/// The kind of effort a set was.
+/// What sort of effort a set was.
 enum SetType: String, CaseIterable, Codable, Sendable {
     case normal, warmUp, drop, failure
 }

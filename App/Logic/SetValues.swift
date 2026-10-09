@@ -14,8 +14,8 @@ enum SetValues: Equatable {
     /// Reads the stored fields as the values of an exercise type, ignoring the fields it doesn't record.
     /// A weight × reps set with no weight has no producer (import rejects it, no screen writes it), so it reads
     /// as the lowest PowerBlock setting.
-    init(kind: ExerciseKind, weight: Double?, reps: Int?, seconds: Int?) {
-        switch kind {
+    init(type: ExerciseType, weight: Double?, reps: Int?, seconds: Int?) {
+        switch type {
         case .weightReps:
             self = .weightReps(weight: weight ?? PowerBlockTable.weights[0], reps: reps)
         case .bodyweightReps: self = .bodyweightReps(addedWeight: weight, reps: reps)
@@ -26,8 +26,8 @@ enum SetValues: Equatable {
     /// Reads the stored fields as a finished set of the exercise type: exactly the values the type records,
     /// weight × reps with a weight and reps of at least 1, bodyweight with reps of at least 1, duration with
     /// seconds above 0. Nil when they are not.
-    init?(complete kind: ExerciseKind, weight: Double?, reps: Int?, seconds: Int?) {
-        switch kind {
+    init?(complete type: ExerciseType, weight: Double?, reps: Int?, seconds: Int?) {
+        switch type {
         case .weightReps:
             guard let weight, (reps ?? 0) >= 1, seconds == nil else { return nil }
             self = .weightReps(weight: weight, reps: reps)
@@ -41,8 +41,8 @@ enum SetValues: Equatable {
     }
 
     /// What `init?(complete:…)` asks of a set of the type, as the end of a sentence about a set.
-    static func requirement(of kind: ExerciseKind) -> String {
-        switch kind {
+    static func requirement(of type: ExerciseType) -> String {
+        switch type {
         case .weightReps: "that needs a weight and reps, and no duration"
         case .bodyweightReps: "that needs reps and no duration"
         case .duration: "that needs a duration and no weight or reps"
@@ -51,8 +51,8 @@ enum SetValues: Equatable {
 
     /// A first set: 5 lb with empty reps for weight × reps, "BW" with empty reps for bodyweight reps, and empty
     /// seconds for duration.
-    static func first(for kind: ExerciseKind) -> SetValues {
-        SetValues(kind: kind, weight: nil, reps: nil, seconds: nil)
+    static func first(for type: ExerciseType) -> SetValues {
+        SetValues(type: type, weight: nil, reps: nil, seconds: nil)
     }
 
     /// The values a set of a workout started from a routine begins with, in this priority: a duration set gets
@@ -60,19 +60,19 @@ enum SetValues: Equatable {
     /// set gets the values of `previous` (last time's set paired with it), or, with nothing from last time, the
     /// values of a first set.
     static func prefilled(
-        for kind: ExerciseKind, previous: SetValues?,
+        for type: ExerciseType, previous: SetValues?,
         progression: (weight: Double, reps: Int)?, targetSeconds: Int?
     ) -> SetValues {
-        if kind == .duration {
+        if type == .duration {
             return .duration(seconds: targetSeconds ?? RoutineTarget.defaultDurationSeconds)
         }
         if let progression {
             return SetValues(
-                kind: kind, weight: progression.weight, reps: progression.reps, seconds: nil)
+                type: type, weight: progression.weight, reps: progression.reps, seconds: nil)
         }
-        guard let previous else { return first(for: kind) }
+        guard let previous else { return first(for: type) }
         // A bodyweight set's nil weight is "BW", so last time's nil is kept rather than defaulted.
-        return SetValues(kind: kind, weight: previous.weight, reps: previous.reps, seconds: nil)
+        return SetValues(type: type, weight: previous.weight, reps: previous.reps, seconds: nil)
     }
 
     // MARK: Reading
@@ -182,7 +182,7 @@ extension WorkoutSet {
     var values: SetValues {
         get {
             SetValues(
-                kind: workoutExercise?.exercise?.kind ?? .weightReps, weight: weight, reps: reps,
+                type: workoutExercise?.exercise?.type ?? .weightReps, weight: weight, reps: reps,
                 seconds: durationSeconds)
         }
         set {

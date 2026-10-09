@@ -21,7 +21,7 @@ struct RoutineEditor: View {
         self.draft = routine.map(RoutineDraft.init(routine:)) ?? RoutineDraft()
     }
 
-    /// A new routine starting from the draft, such as a template's.
+    /// A new routine starting from the draft, such as a starter routine's.
     init(newFrom draft: RoutineDraft) {
         self.routine = nil
         self.draft = draft
@@ -125,7 +125,7 @@ private struct EntrySection: View {
                     value: $entry.targetDurationSeconds, in: RoutineTarget.durationBounds,
                     step: RoutineTarget.durationStep
                 ) {
-                    NumberLabel(title: "Target", value: seconds, unit: " s")
+                    NumberLabel(title: "Target Duration", value: seconds, unit: " s")
                 }
                 .accessibilityValue("\(seconds) seconds")
                 .accessibilityIdentifier("\(identifierPrefix).targetDuration")

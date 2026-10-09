@@ -276,7 +276,7 @@ struct WorkoutLog {
         let set = WorkoutSet(
             position: workoutExercise.sets.count, setType: last?.setType ?? .normal)
         set.values =
-            last?.values ?? SetValues.first(for: workoutExercise.exercise?.kind ?? .weightReps)
+            last?.values ?? SetValues.first(for: workoutExercise.exercise?.type ?? .weightReps)
         context.insert(set)
         workoutExercise.sets.append(set)
     }

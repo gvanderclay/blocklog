@@ -43,7 +43,7 @@ struct BackupTests {
         }
     }
 
-    /// A store with a custom exercise, a routine, two finished workouts covering every exercise kind and set
+    /// A store with a custom exercise, a routine, two finished workouts covering every exercise type and set
     /// type, and one workout in progress.
     private func makeSource() throws -> ModelContainer {
         let container = try BlocklogApp.makeContainer(inMemory: true)
@@ -57,7 +57,7 @@ struct BackupTests {
         let pullUp = try exercise("Pull-up", in: context)
         let plank = try exercise("Plank", in: context)
         let custom = Exercise(
-            name: "Farmer Carry", muscleGroup: .forearms, equipment: .dumbbell, kind: .weightReps,
+            name: "Farmer Carry", muscleGroup: .forearms, equipment: .dumbbell, type: .weightReps,
             restOverrideSeconds: 120, isCustom: true)
         context.insert(custom)
 
@@ -180,7 +180,7 @@ struct BackupTests {
     @Test func fileIsIso8601JsonWithRawStringEnums() throws {
         let source = try makeSource()
         let text = String(decoding: try exported(source).encoded(), as: UTF8.self)
-        #expect(text.contains("\"version\" : 1"))
+        #expect(text.contains("\"version\" : 2"))
         #expect(text.contains("\"exportedAt\" : \"2027-01-16T"))
         #expect(text.contains("\"setType\" : \"warmUp\""))
     }
@@ -207,7 +207,7 @@ struct BackupTests {
         let target = try makeSource()
         let context = target.mainContext
         context.insert(
-            Exercise(name: "Stray", muscleGroup: .core, equipment: .bodyweight, kind: .duration))
+            Exercise(name: "Stray", muscleGroup: .core, equipment: .bodyweight, type: .duration))
         addWorkout(
             context, title: "Old", start: .now.addingTimeInterval(-5_000_000), finished: true
         ) {
@@ -399,7 +399,11 @@ struct BackupTests {
     }
 
     @Test func rejectsAnUnknownVersion() throws {
-        try expectRejected(containing: "version 2") { $0.version = 2 }
+        try expectRejected(containing: "version 3") { $0.version = 3 }
+    }
+
+    @Test func rejectsAnOlderVersionWithAClearError() throws {
+        try expectRejected(containing: "older backups can't be imported") { $0.version = 1 }
     }
 
     @Test func rejectsADanglingExerciseReference() throws {
@@ -439,7 +443,7 @@ struct BackupTests {
         try expectRejected(containing: "unknown equipment") {
             $0.exercises[0].equipment = "kettlebell"
         }
-        try expectRejected(containing: "unknown kind") { $0.exercises[0].kind = "cardio" }
+        try expectRejected(containing: "unknown type") { $0.exercises[0].type = "cardio" }
     }
 
     @Test func rejectsABadExerciseName() throws {
@@ -492,7 +496,7 @@ struct BackupTests {
         }
     }
 
-    @Test func rejectsSetsThatDoNotMatchTheirKind() throws {
+    @Test func rejectsSetsThatDoNotMatchTheirType() throws {
         // Workout 0: exercises sorted by position are bench, pull-up, plank.
         try expectRejected(containing: "needs a duration and no weight or reps") {
             $0.workouts[0].exercises[2].sets[0].reps = 10

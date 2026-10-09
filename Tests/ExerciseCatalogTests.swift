@@ -16,7 +16,7 @@ struct ExerciseCatalogTests {
     }
 
     private func exercises(_ names: [(String, MuscleGroup, Equipment)]) -> [Exercise] {
-        names.map { Exercise(name: $0.0, muscleGroup: $0.1, equipment: $0.2, kind: .weightReps) }
+        names.map { Exercise(name: $0.0, muscleGroup: $0.1, equipment: $0.2, type: .weightReps) }
     }
 
     @Test func sectionsFollowMuscleGroupOrderSortByNameAndHideEmptyGroups() {
@@ -55,7 +55,7 @@ struct ExerciseCatalogTests {
     @Test func createsTrimmedCustomExerciseAndSaves() throws {
         let created = try #require(
             try catalog.createCustomExercise(
-                named: "  Test Row  ", muscleGroup: .back, equipment: .dumbbell, kind: .weightReps))
+                named: "  Test Row  ", muscleGroup: .back, equipment: .dumbbell, type: .weightReps))
         #expect(created.name == "Test Row")
         #expect(created.isCustom)
         #expect(created.muscleGroup == .back)
@@ -68,13 +68,13 @@ struct ExerciseCatalogTests {
     @Test func refusesDuplicatesButCreatesDurationExercises() throws {
         let before = try container.mainContext.fetchCount(FetchDescriptor<Exercise>())
         let duplicate = try catalog.createCustomExercise(
-            named: "plank", muscleGroup: .core, equipment: .bodyweight, kind: .bodyweightReps)
+            named: "plank", muscleGroup: .core, equipment: .bodyweight, type: .bodyweightReps)
         #expect(duplicate == nil)
         #expect(try container.mainContext.fetchCount(FetchDescriptor<Exercise>()) == before)
 
         let duration = try catalog.createCustomExercise(
-            named: "Hollow Hold", muscleGroup: .core, equipment: .bodyweight, kind: .duration)
-        #expect(duration?.kind == .duration)
+            named: "Hollow Hold", muscleGroup: .core, equipment: .bodyweight, type: .duration)
+        #expect(duration?.type == .duration)
     }
 
     // Moved from the UI suite (ticket 10a): the same expectations against the seeded starter list.
@@ -103,7 +103,7 @@ struct ExerciseCatalogTests {
 
     @Test func aCreatedShouldersExerciseListsAloneUnderShoulders() throws {
         _ = try catalog.createCustomExercise(
-            named: "Test Row", muscleGroup: .shoulders, equipment: .dumbbell, kind: .weightReps)
+            named: "Test Row", muscleGroup: .shoulders, equipment: .dumbbell, type: .weightReps)
         let all = try container.mainContext.fetch(FetchDescriptor<Exercise>())
         let sections = ExerciseCatalog.sections(from: all, matching: "Test Row", equipment: nil)
         #expect(sections.map(\.muscleGroup) == [.shoulders])
@@ -118,7 +118,7 @@ struct ExerciseCatalogTests {
         #expect(throws: (any Error).self) {
             _ = try catalog.createCustomExercise(
                 named: "Zottman Curl", muscleGroup: .biceps, equipment: .dumbbell,
-                kind: .weightReps)
+                type: .weightReps)
         }
 
         #expect(!store.context.hasChanges)
@@ -128,7 +128,7 @@ struct ExerciseCatalogTests {
         #expect(throws: (any Error).self) {
             _ = try catalog.createCustomExercise(
                 named: "zottman curl", muscleGroup: .biceps, equipment: .dumbbell,
-                kind: .weightReps)
+                type: .weightReps)
         }
     }
 }

@@ -1,9 +1,8 @@
 [
   {
     "name": "Full Body",
-    "kind": "routine",
     "programme": "Full Body",
-    "why": "One repeatable session covering squat, hinge, push, pull, overhead press, calves and trunk; repeat it three nonconsecutive days a week.",
+    "why": "One repeatable routine covering squat, hinge, push, pull, overhead press, calves and trunk; repeat it three nonconsecutive days a week.",
     "exercises": [
       {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
       {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
@@ -16,7 +15,6 @@
   },
   {
     "name": "Upper Body",
-    "kind": "routine",
     "programme": "Upper/Lower",
     "why": "Horizontal and vertical pressing and pulling plus small doses of shoulders and arms; alternate with Lower Body four days a week.",
     "exercises": [
@@ -31,7 +29,6 @@
   },
   {
     "name": "Lower Body",
-    "kind": "routine",
     "programme": "Upper/Lower",
     "why": "Squat, hinge, single-leg work, hip extension, calves and trunk; alternate with Upper Body four days a week.",
     "exercises": [
@@ -45,9 +42,8 @@
   },
   {
     "name": "Push",
-    "kind": "routine",
     "programme": "Push/Pull/Legs",
-    "why": "Chest, shoulders and triceps, trimmed from a published push/pull/legs plan to fit a home session.",
+    "why": "Chest, shoulders and triceps, trimmed from a published push/pull/legs plan to fit a home routine.",
     "exercises": [
       {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
       {"exercise": "Incline Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
@@ -58,7 +54,6 @@
   },
   {
     "name": "Pull",
-    "kind": "routine",
     "programme": "Push/Pull/Legs",
     "why": "Vertical and horizontal pulling, rear shoulders, traps and biceps, so the back work isn't all rows; needs a pull-up bar.",
     "exercises": [
@@ -72,7 +67,6 @@
   },
   {
     "name": "Legs",
-    "kind": "routine",
     "programme": "Push/Pull/Legs",
     "why": "Squats, hinges and single-leg work that keep legs loaded within a home dumbbell ceiling, plus core.",
     "exercises": [
@@ -86,8 +80,7 @@
   },
   {
     "name": "Golden Six",
-    "kind": "oneOff",
-    "why": "A dumbbell adaptation of Arnold's Golden Six: a classic six-movement full-body strength session.",
+    "why": "A dumbbell adaptation of Arnold's Golden Six: a classic six-movement full-body strength routine.",
     "exercises": [
       {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
       {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},

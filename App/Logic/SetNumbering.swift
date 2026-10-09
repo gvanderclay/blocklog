@@ -9,8 +9,8 @@ enum SetNumbering {
         type != .warmUp
     }
 
-    /// Whether a set of this type is a working set: normal or failure. Progression counts only these.
-    static func isWorking(_ type: SetType) -> Bool {
+    /// Whether a set of this type is a progression set: normal or failure. Progression counts only these.
+    static func isProgressionSet(_ type: SetType) -> Bool {
         type == .normal || type == .failure
     }
 
