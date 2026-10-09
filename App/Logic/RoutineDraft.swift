@@ -5,33 +5,41 @@ import Foundation
 @MainActor
 struct RoutineDraft: Identifiable {
     let id = UUID()
-    /// The values a rep-range end can take.
-    static let repBounds = 1...BackupDocument.maxRepRange
-    static let defaultRepRange = (low: 8, high: 12)
-    static let defaultTargetDuration = 30
-    /// The values a target duration can take, in steps of `targetDurationStep` seconds.
-    static let targetDurationBounds = 5...600
-    static let targetDurationStep = 5
-
-    /// One exercise of the draft. A rep-based exercise uses the rep range and a duration exercise uses the
-    /// target duration; the other value is kept but never saved.
+    /// One exercise of the draft. Its target is a rep range or a target duration, whichever the exercise's
+    /// type uses, and never changes case.
     @MainActor
     struct Entry: Identifiable {
         let id = UUID()
         let exercise: Exercise
         var sets: [PlannedSet]
-        var repLow: Int
-        var repHigh: Int
-        var targetDurationSeconds: Int
+        private(set) var target: RoutineTarget
 
-        var isTimed: Bool { exercise.kind == .duration }
-        /// Low can't pass high, so the range always reads low–high.
-        /// A stored value outside `repBounds` is kept as it is, so the bounds still contain the current value.
-        var repLowBounds: ClosedRange<Int> {
-            min(RoutineDraft.repBounds.lowerBound, repHigh)...repHigh
+        /// An entry with `target`, or the exercise type's standard target when that is nil or of the other
+        /// case.
+        init(exercise: Exercise, sets: [PlannedSet], target: RoutineTarget? = nil) {
+            self.exercise = exercise
+            self.sets = sets
+            self.target = .orStandard(target, for: exercise.kind)
         }
-        var repHighBounds: ClosedRange<Int> {
-            repLow...max(RoutineDraft.repBounds.upperBound, repLow)
+
+        /// The low end of the rep range, for a stepper to bind to. A duration entry reads the standard
+        /// range's low end, and setting it changes nothing.
+        var repLow: Int {
+            get { target.repRange?.lowerBound ?? RoutineTarget.defaultRepRange.lowerBound }
+            set { target = target.settingLow(newValue) }
+        }
+
+        /// The high end of the rep range, for a stepper to bind to; see `repLow`.
+        var repHigh: Int {
+            get { target.repRange?.upperBound ?? RoutineTarget.defaultRepRange.upperBound }
+            set { target = target.settingHigh(newValue) }
+        }
+
+        /// The target duration in seconds, for a stepper to bind to. A rep entry reads the standard duration,
+        /// and setting it changes nothing.
+        var targetDurationSeconds: Int {
+            get { target.seconds ?? RoutineTarget.defaultDurationSeconds }
+            set { target = target.settingSeconds(newValue) }
         }
 
         /// Appends a set of the same type as the last set, or a normal set when there is none.
@@ -53,21 +61,18 @@ struct RoutineDraft: Identifiable {
     init() {}
 
     /// A draft of the routine as stored. Entries whose exercise was deleted are left out, and stored values
-    /// outside the editor's bounds are kept, since the bounds limit only what the user changes; only a low
-    /// above its high is lowered to the high.
+    /// outside the editor's bounds are kept, since the bounds limit only what the user changes. A missing
+    /// target reads as the standard one.
     init(routine: Routine) {
         name = routine.name
         exercises = RoutineLibrary.orderedExercises(of: routine).compactMap { stored in
             guard let exercise = stored.exercise else { return nil }
-            let high = stored.repRangeHigh ?? Self.defaultRepRange.high
-            let low = min(stored.repRangeLow ?? Self.defaultRepRange.low, high)
             return Entry(
                 exercise: exercise,
                 sets: stored.plannedSetTypeRawValues.map {
                     PlannedSet(type: SetType(rawValue: $0) ?? .normal)
                 },
-                repLow: low, repHigh: high,
-                targetDurationSeconds: stored.targetDurationSeconds ?? Self.defaultTargetDuration)
+                target: stored.target)
         }
     }
 
@@ -85,14 +90,8 @@ struct RoutineDraft: Identifiable {
         !trimmedName.isEmpty && !exercises.isEmpty
     }
 
-    /// Appends the exercise with one normal set, the rep range 8–12 and a 30 s target.
+    /// Appends the exercise with one normal set and the standard target for its type.
     mutating func addExercise(_ exercise: Exercise) {
-        exercises.append(
-            Entry(
-                exercise: exercise, sets: [PlannedSet(type: .normal)],
-                repLow: Self.defaultRepRange.low,
-                repHigh: Self.defaultRepRange.high,
-                targetDurationSeconds: Self.defaultTargetDuration
-            ))
+        exercises.append(Entry(exercise: exercise, sets: [PlannedSet(type: .normal)]))
     }
 }

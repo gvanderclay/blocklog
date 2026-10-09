@@ -82,10 +82,9 @@ struct RoutineTests {
 
         let entry = try #require(draft.exercises.first)
         #expect(entry.sets.map(\.type) == [.normal])
-        #expect(entry.repLow == 8)
-        #expect(entry.repHigh == 12)
-        #expect(entry.targetDurationSeconds == 30)
-        #expect(!entry.isTimed)
+        #expect(entry.target == .repRange(8...12))
+        draft.addExercise(try exercise("Plank", in: context))
+        #expect(draft.exercises[1].target == .duration(seconds: 30))
     }
 
     @Test func theRepRangeEndsCantCrossAndStayWithinOneToFifty() throws {
@@ -97,8 +96,10 @@ struct RoutineTests {
         draft.exercises[0].repLow = 10
         draft.exercises[0].repHigh = 10
 
-        #expect(draft.exercises[0].repLowBounds == 1...10)
-        #expect(draft.exercises[0].repHighBounds == 10...50)
+        let range = try #require(draft.exercises[0].target.repRange)
+        #expect(range == 10...10)
+        #expect(RoutineTarget.lowBounds(of: range) == 1...10)
+        #expect(RoutineTarget.highBounds(of: range) == 10...50)
     }
 
     @Test func renamingARoutineKeepsStoredValuesOutsideTheStepperBounds() throws {

@@ -64,7 +64,7 @@ enum SetValues: Equatable {
         progression: (weight: Double, reps: Int)?, targetSeconds: Int?
     ) -> SetValues {
         if kind == .duration {
-            return .duration(seconds: targetSeconds ?? RoutineDraft.defaultTargetDuration)
+            return .duration(seconds: targetSeconds ?? RoutineTarget.defaultDurationSeconds)
         }
         if let progression {
             return SetValues(

@@ -19,9 +19,17 @@ struct RoutineLibrary {
     /// A routine exercise's plan: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration.
     static func summary(of routineExercise: RoutineExercise) -> String {
         summary(
-            setCount: routineExercise.plannedSetTypeRawValues.count,
-            repLow: routineExercise.repRangeLow, repHigh: routineExercise.repRangeHigh,
-            targetDurationSeconds: routineExercise.targetDurationSeconds)
+            setCount: routineExercise.plannedSetTypeRawValues.count, target: routineExercise.target)
+    }
+
+    /// A plan of `setCount` sets: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration, "3 × —" for
+    /// no target.
+    static func summary(setCount count: Int, target: RoutineTarget?) -> String {
+        switch target {
+        case .repRange(let range): "\(count) × \(range.lowerBound)–\(range.upperBound)"
+        case .duration(let seconds): "\(count) × \(seconds) s"
+        case nil: "\(count) × —"
+        }
     }
 
     /// A plan of `setCount` sets: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration.
@@ -38,9 +46,19 @@ struct RoutineLibrary {
     /// The plan read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
     static func spokenSummary(of routineExercise: RoutineExercise) -> String {
         spokenSummary(
-            setCount: routineExercise.plannedSetTypeRawValues.count,
-            repLow: routineExercise.repRangeLow, repHigh: routineExercise.repRangeHigh,
-            targetDurationSeconds: routineExercise.targetDurationSeconds)
+            setCount: routineExercise.plannedSetTypeRawValues.count, target: routineExercise.target)
+    }
+
+    /// A plan of `setCount` sets read aloud: "3 sets of 8 to 12 reps", "3 sets of 45 seconds" or, with no
+    /// target, "3 sets".
+    static func spokenSummary(setCount count: Int, target: RoutineTarget?) -> String {
+        let sets = count == 1 ? "1 set" : "\(count) sets"
+        switch target {
+        case .repRange(let range):
+            return "\(sets) of \(range.lowerBound) to \(range.upperBound) reps"
+        case .duration(let seconds): return "\(sets) of \(seconds) seconds"
+        case nil: return sets
+        }
     }
 
     /// A plan of `setCount` sets read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
@@ -72,11 +90,8 @@ struct RoutineLibrary {
         let occurrences = RoutineLibrary.orderedExercises(of: routine).filter {
             $0.exercise === exercise
         }
-        guard let occurrence, occurrences.indices.contains(occurrence),
-            let low = occurrences[occurrence].repRangeLow,
-            let high = occurrences[occurrence].repRangeHigh, low <= high
-        else { return nil }
-        return low...high
+        guard let occurrence, occurrences.indices.contains(occurrence) else { return nil }
+        return occurrences[occurrence].target?.repRange
     }
 
     /// Writes the draft into `routine`, replacing its name and exercises, or into a new routine when it is
@@ -108,10 +123,8 @@ struct RoutineLibrary {
         for (position, entry) in draft.exercises.enumerated() {
             let routineExercise = RoutineExercise(
                 exercise: entry.exercise, position: position,
-                plannedSetTypes: entry.sets.map(\.type),
-                repRangeLow: entry.isTimed ? nil : entry.repLow,
-                repRangeHigh: entry.isTimed ? nil : entry.repHigh,
-                targetDurationSeconds: entry.isTimed ? entry.targetDurationSeconds : nil)
+                plannedSetTypes: entry.sets.map(\.type))
+            routineExercise.target = entry.target
             context.insert(routineExercise)
             target.exercises.append(routineExercise)
         }

@@ -25,7 +25,7 @@ Renames pending ticket 35: until it ships, the code calls a starter routine `Tem
 ## Routines
 
 - **Routine** (`Routine`): the plan for one training day, such as "Push", holding ordered routine exercises. Starting it creates a workout. It stores structure, rep ranges and target durations, never weights: weights come from history. It belongs to at most one programme; one with none is listed in My Routines.
-- **Routine exercise** (`RoutineExercise`): one exercise in a routine: its position, its planned set types, and either a rep range (low–high, such as 8–12) or a target duration in seconds ("Target Duration" in the routine editor).
+- **Routine exercise** (`RoutineExercise`): one exercise in a routine: its position, its planned set types, and its **target**: a rep range (low–high, such as 8–12) for a rep exercise, or a target duration in seconds ("Target Duration" in the routine editor) for a duration exercise. The exercise's type decides which; a routine exercise can store neither (`RoutineTarget`).
 - **Planned set**: one set of a routine exercise. It holds only a set type; weights and reps come from history.
 - **Routine draft** (`RoutineDraft`): the routine editor's unsaved copy of a routine. Save writes it to the routine; Cancel drops it.
 - **Pre-fill**: the values a workout started from a routine gives each set: last time's weight and reps by counted-set order, last time's warm-ups by order among warm-ups, the target duration for a duration set, and 5 lb (or "BW") with empty reps when there is nothing from last time.

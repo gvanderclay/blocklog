@@ -58,7 +58,7 @@ struct RoutineStart {
         let planned = draft.exercises.map {
             Planned(
                 exercise: $0.exercise, setTypes: $0.sets.map(\.type),
-                targetDurationSeconds: $0.isTimed ? $0.targetDurationSeconds : nil)
+                targetDurationSeconds: $0.target.seconds)
         }
         return try start(Workout(title: title, startDate: date), with: planned)
     }

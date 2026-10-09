@@ -42,9 +42,9 @@ struct RoutineDifference {
                 let isTimed = exercise.kind == .duration
                 routineExercise = RoutineExercise(
                     exercise: exercise, position: position, plannedSetTypes: types,
-                    repRangeLow: isTimed ? nil : RoutineDraft.defaultRepRange.low,
-                    repRangeHigh: isTimed ? nil : RoutineDraft.defaultRepRange.high,
-                    targetDurationSeconds: isTimed ? RoutineDraft.defaultTargetDuration : nil)
+                    repRangeLow: isTimed ? nil : RoutineTarget.defaultRepRange.lowerBound,
+                    repRangeHigh: isTimed ? nil : RoutineTarget.defaultRepRange.upperBound,
+                    targetDurationSeconds: isTimed ? RoutineTarget.defaultDurationSeconds : nil)
                 context.insert(routineExercise)
                 routine.exercises.append(routineExercise)
             }

@@ -119,22 +119,23 @@ private struct EntrySection: View {
 
     var body: some View {
         Section {
-            if entry.isTimed {
+            switch entry.target {
+            case .duration(let seconds):
                 Stepper(
-                    value: $entry.targetDurationSeconds, in: RoutineDraft.targetDurationBounds,
-                    step: RoutineDraft.targetDurationStep
+                    value: $entry.targetDurationSeconds, in: RoutineTarget.durationBounds,
+                    step: RoutineTarget.durationStep
                 ) {
-                    NumberLabel(title: "Target", value: entry.targetDurationSeconds, unit: " s")
+                    NumberLabel(title: "Target", value: seconds, unit: " s")
                 }
-                .accessibilityValue("\(entry.targetDurationSeconds) seconds")
+                .accessibilityValue("\(seconds) seconds")
                 .accessibilityIdentifier("\(identifierPrefix).targetDuration")
-            } else {
-                Stepper(value: $entry.repLow, in: entry.repLowBounds) {
-                    NumberLabel(title: "Low reps", value: entry.repLow)
+            case .repRange(let range):
+                Stepper(value: $entry.repLow, in: RoutineTarget.lowBounds(of: range)) {
+                    NumberLabel(title: "Low reps", value: range.lowerBound)
                 }
                 .accessibilityIdentifier("\(identifierPrefix).repLow")
-                Stepper(value: $entry.repHigh, in: entry.repHighBounds) {
-                    NumberLabel(title: "High reps", value: entry.repHigh)
+                Stepper(value: $entry.repHigh, in: RoutineTarget.highBounds(of: range)) {
+                    NumberLabel(title: "High reps", value: range.upperBound)
                 }
                 .accessibilityIdentifier("\(identifierPrefix).repHigh")
             }
