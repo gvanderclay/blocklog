@@ -208,8 +208,8 @@ struct WorkoutScreen: View {
     }
 }
 
-/// One workout exercise: its sets and an Add Set button.
-private struct ExerciseSection: View {
+/// One workout exercise: its sets and an Add Set button. Also the editing mode of a past workout's detail.
+struct ExerciseSection: View {
     let workoutExercise: WorkoutExercise
     let exerciseIndex: Int
     let workout: Workout
@@ -219,6 +219,8 @@ private struct ExerciseSection: View {
     @Binding var progressions: AppliedProgressions
     let onRemove: (WorkoutExercise) -> Void
     let onAllSetsDone: () -> Void
+    /// True when the section edits a finished workout: sets are completed, with no check-off control.
+    var isEditingPast = false
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -236,12 +238,13 @@ private struct ExerciseSection: View {
                     identifierPrefix: "workout.exercise.\(exerciseIndex).set.\(setIndex)",
                     focusedRepsSetID: focusedRepsSetID, workout: workout,
                     progressions: $progressions, onDelete: { deleteCount += 1 },
-                    onAllSetsDone: onAllSetsDone)
+                    onAllSetsDone: onAllSetsDone, isEditingPast: isEditingPast)
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {
                     do {
-                        try WorkoutLog(context: modelContext).addSet(to: workoutExercise)
+                        try WorkoutLog(context: modelContext)
+                            .addSet(to: workoutExercise, completed: isEditingPast)
                     } catch {
                         saveFailed = true
                     }

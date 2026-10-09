@@ -16,6 +16,9 @@ struct SetRow: View {
     let onDelete: () -> Void
     /// Called when checking the set off leaves no unchecked set in the workout.
     let onAllSetsDone: () -> Void
+    /// True when the row edits a finished workout: the set counts as done, so there is no check-off control,
+    /// and a set missing its required values shows a red outline and a hint.
+    var isEditingPast = false
 
     @Environment(\.modelContext) private var modelContext
     @Environment(RestTimer.self) private var restTimer
@@ -105,45 +108,29 @@ struct SetRow: View {
                     .accessibilityLabel("Reps")
                     .accessibilityIdentifier("\(identifierPrefix).reps")
                 }
-                Button {
-                    withAnimation {
-                        if set.isCompleted {
-                            attempt { try $0.toggleCompleted(set) }
-                        } else {
-                            attempt(restTimer: restTimer) {
-                                switch try $0.checkOff(set, in: workout, defaultRest: defaultRest) {
-                                case .focus(let next):
-                                    focusedRepsSetID.wrappedValue = next?.id
-                                case .allSetsDone:
-                                    focusedRepsSetID.wrappedValue = nil
-                                    onAllSetsDone()
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundStyle(
-                            set.isCompleted ? Color.green : Color.secondary
-                        )
-                        .contentTransition(.symbolEffect(.replace))
-                        .symbolEffect(.bounce, value: checkOffCount)
-                        .symbolEffectsRemoved(reduceMotion)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
+                if !isEditingPast {
+                    checkButton(label: label)
                 }
-                .buttonStyle(.borderless)
-                .disabled(!set.isCompleted && !set.values.canCheckOff)
-                .accessibilityLabel("Set \(label)")
-                .accessibilityValue(set.isCompleted ? "done" : "not done")
-                .accessibilityIdentifier("\(identifierPrefix).check")
             }
             setupLine(values)
+            if isEditingPast, let hint = PastWorkoutEditing.hint(for: set) {
+                Text(hint)
+                    .font(.footnote)
+                    .foregroundStyle(Color.red)
+                    .accessibilityIdentifier("\(identifierPrefix).hint")
+            }
         }
-        .listRowBackground(set.isCompleted ? Color.green.opacity(0.15) : nil)
+        .overlay {
+            if isEditingPast, !PastWorkoutEditing.isValid(set) {
+                RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 2)
+                    .padding(-4)
+                    .allowsHitTesting(false)
+            }
+        }
+        .listRowBackground(set.isCompleted && !isEditingPast ? Color.green.opacity(0.15) : nil)
         .sensoryFeedback(trigger: set.isCompleted) { _, isCompleted in
-            isCompleted ? .success : .impact(weight: .light)
+            guard !isEditingPast else { return nil }
+            return isCompleted ? .success : .impact(weight: .light)
         }
         // Also fires when the keyboard's Done checks the set off, so the bounce matches the checkmark.
         .onChange(of: set.isCompleted) {
@@ -162,19 +149,60 @@ struct SetRow: View {
             }
             Button("Duplicate", systemImage: "plus.square.on.square") {
                 withAnimation(reduceMotion ? nil : .default) {
-                    attempt { try $0.duplicateSet(set) }
+                    attempt { try $0.duplicateSet(set, completed: isEditingPast) }
                 }
             }
             .accessibilityIdentifier("setMenu.duplicate")
             deleteButton
         }
-        .onChange(of: set.reps) {
-            attempt { try $0.context.saveOrRollBack() }
-        }
-        .onChange(of: set.durationSeconds) {
-            attempt { try $0.context.saveOrRollBack() }
-        }
+        .onChange(of: set.reps) { saveEdit() }
+        .onChange(of: set.durationSeconds) { saveEdit() }
         .saveFailedAlert(isPresented: $saveFailed)
+    }
+
+    /// Saves a reps or seconds change; in a past workout the set stays completed.
+    private func saveEdit() {
+        if isEditingPast {
+            do { try PastWorkoutEditing(context: modelContext).saveEdit(of: set) } catch {
+                saveFailed = true
+            }
+        } else {
+            attempt { try $0.context.saveOrRollBack() }
+        }
+    }
+
+    private func checkButton(label: String) -> some View {
+        Button {
+            withAnimation {
+                if set.isCompleted {
+                    attempt { try $0.toggleCompleted(set) }
+                } else {
+                    attempt(restTimer: restTimer) {
+                        switch try $0.checkOff(set, in: workout, defaultRest: defaultRest) {
+                        case .focus(let next):
+                            focusedRepsSetID.wrappedValue = next?.id
+                        case .allSetsDone:
+                            focusedRepsSetID.wrappedValue = nil
+                            onAllSetsDone()
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
+                .font(.title2)
+                .foregroundStyle(set.isCompleted ? Color.green : Color.secondary)
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: checkOffCount)
+                .symbolEffectsRemoved(reduceMotion)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.borderless)
+        .disabled(!set.isCompleted && !set.values.canCheckOff)
+        .accessibilityLabel("Set \(label)")
+        .accessibilityValue(set.isCompleted ? "done" : "not done")
+        .accessibilityIdentifier("\(identifierPrefix).check")
     }
 
     /// The small line under the inputs that opens the block diagram; nothing without a weight.

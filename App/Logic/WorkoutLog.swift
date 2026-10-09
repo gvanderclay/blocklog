@@ -121,18 +121,19 @@ struct WorkoutLog {
         return workout
     }
 
-    /// Appends the exercise to the workout with one first set.
-    func addExercise(_ exercise: Exercise, to workout: Workout) throws {
+    /// Appends the exercise to the workout with one first set, completed when `completed` (editing a past workout).
+    func addExercise(_ exercise: Exercise, to workout: Workout, completed: Bool = false) throws {
         let workoutExercise = WorkoutExercise(exercise: exercise, position: workout.exercises.count)
         context.insert(workoutExercise)
         workout.exercises.append(workoutExercise)
-        appendSet(to: workoutExercise)
+        appendSet(to: workoutExercise, completed: completed)
         try context.saveOrRollBack()
     }
 
-    /// Appends a set copying the last set's type and values, or a first set when there is none.
-    func addSet(to workoutExercise: WorkoutExercise) throws {
-        appendSet(to: workoutExercise)
+    /// Appends a set copying the last set's type and values, or a first set when there is none; completed when
+    /// `completed` (editing a past workout).
+    func addSet(to workoutExercise: WorkoutExercise, completed: Bool = false) throws {
+        appendSet(to: workoutExercise, completed: completed)
         try context.saveOrRollBack()
     }
 
@@ -161,14 +162,15 @@ struct WorkoutLog {
         try context.saveOrRollBack()
     }
 
-    /// Inserts an unchecked copy of the set right after it.
-    func duplicateSet(_ set: WorkoutSet) throws {
+    /// Inserts a copy of the set right after it, unchecked unless `completed` (editing a past workout).
+    func duplicateSet(_ set: WorkoutSet, completed: Bool = false) throws {
         guard let workoutExercise = set.workoutExercise else { return }
         for later in workoutExercise.sets where later.position > set.position {
             later.position += 1
         }
         let copy = WorkoutSet(position: set.position + 1, setType: set.setType)
         copy.values = set.values
+        copy.isCompleted = completed
         context.insert(copy)
         workoutExercise.sets.append(copy)
         try context.saveOrRollBack()
@@ -224,6 +226,25 @@ struct WorkoutLog {
             workoutExercise.sets.removeAll { !$0.isCompleted }
             unchecked.forEach(context.delete)
         }
+        tidy(workout, title: title)
+        // A clock set back during the workout must not end it before it started (export rejects that).
+        let end = max(date, workout.startDate)
+        workout.endDate = end
+        try context.saveOrRollBack()
+        restTimer?.skip()
+        return WorkoutSummary(
+            workoutNumber: finishedWorkoutCount(),
+            title: workout.title,
+            duration: .seconds(end.timeIntervalSince(workout.startDate)),
+            completedSetCount: workout.exercises.reduce(0) { $0 + $1.sets.count },
+            exerciseCount: workout.exercises.count,
+            nextInProgramme: ProgrammeLibrary.nextInProgramme(after: workout))
+    }
+
+    /// Deletes the exercises with no sets, renumbers the exercises and sets, and sets the title (when blank,
+    /// the routine's name for a workout started from one, else the default title; line breaks becoming
+    /// spaces). Does not save; the caller does.
+    func tidy(_ workout: Workout, title: String) {
         let empty = workout.exercises.filter(\.sets.isEmpty)
         workout.exercises.removeAll(where: \.sets.isEmpty)
         empty.forEach(context.delete)
@@ -238,18 +259,6 @@ struct WorkoutLog {
         workout.title =
             trimmed.isEmpty
             ? workout.routine?.name ?? Self.defaultTitle(startingAt: workout.startDate) : trimmed
-        // A clock set back during the workout must not end it before it started (export rejects that).
-        let end = max(date, workout.startDate)
-        workout.endDate = end
-        try context.saveOrRollBack()
-        restTimer?.skip()
-        return WorkoutSummary(
-            workoutNumber: finishedWorkoutCount(),
-            title: workout.title,
-            duration: .seconds(end.timeIntervalSince(workout.startDate)),
-            completedSetCount: workout.exercises.reduce(0) { $0 + $1.sets.count },
-            exerciseCount: workout.exercises.count,
-            nextInProgramme: ProgrammeLibrary.nextInProgramme(after: workout))
     }
 
     /// Deletes the workout with its exercises and sets.
@@ -272,12 +281,13 @@ struct WorkoutLog {
     }
 
     /// A first set starts at 5 lb for weight × reps, with empty reps; later sets copy the last one.
-    private func appendSet(to workoutExercise: WorkoutExercise) {
+    private func appendSet(to workoutExercise: WorkoutExercise, completed: Bool) {
         let last = Self.orderedSets(of: workoutExercise).last
         let set = WorkoutSet(
             position: workoutExercise.sets.count, setType: last?.setType ?? .normal)
         set.values =
             last?.values ?? SetValues.first(for: workoutExercise.exercise?.type ?? .weightReps)
+        set.isCompleted = completed
         context.insert(set)
         workoutExercise.sets.append(set)
     }

@@ -4,7 +4,8 @@ import SwiftData
 /// Finds what the user did last time for a set: the sets of the most recent finished workout that contains
 /// its exercise, paired with the set by order. `previous(for:)` pairs counted sets by counted-set order and
 /// gives warm-ups nothing; `previousWarmUp(for:)` pairs warm-ups by their order among warm-ups. Sets past the
-/// end of that workout's matching sets get nothing.
+/// end of that workout's matching sets get nothing. Sets lacking their kind's required values (a half-edited
+/// past workout) are skipped, so they never feed a later workout.
 @MainActor
 struct PreviousSetLookup {
     let context: ModelContext
@@ -32,7 +33,7 @@ struct PreviousSetLookup {
     func lastProgressionSets(for workoutExercise: WorkoutExercise) -> [SetValues] {
         guard let match = lastTime(of: workoutExercise) else { return [] }
         return WorkoutLog.orderedSets(of: match).filter {
-            SetNumbering.isProgressionSet($0.setType)
+            SetNumbering.isProgressionSet($0.setType) && $0.values.canCheckOff
         }.map(
             \.values)
     }
@@ -44,7 +45,9 @@ struct PreviousSetLookup {
     ) -> SetValues? {
         guard let workoutExercise = set.workoutExercise, let match = lastTime(of: workoutExercise)
         else { return nil }
-        let previousSets = WorkoutLog.orderedSets(of: match).filter { include($0.setType) }
+        let previousSets = WorkoutLog.orderedSets(of: match).filter {
+            include($0.setType) && $0.values.canCheckOff
+        }
         guard previousSets.indices.contains(index) else { return nil }
         return previousSets[index].values
     }
