@@ -31,7 +31,7 @@ struct RootView: View {
             }
             .accessibilityIdentifier("tabs.workout")
             Tab("History", systemImage: "clock.arrow.circlepath") {
-                PlaceholderTab(title: "History", systemImage: "clock.arrow.circlepath")
+                HistoryTab()
             }
             .accessibilityIdentifier("tabs.history")
             Tab("Settings", systemImage: "gearshape") {
@@ -79,21 +79,5 @@ extension RootView {
     private func storeRest() {
         storedRestEnd = restTimer.storedEnd
         storedRestTotal = restTimer.storedTotal
-    }
-}
-
-/// A tab a later phase fills in.
-private struct PlaceholderTab: View {
-    let title: String
-    let systemImage: String
-
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                title, systemImage: systemImage,
-                description: Text("This arrives in a later update.")
-            )
-            .navigationTitle(title)
-        }
     }
 }

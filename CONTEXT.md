@@ -11,6 +11,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Custom exercise**: an exercise the user creates from the exercise picker (`isCustom`). It is listed and logged like a starter exercise.
 - **Exercise picker** (`ExercisePicker`): the Add Exercise sheet. It lists exercises by muscle group, searches and filters them by equipment, and creates custom exercises.
 - **Workout** (`Workout`): the record of one training day you did or are doing: a title, a start date, an end date once finished, and its ordered workout exercises. Starting a routine or a starter routine creates one; a workout is never a plan. Finished workouts are the history that previous numbers and progression read.
+- **History** (`WorkoutHistory`): the History tab's list of finished workouts, newest start date first. A row shows the title (with the programme's name when the routine belongs to one, "Push · PPL"), the start date, the duration ("42m", "1h 05m") and the exercise count; it opens a read-only detail.
 - **Total time**: a finished workout's end date minus its start date, shown on the finish summary as "Total Time".
 - **In-progress workout**: the workout with no end date. At most one exists; the app reopens into it at launch, and starting another workout is disabled while it exists.
 - **All sets done**: the prompt that appears when checking off a workout's last unchecked set. It offers Finish or Keep Going, and that check-off starts no rest.
