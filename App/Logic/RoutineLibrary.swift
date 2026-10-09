@@ -32,17 +32,6 @@ struct RoutineLibrary {
         }
     }
 
-    /// A plan of `setCount` sets: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration.
-    static func summary(
-        setCount count: Int, repLow: Int?, repHigh: Int?, targetDurationSeconds: Int?
-    )
-        -> String
-    {
-        if let seconds = targetDurationSeconds { return "\(count) × \(seconds) s" }
-        guard let low = repLow, let high = repHigh else { return "\(count) × —" }
-        return "\(count) × \(low)–\(high)"
-    }
-
     /// The plan read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
     static func spokenSummary(of routineExercise: RoutineExercise) -> String {
         spokenSummary(
@@ -59,16 +48,6 @@ struct RoutineLibrary {
         case .duration(let seconds): return "\(sets) of \(seconds) seconds"
         case nil: return sets
         }
-    }
-
-    /// A plan of `setCount` sets read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
-    static func spokenSummary(
-        setCount count: Int, repLow: Int?, repHigh: Int?, targetDurationSeconds: Int?
-    ) -> String {
-        let sets = count == 1 ? "1 set" : "\(count) sets"
-        if let seconds = targetDurationSeconds { return "\(sets) of \(seconds) seconds" }
-        guard let low = repLow, let high = repHigh else { return sets }
-        return "\(sets) of \(low) to \(high) reps"
     }
 
     /// "8–12" for a workout exercise whose workout started from a routine that gives the exercise a rep

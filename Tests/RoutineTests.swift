@@ -147,6 +147,18 @@ struct RoutineTests {
         #expect(RoutineLibrary.spokenSummary(of: plank) == "1 set")
     }
 
+    @Test(arguments: [
+        (3, RoutineTarget?.some(.repRange(8...12)), "3 × 8–12", "3 sets of 8 to 12 reps"),
+        (1, .duration(seconds: 45), "1 × 45 s", "1 set of 45 seconds"),
+        (2, nil, "2 × —", "2 sets"),
+    ])
+    func aPlanOfSetsSummarisesItsTargetWrittenAndSpoken(
+        count: Int, target: RoutineTarget?, written: String, spoken: String
+    ) {
+        #expect(RoutineLibrary.summary(setCount: count, target: target) == written)
+        #expect(RoutineLibrary.spokenSummary(setCount: count, target: target) == spoken)
+    }
+
     @Test func aRoutineExerciseWhoseExerciseIsGoneStillSummarisesItsStoredTarget() throws {
         let container = try BlocklogApp.makeContainer(inMemory: true)
         let context = container.mainContext
