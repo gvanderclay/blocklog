@@ -3,7 +3,8 @@ import Foundation
 /// The routine editor's unsaved copy of a routine: its name and its exercises, each with planned set types
 /// and a rep range or a target duration. Nothing is stored until `RoutineLibrary.save` writes it.
 @MainActor
-struct RoutineDraft {
+struct RoutineDraft: Identifiable {
+    let id = UUID()
     /// The values a rep-range end can take.
     static let repBounds = 1...BackupDocument.maxRepRange
     static let defaultRepRange = (low: 8, high: 12)

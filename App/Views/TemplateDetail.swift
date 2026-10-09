@@ -10,8 +10,8 @@ struct TemplateDetail: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
-    @State private var draft = RoutineDraft()
-    @State private var isAddingRoutine = false
+    // Presented with sheet(item:): a sheet(isPresented:) closure read a stale, empty draft.
+    @State private var draft: RoutineDraft?
     @State private var programmeAdded = false
     @State private var saveFailed = false
 
@@ -78,7 +78,7 @@ struct TemplateDetail: View {
             }
         }
         .navigationTitle(template.name)
-        .sheet(isPresented: $isAddingRoutine) {
+        .sheet(item: $draft) { draft in
             RoutineEditor(newFrom: draft)
         }
         .saveFailedAlert(isPresented: $saveFailed)
@@ -98,7 +98,6 @@ struct TemplateDetail: View {
     private func addToRoutines() {
         do {
             draft = try TemplateLibrary(context: modelContext).draft(of: template)
-            isAddingRoutine = true
         } catch {
             saveFailed = true
         }
