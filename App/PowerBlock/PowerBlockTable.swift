@@ -99,6 +99,11 @@ enum PowerBlockTable {
         settings.first { $0.weight == weight }?.setup
     }
 
+    /// The setup line for a set's weight, such as "Pin 30 · 1 adder"; nil with no weight ("BW", duration).
+    static func setupLine(for weight: Double?) -> String? {
+        weight.flatMap { setup(for: $0)?.line }
+    }
+
     /// What to change on the block from one weight to another, such as "Pin 30 → 40 · remove 1 adder".
     /// Nil when the weights are equal or either is not a setting.
     static func changeLine(from start: Double, to end: Double) -> String? {

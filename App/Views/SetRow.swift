@@ -23,6 +23,7 @@ struct SetRow: View {
     @State private var checkOffCount = 0
     @State private var previousCopyCount = 0
     @State private var saveFailed = false
+    @State private var showsDiagram = false
 
     var body: some View {
         @Bindable var set = set
@@ -32,99 +33,97 @@ struct SetRow: View {
         let layout =
             dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout(spacing: 4))
-        layout {
-            Menu {
-                typeButtons(identifier: "setMenu.type")
-            } label: {
-                Text(label)
-                    .font(.body.weight(.semibold))
-                    .monospacedDigit()
-                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
-                    .contentShape(.rect)
-            }
-            .accessibilityLabel("Set type")
-            .accessibilityValue(label)
-            .accessibilityIdentifier("\(identifierPrefix).typeMenu")
-            previousValue(previous, kind: kind)
-            switch kind {
-            case .weightReps:
-                if let weight = set.weight {
-                    WeightControl(weight: weight, identifierPrefix: identifierPrefix) { newWeight in
-                        guard let newWeight else { return }
-                        withAnimation {
-                            attempt { try $0.setWeight(newWeight, of: set) }
+        VStack(alignment: .leading, spacing: 0) {
+            layout {
+                Menu {
+                    typeButtons(identifier: "setMenu.type")
+                } label: {
+                    Text(label)
+                        .font(.body.weight(.semibold))
+                        .monospacedDigit()
+                        .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Set type")
+                .accessibilityValue(label)
+                .accessibilityIdentifier("\(identifierPrefix).typeMenu")
+                previousValue(previous, kind: kind)
+                switch kind {
+                case .weightReps:
+                    if let weight = set.weight {
+                        WeightControl(weight: weight, identifierPrefix: identifierPrefix) {
+                            changeWeight($0, kind: kind)
                         }
                     }
-                }
-            case .bodyweightReps:
-                WeightControl(weight: set.weight, isAdded: true, identifierPrefix: identifierPrefix)
-                {
-                    newWeight in
-                    withAnimation {
-                        attempt { try $0.setAddedWeight(newWeight, of: set) }
+                case .bodyweightReps:
+                    WeightControl(
+                        weight: set.weight, isAdded: true, identifierPrefix: identifierPrefix
+                    ) {
+                        changeWeight($0, kind: kind)
                     }
+                case .duration:
+                    EmptyView()
                 }
-            case .duration:
-                EmptyView()
-            }
-            Spacer(minLength: 0)
-            if kind == .duration {
-                HStack(spacing: 4) {
-                    TextField("Seconds", text: $set.durationText)
+                Spacer(minLength: 0)
+                if kind == .duration {
+                    HStack(spacing: 4) {
+                        TextField("Seconds", text: $set.durationText)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.center)
+                            .textFieldStyle(.roundedBorder)
+                            .fontDesign(.rounded)
+                            .monospacedDigit()
+                            .frame(width: fieldWidth * 1.5)
+                            .frame(minHeight: 44)
+                            .focused(focusedRepsSetID, equals: set.id)
+                            .accessibilityLabel("Seconds")
+                            .accessibilityIdentifier("\(identifierPrefix).duration")
+                        // The field's own label says "Seconds", so the unit isn't read a second time.
+                        Text("s").foregroundStyle(.secondary).accessibilityHidden(true)
+                    }
+                } else {
+                    TextField("Reps", text: $set.repsText)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
                         .textFieldStyle(.roundedBorder)
                         .fontDesign(.rounded)
                         .monospacedDigit()
-                        .frame(width: fieldWidth * 1.5)
+                        .frame(width: fieldWidth)
                         .frame(minHeight: 44)
                         .focused(focusedRepsSetID, equals: set.id)
-                        .accessibilityLabel("Seconds")
-                        .accessibilityIdentifier("\(identifierPrefix).duration")
-                    // The field's own label says "Seconds", so the unit isn't read a second time.
-                    Text("s").foregroundStyle(.secondary).accessibilityHidden(true)
+                        .accessibilityLabel("Reps")
+                        .accessibilityIdentifier("\(identifierPrefix).reps")
                 }
-            } else {
-                TextField("Reps", text: $set.repsText)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
-                    .textFieldStyle(.roundedBorder)
-                    .fontDesign(.rounded)
-                    .monospacedDigit()
-                    .frame(width: fieldWidth)
-                    .frame(minHeight: 44)
-                    .focused(focusedRepsSetID, equals: set.id)
-                    .accessibilityLabel("Reps")
-                    .accessibilityIdentifier("\(identifierPrefix).reps")
-            }
-            Button {
-                withAnimation {
-                    if set.isCompleted {
-                        attempt { try $0.toggleCompleted(set) }
-                    } else {
-                        attempt {
-                            focusedRepsSetID.wrappedValue = try restTimer.checkOff(
-                                set, in: workout, using: $0, defaultRest: defaultRest)?.id
+                Button {
+                    withAnimation {
+                        if set.isCompleted {
+                            attempt { try $0.toggleCompleted(set) }
+                        } else {
+                            attempt {
+                                focusedRepsSetID.wrappedValue = try restTimer.checkOff(
+                                    set, in: workout, using: $0, defaultRest: defaultRest)?.id
+                            }
                         }
                     }
+                } label: {
+                    Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundStyle(
+                            set.isCompleted ? Color.green : Color.secondary
+                        )
+                        .contentTransition(.symbolEffect(.replace))
+                        .symbolEffect(.bounce, value: checkOffCount)
+                        .symbolEffectsRemoved(reduceMotion)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
                 }
-            } label: {
-                Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(
-                        set.isCompleted ? Color.green : Color.secondary
-                    )
-                    .contentTransition(.symbolEffect(.replace))
-                    .symbolEffect(.bounce, value: checkOffCount)
-                    .symbolEffectsRemoved(reduceMotion)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(.rect)
+                .buttonStyle(.borderless)
+                .disabled(!set.isCompleted && !WorkoutLog.canCheckOff(set))
+                .accessibilityLabel("Set \(label)")
+                .accessibilityValue(set.isCompleted ? "done" : "not done")
+                .accessibilityIdentifier("\(identifierPrefix).check")
             }
-            .buttonStyle(.borderless)
-            .disabled(!set.isCompleted && !WorkoutLog.canCheckOff(set))
-            .accessibilityLabel("Set \(label)")
-            .accessibilityValue(set.isCompleted ? "done" : "not done")
-            .accessibilityIdentifier("\(identifierPrefix).check")
+            setupLine(kind: kind)
         }
         .listRowBackground(set.isCompleted ? Color.green.opacity(0.15) : nil)
         .sensoryFeedback(trigger: set.isCompleted) { _, isCompleted in
@@ -156,6 +155,41 @@ struct SetRow: View {
             attempt { try $0.context.saveOrRollBack() }
         }
         .saveFailedAlert(isPresented: $saveFailed)
+    }
+
+    /// The small line under the inputs that opens the block diagram; nothing without a weight.
+    @ViewBuilder
+    private func setupLine(kind: ExerciseKind) -> some View {
+        if let line = PowerBlockTable.setupLine(for: set.weight) {
+            Button {
+                showsDiagram = true
+            } label: {
+                Text(line)
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondary)  // not .secondary, which fades the tint inside a button
+                    // The tap area grows to 44 pt by overlapping neighbouring space, not by adding row height.
+                    .padding(.vertical, 14)
+                    .contentShape([.interaction, .accessibility], .rect)
+                    .padding(.vertical, -14)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows the block diagram")
+            .accessibilityIdentifier("\(identifierPrefix).setup")
+            .sheet(isPresented: $showsDiagram) {
+                SetupSheet(set: set, kind: kind) { changeWeight($0, kind: kind) }
+            }
+        }
+    }
+
+    /// Sets the weight from the row's control or the diagram sheet's, animated so the numbers roll.
+    private func changeWeight(_ newWeight: Double?, kind: ExerciseKind) {
+        withAnimation {
+            if kind == .bodyweightReps {
+                attempt { try $0.setAddedWeight(newWeight, of: set) }
+            } else if let newWeight {
+                attempt { try $0.setWeight(newWeight, of: set) }
+            }
+        }
     }
 
     /// Last time's values: a button that copies them into an unchecked set, or plain text when it can't.

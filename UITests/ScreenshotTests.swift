@@ -61,6 +61,34 @@ final class ScreenshotTests: XCTestCase {
         snap(app, "settings-default-rest-picker")
     }
 
+    /// The block diagram at four setups: handle only, first slot with both adders, one adder, and the top slot.
+    @MainActor
+    func testPowerBlockDiagram() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing"]
+        app.launch()
+        let start = app.buttons["workoutTab.startEmpty"]
+        XCTAssertTrue(start.appears())
+        start.tap()
+        app.addExercise("Dumbbell Bench Press", as: 0)
+        app.buttons["workout.exercise.0.set.0.setup"].tap()
+        let plus = app.buttons["diagram.weightPlus"]
+        XCTAssertTrue(plus.appears())
+        let weights: [Double] = [
+            5, 7.5, 10, 15, 17.5, 20, 25, 27.5, 30, 35, 37.5, 40, 45, 47.5, 50, 55, 57.5, 60, 65,
+            67.5, 70,
+            75, 77.5, 80, 85, 87.5, 90,
+        ]
+        var current = 5.0
+        for target in [5.0, 20, 27.5, 90] {
+            while current < target {
+                plus.tap()
+                current = weights.first { $0 > current } ?? current
+            }
+            snap(app, "diagram-\(target.formatted())")
+        }
+    }
+
     /// A workout with one exercise of each kind, and the set-type menu open.
     @MainActor
     func testWorkoutWithEveryKind() {

@@ -68,6 +68,19 @@ struct PowerBlockTableTests {
         }
     }
 
+    @Test func setupLineOfASetFollowsItsWeight() {
+        #expect(PowerBlockTable.setupLine(for: 27.5) == "Pin 30 · 1 adder")
+        #expect(
+            PowerBlockTable.setupLine(for: PowerBlockTable.stepUp(from: 27.5))
+                == "Pin 30 · 2 adders")
+    }
+
+    @Test func bodyweightAndDurationSetsHaveNoSetupLine() {
+        // Both kinds store no weight: "BW" is nil, and a duration set has none.
+        #expect(PowerBlockTable.setupLine(for: nil) == nil)
+        #expect(PowerBlockTable.setupLine(for: 12.5) == nil)
+    }
+
     @Test func noSetupForAWeightThatIsNotASetting() {
         #expect(PowerBlockTable.setup(for: 12.5) == nil)
     }
