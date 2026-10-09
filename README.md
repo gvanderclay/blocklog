@@ -1,6 +1,6 @@
 # Blocklog
 
-Blocklog is a personal iOS workout logger for PowerBlock adjustable dumbbells. It logs workouts with weights chosen from the PowerBlock settings, adds exercises from a picker (including custom exercises), shows the previous numbers for each set, and exports and restores a JSON backup.
+Blocklog is a personal iOS workout logger for PowerBlock adjustable dumbbells. It logs workouts with weights chosen from the PowerBlock settings, adds exercises from a picker (including custom exercises), shows the previous numbers for each set, and runs a rest timer. Routines and programmes start workouts with targets and double progression. History lists past workouts, which can be reviewed, edited or deleted. The app exports and restores a JSON backup.
 
 ## Setup
 
