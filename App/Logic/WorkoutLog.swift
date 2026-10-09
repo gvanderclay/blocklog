@@ -224,7 +224,8 @@ struct WorkoutLog {
     }
 
     /// Deletes unchecked sets and the exercises left with none, renumbers what remains, sets the title
-    /// (the default title when blank, line breaks becoming spaces) and the end date (never before the start), and saves.
+    /// (when blank, the routine's name for a workout started from one, else the default title; line breaks
+    /// becoming spaces) and the end date (never before the start), and saves.
     /// Nil, changing nothing, when no set is checked. When saving fails it rolls everything back, leaving the
     /// workout in progress as it was, and throws, returning no summary.
     func finish(_ workout: Workout, title: String, at date: Date = .now) throws -> WorkoutSummary? {
@@ -245,7 +246,9 @@ struct WorkoutLog {
         }
         let trimmed = title.split(whereSeparator: \.isNewline).joined(separator: " ")
             .trimmingCharacters(in: .whitespaces)
-        workout.title = trimmed.isEmpty ? Self.defaultTitle(startingAt: workout.startDate) : trimmed
+        workout.title =
+            trimmed.isEmpty
+            ? workout.routine?.name ?? Self.defaultTitle(startingAt: workout.startDate) : trimmed
         // A clock set back during the workout must not end it before it started (export rejects that).
         let end = max(date, workout.startDate)
         workout.endDate = end

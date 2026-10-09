@@ -82,17 +82,21 @@ struct SetRow: View {
                         Text("s").foregroundStyle(.secondary).accessibilityHidden(true)
                     }
                 } else {
-                    TextField("Reps", text: $set.repsText)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.center)
-                        .textFieldStyle(.roundedBorder)
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                        .frame(width: fieldWidth)
-                        .frame(minHeight: 44)
-                        .focused(focusedRepsSetID, equals: set.id)
-                        .accessibilityLabel("Reps")
-                        .accessibilityIdentifier("\(identifierPrefix).reps")
+                    // A workout from a routine shows the exercise's rep range, such as "8–12", in an empty field.
+                    TextField(
+                        set.workoutExercise.flatMap(RoutineStart.repRangeText(for:)) ?? "Reps",
+                        text: $set.repsText
+                    )
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .textFieldStyle(.roundedBorder)
+                    .fontDesign(.rounded)
+                    .monospacedDigit()
+                    .frame(width: fieldWidth)
+                    .frame(minHeight: 44)
+                    .focused(focusedRepsSetID, equals: set.id)
+                    .accessibilityLabel("Reps")
+                    .accessibilityIdentifier("\(identifierPrefix).reps")
                 }
                 Button {
                     withAnimation {

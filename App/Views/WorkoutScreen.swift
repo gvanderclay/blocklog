@@ -128,8 +128,11 @@ struct WorkoutScreen: View {
                 }
             }
             .sheet(isPresented: $isReordering) {
-                ReorderSheet(workout: workout)
-                    .interactiveDismissDisabled()
+                ReorderSheet(
+                    items: WorkoutLog.orderedExercises(of: workout),
+                    name: { $0.exercise?.name ?? "Exercise" }
+                ) { try WorkoutLog(context: modelContext).reorderExercises($0) }
+                .interactiveDismissDisabled()
             }
             .sheet(isPresented: $isFinishing) {
                 FinishSheet(workout: workout) { dismiss() }
@@ -269,50 +272,5 @@ private struct ExerciseSection: View {
                     saveFailed = true
                 }
             })
-    }
-}
-
-/// A compact list of the exercise names to drag into a new order; Done applies it.
-private struct ReorderSheet: View {
-    let workout: Workout
-
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    @State private var order: [WorkoutExercise]
-    @State private var saveFailed = false
-
-    init(workout: Workout) {
-        self.workout = workout
-        _order = State(initialValue: WorkoutLog.orderedExercises(of: workout))
-    }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach(order.enumerated(), id: \.element.id) { index, workoutExercise in
-                    Text(workoutExercise.exercise?.name ?? "Exercise")
-                        .accessibilityIdentifier("reorder.row.\(index)")
-                }
-                .onMove { order.move(fromOffsets: $0, toOffset: $1) }
-            }
-            .environment(\.editMode, .constant(.active))
-            .navigationTitle("Reorder")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        do {
-                            try WorkoutLog(context: modelContext).reorderExercises(order)
-                            dismiss()
-                        } catch {
-                            saveFailed = true
-                        }
-                    }
-                    .accessibilityIdentifier("reorder.done")
-                }
-            }
-            .saveFailedAlert(isPresented: $saveFailed)
-        }
-        .presentationDetents([.medium])
     }
 }

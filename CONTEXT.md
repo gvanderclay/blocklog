@@ -21,6 +21,9 @@ The domain terms Blocklog uses in code, tests and UI text. A term in parentheses
 
 - **Routine** (`Routine`): a named plan a workout can start from, holding ordered routine exercises. It stores structure, rep ranges and target durations, never weights: weights come from history.
 - **Routine exercise** (`RoutineExercise`): one exercise in a routine: its position, its planned set types, and either a rep range (low–high, such as 8–12) or a target duration in seconds.
+- **Planned set**: one set of a routine exercise. It holds only a set type; weights and reps come from history.
+- **Routine draft** (`RoutineDraft`): the routine editor's unsaved copy of a routine. Save writes it to the routine; Cancel drops it.
+- **Pre-fill**: the values a workout started from a routine gives each set: last time's weight and reps by counted-set order, last time's warm-ups by order among warm-ups, the target duration for a duration set, and 5 lb (or "BW") with empty reps when there is nothing from last time.
 - **Progression note**: the line under an exercise in a workout started from a routine that explains a pre-filled step up, such as "↑ Up from 35 lb: you hit 12 on every set", or "You hit 12 on every set: consider adding weight" for bodyweight without added weight. It is not stored.
 - **Structural change**: a difference between a finished workout and the routine it started from that makes Finish ask to update the routine: an exercise added, removed, swapped or reordered, or a set added or removed. Weight, reps, duration and set-type edits are not structural.
 

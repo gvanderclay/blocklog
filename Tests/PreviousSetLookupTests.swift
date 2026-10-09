@@ -89,6 +89,24 @@ struct PreviousSetLookupTests {
         #expect(lookup(currentSets[2])?.reps == 6)
     }
 
+    @Test func theWarmUpVariantPairsWarmUpsByOrderAmongWarmUps() throws {
+        _ = try workout(
+            starting: try day(7), sets: [(.warmUp, 5, 12), (.normal, 20, 6), (.warmUp, 10, 8)])
+        let current = try workout(
+            starting: try day(12),
+            sets: [(.warmUp, 5, 1), (.normal, 5, 1), (.warmUp, 5, 1), (.warmUp, 5, 1)],
+            finished: false)
+
+        let warmUpLookup = PreviousSetLookup(context: container.mainContext)
+        let currentSets = try sets(of: current)
+        #expect(warmUpLookup.previousWarmUp(for: currentSets[0])?.weight == 5)
+        #expect(warmUpLookup.previousWarmUp(for: currentSets[0])?.reps == 12)
+        #expect(warmUpLookup.previousWarmUp(for: currentSets[1]) == nil)
+        #expect(warmUpLookup.previousWarmUp(for: currentSets[2])?.weight == 10)
+        #expect(warmUpLookup.previousWarmUp(for: currentSets[2])?.reps == 8)
+        #expect(warmUpLookup.previousWarmUp(for: currentSets[3]) == nil)
+    }
+
     @Test func setsPastThePreviousCountGetNothing() throws {
         _ = try workout(starting: try day(7), sets: [(.normal, 15, 10)])
         let current = try workout(

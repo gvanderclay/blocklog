@@ -16,7 +16,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
   - Contrast (WCAG): light `#B45309` is 5.0:1 on white and 4.5:1 on the grouped background, and white text on it is 5.0:1. Dark `#E8710A` is 5.5:1 on the dark cell background (`#1C1C1E`) and 6.8:1 on black, and white text on it is 3.1:1, which passes only for large text (at least 18 pt regular or 14 pt bold). So white text on the accent, such as a prominent button's label, uses `.headline` (17 pt semibold) or a larger text style, never a smaller one.
 - Completed sets: the row background is `Color.green.opacity(0.15)` (system green, so it adapts to dark mode), and the check-off symbol is `checkmark.circle.fill` in `.green`. Unchecked sets use `circle` in `.secondary` on the normal row background.
 - The accent marks what the user can act on, plus one highlight: a weight pre-filled by progression shows in the accent until the user changes it or checks off the set (ticket 19).
-- Everything else uses semantic styles: `.primary`, `.secondary` and `.tertiary` for text; system grouped backgrounds; `role: .destructive` for red. No other custom colors in views. The PowerBlock diagram's rail bands are the one exception, because they copy the physical block (ticket 14).
+- Everything else uses semantic styles: `.primary`, `.secondary` and `.tertiary` for text; system grouped backgrounds; `role: .destructive` for red (the one exception: a swipe Delete that confirms first, such as a routine's, is tinted `.red` with no destructive role, because the role removes the row before the confirmation). No other custom colors in views. The PowerBlock diagram's rail bands are the one exception, because they copy the physical block (ticket 14).
 
 ## Typography
 
