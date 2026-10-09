@@ -449,13 +449,28 @@ struct BackupTests {
         }
     }
 
-    @Test func rejectsARestOverrideThatIsNotPositive() throws {
+    @Test func rejectsARestOverrideOutsideThePickerRange() throws {
         try expectRejected(containing: "rest time of 0 seconds") {
             $0.exercises[0].restOverrideSeconds = 0
         }
         try expectRejected(containing: "rest time of -30 seconds") {
             $0.exercises[0].restOverrideSeconds = -30
         }
+        try expectRejected(containing: "rest time of 301 seconds") {
+            $0.exercises[0].restOverrideSeconds = 301
+        }
+        try expectRejected(containing: "rest time of \(Int.max) seconds") {
+            $0.exercises[0].restOverrideSeconds = Int.max
+        }
+    }
+
+    @Test func acceptsARestOverrideOfFiveMinutes() throws {
+        var document = try exported(makeSource())
+        document.exercises[0].restOverrideSeconds = 300
+        let target = try emptyContainer()
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(document.encoded()))
+        #expect(try exported(target).exercises[0].restOverrideSeconds == 300)
     }
 
     @Test func acceptsAnExerciseWithNoRestOverride() throws {
