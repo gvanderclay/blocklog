@@ -6,6 +6,8 @@ struct WeightControl: View {
     let weight: Double?
     /// True for the added weight of a bodyweight set, which can also be nil ("BW").
     var isAdded = false
+    /// True while the weight is the one progression pre-filled, shown in the accent color.
+    var isHighlighted = false
     /// `workout.exercise.<e>.set.<s>`.
     let identifierPrefix: String
     let onChange: (Double?) -> Void
@@ -44,6 +46,7 @@ struct WeightControl: View {
                 Text(text(for: weight))
                     .fontDesign(.rounded)
                     .monospacedDigit()
+                    .foregroundStyle(isHighlighted ? Color.accentColor : Color.primary)
                     .contentTransition(.numericText(value: weight ?? 0))
                     .frame(minWidth: 44, minHeight: 44)
                     .fixedSize(horizontal: true, vertical: false)

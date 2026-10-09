@@ -27,13 +27,30 @@ struct PreviousSetLookup {
         return lastTime(for: set, index: index, matching: { $0 == .warmUp })
     }
 
+    /// The values of every working set (normal and failure) in last time's workout exercise for
+    /// `workoutExercise`, in order; empty when there is no last time. Skips the exercise's own workout.
+    func lastWorkingSets(for workoutExercise: WorkoutExercise) -> [PreviousValues] {
+        guard let match = lastTime(of: workoutExercise) else { return [] }
+        return WorkoutLog.orderedSets(of: match).filter { SetNumbering.isWorking($0.setType) }.map(
+            values(of:))
+    }
+
     /// The set at `index` among the sets whose type matches, in the set's exercise's first occurrence in
     /// the most recent other finished workout containing it.
     private func lastTime(
         for set: WorkoutSet, index: Int, matching include: (SetType) -> Bool
     ) -> PreviousValues? {
-        guard let workoutExercise = set.workoutExercise, let exercise = workoutExercise.exercise
+        guard let workoutExercise = set.workoutExercise, let match = lastTime(of: workoutExercise)
         else { return nil }
+        let previousSets = WorkoutLog.orderedSets(of: match).filter { include($0.setType) }
+        guard previousSets.indices.contains(index) else { return nil }
+        return values(of: previousSets[index])
+    }
+
+    /// The first occurrence of the exercise in the most recent finished workout, other than the exercise's
+    /// own, that contains it.
+    private func lastTime(of workoutExercise: WorkoutExercise) -> WorkoutExercise? {
+        guard let exercise = workoutExercise.exercise else { return nil }
         let editing = workoutExercise.workout
         // ponytail: fetches every finished workout for each set; fetch by exercise once history is long.
         let descriptor = FetchDescriptor<Workout>(
@@ -43,18 +60,14 @@ struct PreviousSetLookup {
         guard
             let source = workouts.first(where: { workout in
                 workout !== editing && workout.exercises.contains { $0.exercise === exercise }
-            }),
-            // The exercise's first occurrence in that workout.
-            let match = WorkoutLog.orderedExercises(of: source).first(where: {
-                $0.exercise === exercise
             })
         else { return nil }
-        let previousSets = WorkoutLog.orderedSets(of: match).filter { include($0.setType) }
-        guard previousSets.indices.contains(index) else { return nil }
-        let previousSet = previousSets[index]
-        return PreviousValues(
-            weight: previousSet.weight, reps: previousSet.reps,
-            durationSeconds: previousSet.durationSeconds)
+        return WorkoutLog.orderedExercises(of: source).first { $0.exercise === exercise }
+    }
+
+    private func values(of set: WorkoutSet) -> PreviousValues {
+        PreviousValues(
+            weight: set.weight, reps: set.reps, durationSeconds: set.durationSeconds)
     }
 }
 

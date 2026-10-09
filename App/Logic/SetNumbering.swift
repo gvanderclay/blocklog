@@ -9,6 +9,11 @@ enum SetNumbering {
         type != .warmUp
     }
 
+    /// Whether a set of this type is a working set: normal or failure. Progression counts only these.
+    static func isWorking(_ type: SetType) -> Bool {
+        type == .normal || type == .failure
+    }
+
     /// The counted number of each set, or nil for a warm-up.
     static func countedNumbers(for types: [SetType]) -> [Int?] {
         var count = 0

@@ -5,6 +5,9 @@ import SwiftUI
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var presentedWorkout: Workout?
+    /// What progression applied to the workout started from a routine, in memory only. Owned here because
+    /// this is where the start (through the Workout tab) and the workout screen meet.
+    @State private var progressions = AppliedProgressions()
     @State private var hasCheckedForInProgressWorkout = false
     @State private var restTimer = RestTimer()
     @Environment(\.scenePhase) private var scenePhase
@@ -19,7 +22,12 @@ struct RootView: View {
     var body: some View {
         TabView {
             Tab("Workout", systemImage: "dumbbell.fill") {
-                WorkoutTab { presentedWorkout = $0 }
+                WorkoutTab(
+                    present: { presentedWorkout = $0 },
+                    presentStarted: {
+                        progressions = $0.progressions
+                        presentedWorkout = $0.workout
+                    })
             }
             .accessibilityIdentifier("tabs.workout")
             Tab("History", systemImage: "clock.arrow.circlepath") {
@@ -32,7 +40,7 @@ struct RootView: View {
             .accessibilityIdentifier("tabs.settings")
         }
         .fullScreenCover(item: $presentedWorkout) { workout in
-            WorkoutScreen(workout: workout)
+            WorkoutScreen(workout: workout, progressions: $progressions)
         }
         // After the cover, which gets only the environment set outside it.
         .environment(restTimer)

@@ -52,7 +52,8 @@ struct RoutineTests {
         let library = RoutineLibrary(context: context)
         let routine = try #require(try library.save(draft, to: nil))
         let log = WorkoutLog(context: context)
-        let workout = try #require(try RoutineStart(context: context).startWorkout(from: routine))
+        let workout = try #require(
+            try RoutineStart(context: context).startWorkout(from: routine)?.workout)
         let set = try #require(workout.exercises.first?.sets.first)
         set.repsText = "10"
         try log.toggleCompleted(set)

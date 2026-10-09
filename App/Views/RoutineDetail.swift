@@ -4,8 +4,8 @@ import SwiftUI
 /// A routine's exercises with their plans, such as "3 × 8–12", plus Start Workout and Edit.
 struct RoutineDetail: View {
     let routine: Routine
-    /// Shows the started workout in the full-screen workout screen.
-    let present: (Workout) -> Void
+    /// Shows the started workout, with its progressions, in the full-screen workout screen.
+    let present: (RoutineStart.Started) -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
@@ -56,8 +56,8 @@ struct RoutineDetail: View {
 
     private func start() {
         do {
-            if let workout = try RoutineStart(context: modelContext).startWorkout(from: routine) {
-                present(workout)
+            if let started = try RoutineStart(context: modelContext).startWorkout(from: routine) {
+                present(started)
             }
         } catch {
             saveFailed = true

@@ -75,7 +75,7 @@ struct RoutineStartTests {
         try logFinished(on: try day(7), sets: [(.normal, 15, 10), (.normal, 15, 10)])
         let push = try routine("Push", [("Dumbbell Bench Press", [.normal, .normal, .normal])])
 
-        let workout = try #require(try start.startWorkout(from: push, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
 
         let started = try sets(of: workout)
         #expect(started.map(\.weight) == [15, 15, 5])
@@ -91,7 +91,7 @@ struct RoutineStartTests {
                 ("Hammer Curl", [.normal, .drop]),
             ])
 
-        let workout = try #require(try start.startWorkout(from: push, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
 
         #expect(workout.title == "Push")
         #expect(workout.routine === push)
@@ -117,7 +117,7 @@ struct RoutineStartTests {
         let push = try routine(
             "Push", [("Dumbbell Bench Press", [.warmUp, .warmUp, .warmUp, .normal, .normal])])
 
-        let workout = try #require(try start.startWorkout(from: push, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
 
         let started = try sets(of: workout)
         #expect(started.map(\.weight) == [5, 10, 5, 20, 25])
@@ -139,7 +139,7 @@ struct RoutineStartTests {
         let core = try #require(
             try RoutineLibrary(context: container.mainContext).save(draft, to: nil))
 
-        let workout = try #require(try start.startWorkout(from: core, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: core, at: try day(9))?.workout)
 
         let started = try sets(of: workout, "Plank")
         #expect(started.map(\.durationSeconds) == [60, 60])
@@ -150,7 +150,7 @@ struct RoutineStartTests {
         let mixed = try routine(
             "Mixed", [("Dumbbell Bench Press", [.warmUp, .normal]), ("Push-up", [.normal])])
 
-        let workout = try #require(try start.startWorkout(from: mixed, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: mixed, at: try day(9))?.workout)
 
         let bench = try sets(of: workout)
         #expect(bench.map(\.weight) == [5, 5])
@@ -169,17 +169,18 @@ struct RoutineStartTests {
         try log.setAddedWeight(10, of: logged[0])
         try log.setAddedWeight(nil, of: logged[1])
         for set in logged {
-            set.repsText = "12"
+            // Short of the range's top (8–12), so progression leaves the weights alone.
+            set.repsText = "10"
             try log.toggleCompleted(set)
         }
         _ = try log.finish(source, title: "Logged", at: try day(7))
         let push = try routine("Push", [("Push-up", [.normal, .normal])])
 
-        let workout = try #require(try start.startWorkout(from: push, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
 
         let started = try sets(of: workout, "Push-up")
         #expect(started.map(\.weight) == [10, nil])
-        #expect(started.map(\.reps) == [12, 12])
+        #expect(started.map(\.reps) == [10, 10])
     }
 
     @Test func startingIsRefusedWhileAnotherWorkoutIsInProgress() throws {
@@ -199,7 +200,7 @@ struct RoutineStartTests {
         draft.addExercise(try exercise("Plank"))
         let push = try #require(
             try RoutineLibrary(context: container.mainContext).save(draft, to: nil))
-        let workout = try #require(try start.startWorkout(from: push, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
         let exercises = WorkoutLog.orderedExercises(of: workout)
 
         #expect(RoutineStart.repRangeText(for: exercises[0]) == "6–10")
@@ -220,7 +221,7 @@ struct RoutineStartTests {
         }
         let twice = try #require(
             try RoutineLibrary(context: container.mainContext).save(draft, to: nil))
-        let workout = try #require(try start.startWorkout(from: twice, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: twice, at: try day(9))?.workout)
         let exercises = WorkoutLog.orderedExercises(of: workout)
 
         #expect(RoutineStart.repRangeText(for: exercises[0]) == "6–8")
@@ -236,7 +237,7 @@ struct RoutineStartTests {
 
     @Test func finishWithABlankTitleKeepsTheRoutineName() throws {
         let push = try routine("Push", [("Dumbbell Bench Press", [.normal])])
-        let workout = try #require(try start.startWorkout(from: push, at: try day(9)))
+        let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
         let set = try #require(try sets(of: workout).first)
         set.repsText = "8"
         try log.toggleCompleted(set)

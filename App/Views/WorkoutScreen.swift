@@ -4,6 +4,8 @@ import SwiftUI
 /// The in-progress workout: its exercises and sets, presented full screen.
 struct WorkoutScreen: View {
     let workout: Workout
+    /// What progression applied when the workout started; the screen shows it and ends highlights.
+    @Binding var progressions: AppliedProgressions
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -29,7 +31,7 @@ struct WorkoutScreen: View {
                     ExerciseSection(
                         workoutExercise: workoutExercise, exerciseIndex: index,
                         workout: workout, focusedRepsSetID: $focusedRepsSetID,
-                        deleteCount: $deleteCount, onRemove: remove)
+                        deleteCount: $deleteCount, progressions: $progressions, onRemove: remove)
                 }
                 Section {
                     Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
@@ -197,12 +199,15 @@ private struct ExerciseSection: View {
     let focusedRepsSetID: FocusState<UUID?>.Binding
     /// Bumped on every deletion, so the screen plays the delete haptic.
     @Binding var deleteCount: Int
+    @Binding var progressions: AppliedProgressions
     let onRemove: (WorkoutExercise) -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("defaultRestSeconds") private var defaultRest = 90
     @State private var saveFailed = false
+    /// Flips once when the section first appears, so the progression arrow bounces once.
+    @State private var arrowBounce = false
 
     var body: some View {
         Section {
@@ -212,7 +217,7 @@ private struct ExerciseSection: View {
                     set: set,
                     identifierPrefix: "workout.exercise.\(exerciseIndex).set.\(setIndex)",
                     focusedRepsSetID: focusedRepsSetID, workout: workout,
-                    onDelete: { deleteCount += 1 })
+                    progressions: $progressions, onDelete: { deleteCount += 1 })
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {
@@ -226,39 +231,68 @@ private struct ExerciseSection: View {
             .saveFailedAlert(isPresented: $saveFailed)
             .accessibilityIdentifier("workout.exercise.\(exerciseIndex).addSet")
         } header: {
-            HStack {
-                Text(workoutExercise.exercise?.name ?? "Exercise")
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).name")
-                Spacer()
-                Menu {
-                    if let exercise = workoutExercise.exercise {
-                        // A submenu, so the 19 choices don't push Remove Exercise off the menu.
-                        Menu("Rest Time…", systemImage: "timer") {
-                            Picker("Rest Time", selection: restOverride(of: exercise)) {
-                                Text("Default (\(RestTimer.clock(defaultRest)))").tag(Int?.none)
-                                ForEach(RestTimer.choices, id: \.self) {
-                                    Text(RestTimer.clock($0)).tag(Int?.some($0))
-                                }
-                            }
-                        }
-                        .accessibilityIdentifier("workout.exercise.\(exerciseIndex).restTime")
-                    }
-                    Button("Remove Exercise", systemImage: "trash", role: .destructive) {
-                        onRemove(workoutExercise)
-                    }
-                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).remove")
-                } label: {
-                    // The 44 × 44 frame belongs on the label: a frame outside the menu leaves its tap target small.
-                    Label("Exercise Actions", systemImage: "ellipsis.circle")
-                        .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
-                }
-                .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
+            VStack(alignment: .leading, spacing: 0) {
+                headerRow
+                progressionNote
             }
         }
         .headerProminence(.increased)
+    }
+
+    /// The note under the name when progression applies; the arrow bounces once as the workout opens.
+    @ViewBuilder
+    private var progressionNote: some View {
+        if let suggestion = progressions.note(for: workoutExercise) {
+            HStack(spacing: 4) {
+                if suggestion.showsArrow {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .symbolEffect(.bounce, value: arrowBounce)
+                        .symbolEffectsRemoved(reduceMotion)
+                        .accessibilityHidden(true)
+                }
+                Text(suggestion.text)
+            }
+            .font(.footnote)
+            .foregroundStyle(Color.secondary)
+            .textCase(nil)
+            .onAppear { arrowBounce = true }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("workout.exercise.\(exerciseIndex).progressionNote")
+        }
+    }
+
+    private var headerRow: some View {
+        HStack {
+            Text(workoutExercise.exercise?.name ?? "Exercise")
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("workout.exercise.\(exerciseIndex).name")
+            Spacer()
+            Menu {
+                if let exercise = workoutExercise.exercise {
+                    // A submenu, so the 19 choices don't push Remove Exercise off the menu.
+                    Menu("Rest Time…", systemImage: "timer") {
+                        Picker("Rest Time", selection: restOverride(of: exercise)) {
+                            Text("Default (\(RestTimer.clock(defaultRest)))").tag(Int?.none)
+                            ForEach(RestTimer.choices, id: \.self) {
+                                Text(RestTimer.clock($0)).tag(Int?.some($0))
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).restTime")
+                }
+                Button("Remove Exercise", systemImage: "trash", role: .destructive) {
+                    onRemove(workoutExercise)
+                }
+                .accessibilityIdentifier("workout.exercise.\(exerciseIndex).remove")
+            } label: {
+                // The 44 × 44 frame belongs on the label: a frame outside the menu leaves its tap target small.
+                Label("Exercise Actions", systemImage: "ellipsis.circle")
+                    .labelStyle(.iconOnly)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
+            }
+            .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
+        }
     }
 
     /// The exercise's rest override, saved when the picker changes it.

@@ -10,6 +10,8 @@ struct SetRow: View {
     let focusedRepsSetID: FocusState<UUID?>.Binding
     /// The set's workout, which decides where focus goes after the set is checked off.
     let workout: Workout
+    /// Decides whether the weight shows highlighted, and hears when the user ends the highlight.
+    @Binding var progressions: AppliedProgressions
     /// Called after the set is deleted, so the screen plays the delete haptic.
     let onDelete: () -> Void
 
@@ -51,13 +53,18 @@ struct SetRow: View {
                 switch kind {
                 case .weightReps:
                     if let weight = set.weight {
-                        WeightControl(weight: weight, identifierPrefix: identifierPrefix) {
+                        WeightControl(
+                            weight: weight, isHighlighted: progressions.isHighlighted(set),
+                            identifierPrefix: identifierPrefix
+                        ) {
                             changeWeight($0, kind: kind)
                         }
                     }
                 case .bodyweightReps:
                     WeightControl(
-                        weight: set.weight, isAdded: true, identifierPrefix: identifierPrefix
+                        weight: set.weight, isAdded: true,
+                        isHighlighted: progressions.isHighlighted(set),
+                        identifierPrefix: identifierPrefix
                     ) {
                         changeWeight($0, kind: kind)
                     }
@@ -134,7 +141,11 @@ struct SetRow: View {
             isCompleted ? .success : .impact(weight: .light)
         }
         // Also fires when the keyboard's Done checks the set off, so the bounce matches the checkmark.
-        .onChange(of: set.isCompleted) { if set.isCompleted { checkOffCount += 1 } }
+        .onChange(of: set.isCompleted) {
+            progressions.checkedOff(set)
+            if set.isCompleted { checkOffCount += 1 }
+        }
+        .onChange(of: set.weight) { progressions.weightChanged(of: set) }
         .sensoryFeedback(.selection, trigger: set.setType)
         .sensoryFeedback(.selection, trigger: previousCopyCount)
         .swipeActions(edge: .trailing) {

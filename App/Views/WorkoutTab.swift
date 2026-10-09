@@ -5,6 +5,8 @@ import SwiftUI
 struct WorkoutTab: View {
     /// Shows a workout in the full-screen workout screen.
     let present: (Workout) -> Void
+    /// Shows a workout started from a routine, with the progressions applied to it.
+    let presentStarted: (RoutineStart.Started) -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -60,7 +62,7 @@ struct WorkoutTab: View {
             }
             .navigationTitle("Workout")
             .navigationDestination(for: Routine.self) { routine in
-                RoutineDetail(routine: routine, present: present)
+                RoutineDetail(routine: routine, present: presentStarted)
             }
             .sheet(isPresented: $isCreatingRoutine) {
                 RoutineEditor(routine: nil)
