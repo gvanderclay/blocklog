@@ -298,19 +298,10 @@ struct BackupDocument: Codable, Equatable {
             throw problem(
                 "with a weight of \(weight.formatted()) lb, which is not a PowerBlock setting")
         }
-        switch kind {
-        case .weightReps:
-            guard set.weight != nil, (set.reps ?? 0) >= 1, set.durationSeconds == nil else {
-                throw problem("that needs a weight and reps, and no duration")
-            }
-        case .bodyweightReps:
-            guard (set.reps ?? 0) >= 1, set.durationSeconds == nil else {
-                throw problem("that needs reps and no duration")
-            }
-        case .duration:
-            guard (set.durationSeconds ?? 0) > 0, set.weight == nil, set.reps == nil else {
-                throw problem("that needs a duration and no weight or reps")
-            }
-        }
+        guard
+            SetValues(
+                complete: kind, weight: set.weight, reps: set.reps, seconds: set.durationSeconds)
+                != nil
+        else { throw problem(SetValues.requirement(of: kind)) }
     }
 }
