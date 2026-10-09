@@ -221,4 +221,48 @@ struct RoutineTests {
                 "1 × 45 s", "3 × 6–10",
             ])
     }
+
+    @Test func aFailedRoutineEditRollsBackAndThrows() throws {
+        let store = try ReadOnlyStore { context in
+            let curl = Exercise(
+                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, kind: .weightReps)
+            let fly = Exercise(
+                name: "Dumbbell Fly", muscleGroup: .chest, equipment: .dumbbell, kind: .weightReps)
+            context.insert(curl)
+            context.insert(fly)
+            let routine = Routine(name: "Pull", creationDate: .now)
+            context.insert(routine)
+            let routineExercise = RoutineExercise(
+                exercise: curl, position: 0, plannedSetTypes: [.warmUp, .normal], repRangeLow: 6,
+                repRangeHigh: 10)
+            context.insert(routineExercise)
+            routine.exercises.append(routineExercise)
+        }
+        defer { store.remove() }
+        let context = store.context
+        let routine = try #require(try context.fetch(FetchDescriptor<Routine>()).first)
+        let before = RoutineLibrary.orderedExercises(of: routine)
+        let ids = before.map(\.persistentModelID)
+        var draft = RoutineDraft()
+        draft.name = "Renamed"
+        let fly = try #require(
+            try context.fetch(FetchDescriptor<Exercise>()).first { $0.name == "Dumbbell Fly" })
+        draft.addExercise(fly)
+
+        #expect(throws: (any Error).self) {
+            try RoutineLibrary(context: context).save(draft, to: routine)
+        }
+
+        let after = RoutineLibrary.orderedExercises(of: routine)
+        #expect(!context.hasChanges)
+        #expect(routine.name == "Pull")
+        #expect(after.map(\.persistentModelID) == ids)
+        #expect(
+            after.map(\.plannedSetTypeRawValues) == [
+                [SetType.warmUp.rawValue, SetType.normal.rawValue]
+            ])
+        #expect(after.map(\.repRangeLow) == [6])
+        #expect(after.map(\.repRangeHigh) == [10])
+        #expect(try context.fetchCount(FetchDescriptor<RoutineExercise>()) == 1)
+    }
 }

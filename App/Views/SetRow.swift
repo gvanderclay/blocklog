@@ -91,7 +91,7 @@ struct SetRow: View {
                 } else {
                     // A workout from a routine shows the exercise's rep range, such as "8–12", in an empty field.
                     TextField(
-                        set.workoutExercise.flatMap(RoutineStart.repRangeText(for:)) ?? "Reps",
+                        set.workoutExercise.flatMap(RoutineLibrary.repRangeText(for:)) ?? "Reps",
                         text: $set.repsText
                     )
                     .keyboardType(.numberPad)

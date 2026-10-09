@@ -39,6 +39,32 @@ struct RoutineLibrary {
         return "\(sets) of \(low) to \(high) reps"
     }
 
+    /// "8–12" for a workout exercise whose workout started from a routine that gives the exercise a rep
+    /// range; nil otherwise.
+    static func repRangeText(for workoutExercise: WorkoutExercise) -> String? {
+        repRange(for: workoutExercise).map { "\($0.lowerBound)–\($0.upperBound)" }
+    }
+
+    /// The rep range a workout exercise's routine gives it; nil for a freeform workout or an exercise
+    /// with no range. When the routine lists the exercise more than once, the nth such workout exercise
+    /// (by position) takes the nth occurrence's range.
+    static func repRange(for workoutExercise: WorkoutExercise) -> ClosedRange<Int>? {
+        guard let workout = workoutExercise.workout, let routine = workout.routine,
+            let exercise = workoutExercise.exercise
+        else { return nil }
+        let occurrence = WorkoutLog.orderedExercises(of: workout)
+            .filter { $0.exercise === exercise }
+            .firstIndex { $0 === workoutExercise }
+        let occurrences = RoutineLibrary.orderedExercises(of: routine).filter {
+            $0.exercise === exercise
+        }
+        guard let occurrence, occurrences.indices.contains(occurrence),
+            let low = occurrences[occurrence].repRangeLow,
+            let high = occurrences[occurrence].repRangeHigh, low <= high
+        else { return nil }
+        return low...high
+    }
+
     /// Writes the draft into `routine`, replacing its name and exercises, or into a new routine when it is
     /// nil, and saves. Nil, changing nothing, when the draft can't be saved.
     @discardableResult

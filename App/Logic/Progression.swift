@@ -30,7 +30,7 @@ struct Progression {
     /// lookup uses.
     func suggestion(for workoutExercise: WorkoutExercise) -> Suggestion? {
         guard let kind = workoutExercise.exercise?.kind, kind != .duration,
-            let range = RoutineStart.repRange(for: workoutExercise)
+            let range = RoutineLibrary.repRange(for: workoutExercise)
         else { return nil }
         let working = PreviousSetLookup(context: context).lastWorkingSets(for: workoutExercise)
         guard !working.isEmpty, working.allSatisfy({ ($0.reps ?? 0) >= range.upperBound }) else {

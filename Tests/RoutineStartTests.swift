@@ -203,12 +203,12 @@ struct RoutineStartTests {
         let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
         let exercises = WorkoutLog.orderedExercises(of: workout)
 
-        #expect(RoutineStart.repRangeText(for: exercises[0]) == "6–10")
-        #expect(RoutineStart.repRangeText(for: exercises[1]) == nil)
+        #expect(RoutineLibrary.repRangeText(for: exercises[0]) == "6–10")
+        #expect(RoutineLibrary.repRangeText(for: exercises[1]) == nil)
 
         try log.addExercise(try exercise("Hammer Curl"), to: workout)
         let added = try #require(WorkoutLog.orderedExercises(of: workout).last)
-        #expect(RoutineStart.repRangeText(for: added) == nil)
+        #expect(RoutineLibrary.repRangeText(for: added) == nil)
     }
 
     @Test func anExerciseListedTwiceShowsEachOccurrencesRange() throws {
@@ -224,15 +224,15 @@ struct RoutineStartTests {
         let workout = try #require(try start.startWorkout(from: twice, at: try day(9))?.workout)
         let exercises = WorkoutLog.orderedExercises(of: workout)
 
-        #expect(RoutineStart.repRangeText(for: exercises[0]) == "6–8")
-        #expect(RoutineStart.repRangeText(for: exercises[1]) == "10–12")
+        #expect(RoutineLibrary.repRangeText(for: exercises[0]) == "6–8")
+        #expect(RoutineLibrary.repRangeText(for: exercises[1]) == "10–12")
     }
 
     @Test func aFreeformWorkoutShowsNoRange() throws {
         let workout = try #require(try log.startEmptyWorkout(at: try day(9)))
         try log.addExercise(try exercise("Dumbbell Bench Press"), to: workout)
 
-        #expect(RoutineStart.repRangeText(for: try #require(workout.exercises.first)) == nil)
+        #expect(RoutineLibrary.repRangeText(for: try #require(workout.exercises.first)) == nil)
     }
 
     @Test func finishWithABlankTitleKeepsTheRoutineName() throws {
@@ -245,5 +245,46 @@ struct RoutineStartTests {
         _ = try log.finish(workout, title: "  ", at: try day(9))
 
         #expect(workout.title == "Push")
+    }
+
+    @Test func aFailedStartRollsBackAndThrows() throws {
+        let store = try ReadOnlyStore { context in
+            let curl = Exercise(
+                name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell, kind: .weightReps)
+            context.insert(curl)
+            let routine = Routine(name: "Pull", creationDate: .now)
+            context.insert(routine)
+            let routineExercise = RoutineExercise(
+                exercise: curl, position: 0, plannedSetTypes: [.normal, .normal], repRangeLow: 6,
+                repRangeHigh: 10)
+            context.insert(routineExercise)
+            routine.exercises.append(routineExercise)
+        }
+        defer { store.remove() }
+        let context = store.context
+        let routine = try #require(try context.fetch(FetchDescriptor<Routine>()).first)
+
+        #expect(throws: (any Error).self) {
+            try RoutineStart(context: context).startWorkout(from: routine)
+        }
+
+        #expect(!context.hasChanges)
+        // `fetchCount` on the failed context still reports the rolled-back workout; a fetch and a fresh
+        // context agree that no row exists.
+        #expect(try context.fetch(FetchDescriptor<Workout>()).isEmpty)
+        #expect(try ModelContext(store.container).fetchCount(FetchDescriptor<Workout>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<WorkoutExercise>()) == 0)
+        #expect(try context.fetchCount(FetchDescriptor<WorkoutSet>()) == 0)
+        #expect(routine.name == "Pull")
+        // Reading `routine.exercises` here traps in SwiftData ("Could not cast ... SnapshotValueFuture"), so
+        // the routine's plan is read through a fetch of its routine exercises instead.
+        let stored = try context.fetch(FetchDescriptor<RoutineExercise>())
+        #expect(stored.count == 1)
+        #expect(
+            stored.first?.plannedSetTypeRawValues == [
+                SetType.normal.rawValue, SetType.normal.rawValue,
+            ])
+        #expect(stored.first?.repRangeLow == 6)
+        #expect(stored.first?.repRangeHigh == 10)
     }
 }
