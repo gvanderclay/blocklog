@@ -12,10 +12,7 @@ struct ReadOnlyStore {
 
     init(populate: (ModelContext) throws -> Void = { _ in }) throws {
         url = URL.temporaryDirectory.appending(path: "\(UUID()).store")
-        let schema = Schema([
-            Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
-            RoutineExercise.self,
-        ])
+        let schema = BlocklogApp.schema
         let writable = try ModelContainer(
             for: schema, configurations: ModelConfiguration(schema: schema, url: url))
         try populate(writable.mainContext)

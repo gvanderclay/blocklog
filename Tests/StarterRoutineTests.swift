@@ -159,7 +159,7 @@ struct StarterRoutineTests {
         #expect(!container.mainContext.hasChanges)
     }
 
-    @Test func addProgrammeSavesEveryRoutineAsARoutine() throws {
+    @Test func addProgrammeCreatesAProgrammeHoldingCopiesOfItsRoutinesInOrder() throws {
         let upperLower = try #require(
             StarterRoutine.programmes(in: try StarterRoutine.load()).first {
                 $0.name == "Upper/Lower"
@@ -168,9 +168,13 @@ struct StarterRoutineTests {
         try library.addProgramme(upperLower)
 
         let fresh = ModelContext(container)
-        let routines = try fresh.fetch(RoutineLibrary.routinesByName)
-        #expect(routines.map(\.name) == ["Lower Body", "Upper Body"])
-        let lower = try #require(routines.first)
+        let programme = try #require(try fresh.fetch(FetchDescriptor<Programme>()).first)
+        #expect(programme.name == "Upper/Lower")
+        let routines = ProgrammeLibrary.orderedRoutines(of: programme)
+        #expect(routines.map(\.name) == upperLower.routines.map(\.name))
+        #expect(routines.map { $0.membership?.position } == [0, 1])
+        #expect(try fresh.fetchCount(FetchDescriptor<Routine>()) == 2)
+        let lower = try #require(routines.first { $0.name == "Lower Body" })
         let entries = RoutineLibrary.orderedExercises(of: lower)
         #expect(
             entries.map { $0.exercise?.name } == upperLower.routines[1].exercises.map(\.exercise))
@@ -230,6 +234,7 @@ struct StarterRoutineTests {
         #expect(try fresh.fetchCount(FetchDescriptor<Exercise>()) == 0)
         #expect(try fresh.fetchCount(FetchDescriptor<Workout>()) == 0)
         #expect(try fresh.fetchCount(FetchDescriptor<Routine>()) == 0)
+        #expect(try fresh.fetchCount(FetchDescriptor<Programme>()) == 0)
     }
 
     // Each test starts from an empty store, so every starter the starter routine names is inserted on use.

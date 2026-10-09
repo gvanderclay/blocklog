@@ -7,6 +7,11 @@ final class Routine {
     var id: UUID
     var name: String
     var creationDate: Date
+    /// The programme the routine belongs to, set together with `programmePosition`; read both through
+    /// `membership`. Nil for a routine in My Routines.
+    var programme: Programme?
+    /// The routine's place in its programme, from 0.
+    var programmePosition: Int?
 
     /// Unordered: sort by `position`.
     @Relationship(deleteRule: .cascade, inverse: \RoutineExercise.routine)

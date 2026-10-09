@@ -73,6 +73,16 @@ struct BackupTests {
             routine.exercises.append(entry)
         }
 
+        // A programme whose routines are stored out of position order.
+        let programme = Programme(name: "PPL", creationDate: Self.start.addingTimeInterval(-5_000))
+        context.insert(programme)
+        for (name, position) in [("Pull", 1), ("Legs", 0)] {
+            let member = Routine(
+                name: name, creationDate: Self.start.addingTimeInterval(Double(-4_000 + position)))
+            context.insert(member)
+            member.membership = ProgrammeMembership(programme: programme, position: position)
+        }
+
         addWorkout(context, title: "Push Day", start: Self.start, finished: true, routine: routine)
         {
             workout in
@@ -122,8 +132,7 @@ struct BackupTests {
 
     private func emptyContainer() throws -> ModelContainer {
         try ModelContainer(
-            for: Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
-            RoutineExercise.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            for: BlocklogApp.schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }
 
     private func exported(_ container: ModelContainer) throws -> BackupDocument {
@@ -175,6 +184,42 @@ struct BackupTests {
         #expect(abs(workouts[0].startDate.timeIntervalSince(Self.start)) < 0.001)
         #expect(workouts[0].routine?.name == "Push Day")
         #expect(workouts[1].routine == nil)
+    }
+
+    @Test func importKeepsProgrammesAndTheirRoutineOrder() throws {
+        let document = try exported(makeSource())
+        #expect(document.programmes.map(\.name) == ["PPL"])
+        let target = try emptyContainer()
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(document.encoded()))
+
+        let programme = try #require(
+            try target.mainContext.fetch(FetchDescriptor<Programme>()).first)
+        #expect(programme.name == "PPL")
+        #expect(ProgrammeLibrary.orderedRoutines(of: programme).map(\.name) == ["Legs", "Pull"])
+        let push = try #require(
+            try target.mainContext.fetch(
+                FetchDescriptor<Routine>(predicate: #Predicate { $0.name == "Push Day" })
+            ).first)
+        #expect(push.membership == nil)
+    }
+
+    @Test func aBackupWithoutProgrammesFromBeforeThemStillImports() throws {
+        var document = try exported(makeSource())
+        document.programmes = []
+        for index in document.routines.indices {
+            document.routines[index].programmeID = nil
+            document.routines[index].programmePosition = nil
+        }
+        var json = try #require(
+            try JSONSerialization.jsonObject(with: document.encoded()) as? [String: Any])
+        json["programmes"] = nil
+        let data = try JSONSerialization.data(withJSONObject: json)
+
+        let read = try BackupDocument.read(data)
+
+        #expect(read.programmes.isEmpty)
+        #expect(read.routines.count == 3)
     }
 
     @Test func fileIsIso8601JsonWithRawStringEnums() throws {
@@ -539,6 +584,29 @@ struct BackupTests {
         try expectRejected(containing: "same position") {
             $0.routines[0].exercises[1].position = $0.routines[0].exercises[0].position
         }
+    }
+
+    @Test func rejectsProgrammePositionsThatAreNotZeroToNMinusOne() throws {
+        // Routines sorted by creation date: Push Day, Legs (position 0), Pull (position 1).
+        try expectRejected(containing: "routine positions that aren’t 0") {
+            $0.routines[2].programmePosition = 2
+        }
+        try expectRejected(containing: "routine positions that aren’t 0") {
+            $0.routines[2].programmePosition = 0
+        }
+        try expectRejected(containing: "routine positions that aren’t 0") {
+            $0.routines[2].programmePosition = -1
+        }
+        try expectRejected(containing: "programme position but no programme") {
+            $0.routines[0].programmePosition = 2
+        }
+        try expectRejected(containing: "programme but no position") {
+            $0.routines[1].programmePosition = nil
+        }
+        try expectRejected(containing: "programme that is not in the file") {
+            $0.routines[1].programmeID = UUID()
+        }
+        try expectRejected(containing: "programme has no name") { $0.programmes[0].name = " " }
     }
 
     @Test func rejectsBadRepRangesAndTargetDurations() throws {

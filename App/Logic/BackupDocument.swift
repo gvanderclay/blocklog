@@ -34,6 +34,8 @@ struct BackupDocument: Codable, Equatable {
     var version: Int
     var exportedAt: Date
     var exercises: [ExerciseRecord]
+    /// Absent from files written before programmes, which read as none.
+    var programmes: [ProgrammeRecord]
     var routines: [RoutineRecord]
     var workouts: [WorkoutRecord]
 
@@ -49,10 +51,20 @@ struct BackupDocument: Codable, Equatable {
     }
 
     @MainActor
+    struct ProgrammeRecord: Codable, Equatable {
+        var id: UUID
+        var name: String
+        var creationDate: Date
+    }
+
+    @MainActor
     struct RoutineRecord: Codable, Equatable {
         var id: UUID
         var name: String
         var creationDate: Date
+        /// The programme the routine belongs to, with `programmePosition`; both nil for My Routines.
+        var programmeID: UUID?
+        var programmePosition: Int?
         var exercises: [RoutineExerciseRecord]
     }
 
@@ -233,9 +245,31 @@ struct BackupDocument: Codable, Equatable {
             types[exercise.id] = ExerciseType(rawValue: exercise.type)
         }
 
+        var programmePositions: [UUID: [Int]] = [:]
+        for programme in programmes {
+            try claim(programme.id, for: "Programme “\(programme.name)”")
+            guard !ExerciseCatalog.normalized(programme.name).trimmed.isEmpty else {
+                throw BackupError.invalid("A programme has no name.")
+            }
+            programmePositions[programme.id] = []
+        }
+
         for routine in routines {
             let owner = "Routine “\(routine.name)”"
             try claim(routine.id, for: owner)
+            switch (routine.programmeID, routine.programmePosition) {
+            case (nil, nil): break
+            case (let programmeID?, let position?):
+                guard programmePositions[programmeID] != nil else {
+                    throw BackupError.invalid(
+                        "\(owner) belongs to a programme that is not in the file.")
+                }
+                programmePositions[programmeID, default: []].append(position)
+            case (_?, nil):
+                throw BackupError.invalid("\(owner) has a programme but no position in it.")
+            case (nil, _?):
+                throw BackupError.invalid("\(owner) has a programme position but no programme.")
+            }
             try requireUniquePositions(routine.exercises.map(\.position), in: owner)
             for entry in routine.exercises {
                 try claim(entry.id, for: owner)
@@ -274,6 +308,13 @@ struct BackupDocument: Codable, Equatable {
                     throw BackupError.invalid("\(owner) has a target duration for a rep exercise.")
                 }
             }
+        }
+
+        for programme in programmes
+        where !ProgrammeMembership.areValid(programmePositions[programme.id] ?? []) {
+            throw BackupError.invalid(
+                "Programme “\(programme.name)” has routine positions that aren’t 0 to one less than its number of routines."
+            )
         }
 
         let routineIDs = Set(routines.map(\.id))
@@ -319,5 +360,19 @@ struct BackupDocument: Codable, Equatable {
                 complete: type, weight: set.weight, reps: set.reps, seconds: set.durationSeconds)
                 != nil
         else { throw problem(SetValues.requirement(of: type)) }
+    }
+}
+
+extension BackupDocument {
+    /// Reads `programmes` as empty when the key is absent; every other key is required.
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        exportedAt = try container.decode(Date.self, forKey: .exportedAt)
+        exercises = try container.decode([ExerciseRecord].self, forKey: .exercises)
+        programmes =
+            try container.decodeIfPresent([ProgrammeRecord].self, forKey: .programmes) ?? []
+        routines = try container.decode([RoutineRecord].self, forKey: .routines)
+        workouts = try container.decode([WorkoutRecord].self, forKey: .workouts)
     }
 }

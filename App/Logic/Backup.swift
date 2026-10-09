@@ -18,7 +18,7 @@ struct BackupCounts: Equatable {
     }
 }
 
-/// Exports every exercise, routine and finished workout as a `BackupDocument`, and replaces all training data with
+/// Exports every exercise, programme, routine and finished workout as a `BackupDocument`, and replaces all training data with
 /// a validated one.
 @MainActor
 struct Backup {
@@ -69,6 +69,8 @@ struct Backup {
     func export(at date: Date = .now) throws -> BackupDocument {
         let exercises = try context.fetch(FetchDescriptor<Exercise>())
             .sorted { ($0.name, $0.id.uuidString) < ($1.name, $1.id.uuidString) }
+        let programmes = try context.fetch(FetchDescriptor<Programme>())
+            .sorted { ($0.creationDate, $0.id.uuidString) < ($1.creationDate, $1.id.uuidString) }
         let routines = try context.fetch(FetchDescriptor<Routine>())
             .sorted { ($0.creationDate, $0.id.uuidString) < ($1.creationDate, $1.id.uuidString) }
         let workouts = try context.fetch(
@@ -85,10 +87,17 @@ struct Backup {
                     equipment: exercise.equipmentRawValue, type: exercise.typeRawValue,
                     restOverrideSeconds: exercise.restOverrideSeconds, isCustom: exercise.isCustom)
             },
+            programmes: programmes.map { programme in
+                .init(
+                    id: programme.id, name: programme.name,
+                    creationDate: BackupDocument.fileDate(programme.creationDate))
+            },
             routines: routines.map { routine in
                 .init(
                     id: routine.id, name: routine.name,
                     creationDate: BackupDocument.fileDate(routine.creationDate),
+                    programmeID: routine.programme?.id,
+                    programmePosition: routine.programmePosition,
                     exercises: routine.exercises.sorted(by: \.position).compactMap { entry in
                         // ponytail: an entry whose exercise is gone can't be referenced, so it is left out.
                         guard let exercise = entry.exercise else { return nil }
@@ -149,6 +158,9 @@ struct Backup {
         for workout in try context.fetch(FetchDescriptor<Workout>()) { context.delete(workout) }
         for entry in try context.fetch(FetchDescriptor<RoutineExercise>()) { context.delete(entry) }
         for routine in try context.fetch(FetchDescriptor<Routine>()) { context.delete(routine) }
+        for programme in try context.fetch(FetchDescriptor<Programme>()) {
+            context.delete(programme)
+        }
         for exercise in try context.fetch(FetchDescriptor<Exercise>()) { context.delete(exercise) }
     }
 
@@ -164,12 +176,24 @@ struct Backup {
             exercises[record.id] = exercise
         }
 
+        var programmes: [UUID: Programme] = [:]
+        for record in document.programmes {
+            let programme = Programme(
+                id: record.id, name: record.name, creationDate: record.creationDate)
+            context.insert(programme)
+            programmes[record.id] = programme
+        }
+
         var routines: [UUID: Routine] = [:]
         for record in document.routines {
             let routine = Routine(
                 id: record.id, name: record.name, creationDate: record.creationDate)
             context.insert(routine)
             routines[record.id] = routine
+            if let programmeID = record.programmeID, let position = record.programmePosition {
+                routine.membership = ProgrammeMembership(
+                    programme: try Self.resolve(programmeID, in: programmes), position: position)
+            }
             for (position, entry) in record.exercises.sorted(by: \.position).enumerated() {
                 let routineExercise = RoutineExercise(
                     id: entry.id, exercise: try Self.resolve(entry.exerciseID, in: exercises),

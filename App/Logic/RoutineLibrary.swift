@@ -84,15 +84,8 @@ struct RoutineLibrary {
         return target
     }
 
-    /// Writes each draft that can be saved into a new routine, and saves them all at once.
-    @discardableResult
-    func saveNew(_ drafts: [RoutineDraft], at date: Date = .now) throws -> [Routine] {
-        let routines = drafts.filter(\.canSave).map { write($0, to: nil, at: date) }
-        try context.saveOrRollBack()
-        return routines
-    }
-
-    private func write(_ draft: RoutineDraft, to routine: Routine?, at date: Date) -> Routine {
+    /// Writes the draft into `routine`, or into a new routine when it is nil, without saving.
+    func write(_ draft: RoutineDraft, to routine: Routine?, at date: Date) -> Routine {
         let target = routine ?? Routine(name: draft.trimmedName, creationDate: date)
         if routine == nil { context.insert(target) }
         target.name = draft.trimmedName
@@ -111,7 +104,13 @@ struct RoutineLibrary {
     }
 
     /// Deletes the routine with its routine exercises. Workouts started from it are kept, with their link cleared.
+    /// The rest of its programme, if any, is renumbered.
     func delete(_ routine: Routine) throws {
+        if let programme = routine.membership?.programme {
+            ProgrammeLibrary.place(
+                ProgrammeLibrary.orderedRoutines(of: programme).filter { $0 !== routine },
+                in: programme)
+        }
         context.delete(routine)
         try context.saveOrRollBack()
     }

@@ -36,7 +36,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Starter programme** (`StarterProgramme`): starter routines meant to rotate as one programme, such as Push/Pull/Legs. "Add Programme" creates a programme holding copies of them, in order.
 - **Starter library**: the sheet listing the starter programmes and the starter routines that belong to none.
 - **Estimated time**: a starter routine's rough length, every set taking the default rest plus 40 seconds.
-- **Programme** (`Programme`) *(planned, phase 4)*: an ordered list of routines you rotate through, such as PPL: Push → Pull → Legs. It owns its routines: adding a routine copies it in, and a routine that leaves the programme, or whose programme is deleted, moves to My Routines.
+- **Programme** (`Programme`) *(planned, phase 4)*: an ordered list of routines you rotate through, such as PPL: Push → Pull → Legs. It owns its routines: adding a routine copies it in, and a routine that leaves the programme, or whose programme is deleted, moves to My Routines. A routine's **programme membership** (`ProgrammeMembership`) is its programme and its position in it, from 0, held together.
 - **Up next** *(planned, phase 4)*: a programme's next routine: the one after the routine of the programme's newest finished workout, wrapping round, or the first with none. It is worked out, never stored; workouts of other routines never move it.
 - **Routine format** *(planned, phase 7)*: how a routine plays: Sets (the default), Timed AMRAP or Stretch.
 
