@@ -449,6 +449,24 @@ struct BackupTests {
         }
     }
 
+    @Test func rejectsARestOverrideThatIsNotPositive() throws {
+        try expectRejected(containing: "rest time of 0 seconds") {
+            $0.exercises[0].restOverrideSeconds = 0
+        }
+        try expectRejected(containing: "rest time of -30 seconds") {
+            $0.exercises[0].restOverrideSeconds = -30
+        }
+    }
+
+    @Test func acceptsAnExerciseWithNoRestOverride() throws {
+        var document = try exported(makeSource())
+        document.exercises[0].restOverrideSeconds = nil
+        let target = try emptyContainer()
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(document.encoded()))
+        #expect(try exported(target).exercises[0].restOverrideSeconds == nil)
+    }
+
     @Test func rejectsAWeightThatIsNotAPowerBlockSetting() throws {
         try expectRejected(containing: "12.5 lb") {
             $0.workouts[0].exercises[0].sets[1].weight = 12.5

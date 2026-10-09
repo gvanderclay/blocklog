@@ -222,6 +222,9 @@ struct BackupDocument: Codable, Equatable {
             try requireKnown(MuscleGroup.self, exercise.muscleGroup, "muscle group", owner)
             try requireKnown(Equipment.self, exercise.equipment, "equipment", owner)
             try requireKnown(ExerciseKind.self, exercise.kind, "kind", owner)
+            if let rest = exercise.restOverrideSeconds, rest <= 0 {
+                throw BackupError.invalid("\(owner) has a rest time of \(rest) seconds.")
+            }
             kinds[exercise.id] = ExerciseKind(rawValue: exercise.kind)
         }
 
