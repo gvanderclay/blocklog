@@ -228,6 +228,39 @@ struct RoutineStartTests {
         #expect(RoutineLibrary.repRangeText(for: exercises[1]) == "10–12")
     }
 
+    @Test func aDurationSetWithNoTargetGetsThirtySeconds() throws {
+        let plank = try exercise("Plank")
+        let routine = Routine(name: "Core", creationDate: try day(1))
+        container.mainContext.insert(routine)
+        let entry = RoutineExercise(
+            exercise: plank, position: 0, plannedSetTypes: [.normal, .normal])
+        container.mainContext.insert(entry)
+        routine.exercises.append(entry)
+
+        let workout = try #require(try start.startWorkout(from: routine, at: try day(9))?.workout)
+
+        #expect(try sets(of: workout, "Plank").map(\.durationSeconds) == [30, 30])
+    }
+
+    @Test func aStoredRangeWithLowAboveHighOrOnlyOneEndShowsNoRange() throws {
+        let bench = try exercise("Dumbbell Bench Press")
+        let routine = Routine(name: "Odd", creationDate: try day(1))
+        container.mainContext.insert(routine)
+        let stored: [(Int?, Int?)] = [(12, 8), (6, nil), (nil, 10)]
+        for (position, ends) in stored.enumerated() {
+            let entry = RoutineExercise(
+                exercise: bench, position: position, plannedSetTypes: [.normal],
+                repRangeLow: ends.0, repRangeHigh: ends.1)
+            container.mainContext.insert(entry)
+            routine.exercises.append(entry)
+        }
+
+        let workout = try #require(try start.startWorkout(from: routine, at: try day(9))?.workout)
+
+        let exercises = WorkoutLog.orderedExercises(of: workout)
+        #expect(exercises.map { RoutineLibrary.repRangeText(for: $0) } == [nil, nil, nil])
+    }
+
     @Test func aFreeformWorkoutShowsNoRange() throws {
         let workout = try #require(try log.startEmptyWorkout(at: try day(9)))
         try log.addExercise(try exercise("Dumbbell Bench Press"), to: workout)

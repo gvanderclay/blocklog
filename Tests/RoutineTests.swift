@@ -126,6 +126,72 @@ struct RoutineTests {
         #expect(saved[1].repRangeHigh == 80)
     }
 
+    @Test func aRoutineExerciseWithNoTargetSummarisesAsADashAndBareSets() throws {
+        let container = try BlocklogApp.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let routine = Routine(name: "Empty", creationDate: .now)
+        context.insert(routine)
+        let sets: [SetType] = [.normal, .normal, .normal]
+        let bench = RoutineExercise(
+            exercise: try exercise("Dumbbell Bench Press", in: context), position: 0,
+            plannedSetTypes: sets)
+        let plank = RoutineExercise(
+            exercise: try exercise("Plank", in: context), position: 1, plannedSetTypes: [.normal])
+        routine.exercises.append(contentsOf: [bench, plank])
+        try context.save()
+
+        #expect(RoutineLibrary.summary(of: bench) == "3 × —")
+        #expect(RoutineLibrary.spokenSummary(of: bench) == "3 sets")
+        #expect(RoutineLibrary.summary(of: plank) == "1 × —")
+        #expect(RoutineLibrary.spokenSummary(of: plank) == "1 set")
+    }
+
+    @Test func aRoutineExerciseWhoseExerciseIsGoneStillSummarisesItsStoredTarget() throws {
+        let container = try BlocklogApp.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let routine = Routine(name: "Gone", creationDate: .now)
+        context.insert(routine)
+        let ranged = RoutineExercise(
+            exercise: try exercise("Dumbbell Bench Press", in: context), position: 0,
+            plannedSetTypes: [.normal, .normal], repRangeLow: 6, repRangeHigh: 10)
+        let timed = RoutineExercise(
+            exercise: try exercise("Plank", in: context), position: 1,
+            plannedSetTypes: [.normal, .normal], targetDurationSeconds: 45)
+        routine.exercises.append(contentsOf: [ranged, timed])
+        try context.save()
+        ranged.exercise = nil
+        timed.exercise = nil
+
+        #expect(RoutineLibrary.summary(of: ranged) == "2 × 6–10")
+        #expect(RoutineLibrary.spokenSummary(of: ranged) == "2 sets of 6 to 10 reps")
+        #expect(RoutineLibrary.summary(of: timed) == "2 × 45 s")
+        #expect(RoutineLibrary.spokenSummary(of: timed) == "2 sets of 45 seconds")
+    }
+
+    @Test func openingARoutineExerciseWithNoTargetShowsTheDefaultsAndSavingStoresThem() throws {
+        let container = try BlocklogApp.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let routine = Routine(name: "Bare", creationDate: .now)
+        context.insert(routine)
+        routine.exercises.append(
+            RoutineExercise(
+                exercise: try exercise("Dumbbell Bench Press", in: context), position: 0,
+                plannedSetTypes: [.normal]))
+        routine.exercises.append(
+            RoutineExercise(
+                exercise: try exercise("Plank", in: context), position: 1,
+                plannedSetTypes: [.normal]))
+        try context.save()
+
+        let draft = RoutineDraft(routine: routine)
+        try RoutineLibrary(context: context).save(draft, to: routine)
+
+        let saved = RoutineLibrary.orderedExercises(of: routine)
+        #expect(saved.map(\.repRangeLow) == [8, nil])
+        #expect(saved.map(\.repRangeHigh) == [12, nil])
+        #expect(saved.map(\.targetDurationSeconds) == [nil, 30])
+    }
+
     @Test func reorderingNeedsTwoExercises() throws {
         let container = try BlocklogApp.makeContainer(inMemory: true)
         let context = container.mainContext
