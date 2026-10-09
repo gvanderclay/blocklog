@@ -3,18 +3,18 @@ import SwiftUI
 /// The block diagram for a set's weight at medium height, with the set row's − and + so the user can browse setups.
 struct SetupSheet: View {
     let set: WorkoutSet
-    let kind: ExerciseKind
     let onChange: (Double?) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        let values = set.values
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    PowerBlockDiagram(weight: set.weight ?? 0)
+                    PowerBlockDiagram(weight: values.weight ?? 0)
                     WeightControl(
-                        weight: set.weight, isAdded: kind == .bodyweightReps,
+                        weight: values.weight, isAdded: values.weightIsAdded,
                         identifierPrefix: "diagram", onChange: onChange)
                 }
                 .padding()
@@ -30,6 +30,6 @@ struct SetupSheet: View {
         }
         .presentationDetents([.medium, .large])
         // Stepping a bodyweight set down to BW leaves nothing to draw.
-        .onChange(of: set.weight) { if set.weight == nil { dismiss() } }
+        .onChange(of: set.values.weight) { if set.values.weight == nil { dismiss() } }
     }
 }

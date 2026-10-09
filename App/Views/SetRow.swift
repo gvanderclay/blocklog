@@ -30,7 +30,7 @@ struct SetRow: View {
     var body: some View {
         @Bindable var set = set
         let label = SetNumbering.label(of: set)
-        let kind = set.workoutExercise?.exercise?.kind ?? .weightReps
+        let values = set.values
         let previous = PreviousSetLookup(context: modelContext).previous(for: set)
         let layout =
             dynamicTypeSize.isAccessibilitySize
@@ -50,29 +50,27 @@ struct SetRow: View {
                 .accessibilityValue(label)
                 .accessibilityIdentifier("\(identifierPrefix).typeMenu")
                 previousValue(previous)
-                switch kind {
-                case .weightReps:
-                    if let weight = set.weight {
-                        WeightControl(
-                            weight: weight, isHighlighted: progressions.isHighlighted(set),
-                            identifierPrefix: identifierPrefix
-                        ) {
-                            changeWeight($0, kind: kind)
-                        }
-                    }
-                case .bodyweightReps:
+                switch values {
+                case .weightReps(let weight, _):
                     WeightControl(
-                        weight: set.weight, isAdded: true,
+                        weight: weight, isHighlighted: progressions.isHighlighted(set),
+                        identifierPrefix: identifierPrefix
+                    ) {
+                        changeWeight($0)
+                    }
+                case .bodyweightReps(let addedWeight, _):
+                    WeightControl(
+                        weight: addedWeight, isAdded: true,
                         isHighlighted: progressions.isHighlighted(set),
                         identifierPrefix: identifierPrefix
                     ) {
-                        changeWeight($0, kind: kind)
+                        changeWeight($0)
                     }
                 case .duration:
                     EmptyView()
                 }
                 Spacer(minLength: 0)
-                if kind == .duration {
+                if case .duration = values {
                     HStack(spacing: 4) {
                         TextField("Seconds", text: $set.durationText)
                             .keyboardType(.numberPad)
@@ -134,7 +132,7 @@ struct SetRow: View {
                 .accessibilityValue(set.isCompleted ? "done" : "not done")
                 .accessibilityIdentifier("\(identifierPrefix).check")
             }
-            setupLine(kind: kind)
+            setupLine(values)
         }
         .listRowBackground(set.isCompleted ? Color.green.opacity(0.15) : nil)
         .sensoryFeedback(trigger: set.isCompleted) { _, isCompleted in
@@ -145,7 +143,7 @@ struct SetRow: View {
             progressions.checkedOff(set)
             if set.isCompleted { checkOffCount += 1 }
         }
-        .onChange(of: set.weight) { progressions.weightChanged(of: set) }
+        .onChange(of: values.weight) { progressions.weightChanged(of: set) }
         .sensoryFeedback(.selection, trigger: set.setType)
         .sensoryFeedback(.selection, trigger: previousCopyCount)
         .swipeActions(edge: .trailing) {
@@ -174,8 +172,8 @@ struct SetRow: View {
 
     /// The small line under the inputs that opens the block diagram; nothing without a weight.
     @ViewBuilder
-    private func setupLine(kind: ExerciseKind) -> some View {
-        if let line = PowerBlockTable.setupLine(for: set.weight) {
+    private func setupLine(_ values: SetValues) -> some View {
+        if let line = PowerBlockTable.setupLine(for: values.weight) {
             Button {
                 showsDiagram = true
             } label: {
@@ -191,13 +189,13 @@ struct SetRow: View {
             .accessibilityHint("Shows the block diagram")
             .accessibilityIdentifier("\(identifierPrefix).setup")
             .sheet(isPresented: $showsDiagram) {
-                SetupSheet(set: set, kind: kind) { changeWeight($0, kind: kind) }
+                SetupSheet(set: set) { changeWeight($0) }
             }
         }
     }
 
     /// Sets the weight from the row's control or the diagram sheet's, animated so the numbers roll.
-    private func changeWeight(_ newWeight: Double?, kind: ExerciseKind) {
+    private func changeWeight(_ newWeight: Double?) {
         withAnimation {
             attempt { try $0.setWeight(newWeight, of: set) }
         }
@@ -237,12 +235,12 @@ struct SetRow: View {
     /// Copies the previous values in, animated so the weight rolls. The selection tick comes from the weight
     /// control when the weight changes, so this ticks only when the copy leaves the weight alone.
     private func copyPrevious() {
-        let weightBefore = set.weight
+        let weightBefore = set.values.weight
         var copied = false
         withAnimation {
             attempt { copied = try $0.copyPrevious(to: set) }
         }
-        if copied, set.weight == weightBefore { previousCopyCount += 1 }
+        if copied, set.values.weight == weightBefore { previousCopyCount += 1 }
     }
 
     private var deleteButton: some View {
