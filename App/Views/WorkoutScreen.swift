@@ -177,9 +177,8 @@ struct WorkoutScreen: View {
         }
         withAnimation(reduceMotion ? nil : .default) {
             do {
-                focusedRepsSetID = try restTimer.checkOff(
-                    set, in: workout, using: WorkoutLog(context: modelContext),
-                    defaultRest: defaultRest)?.id
+                focusedRepsSetID = try WorkoutLog(context: modelContext, restTimer: restTimer)
+                    .checkOff(set, in: workout, defaultRest: defaultRest)?.id
             } catch {
                 saveFailed = true
             }

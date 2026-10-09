@@ -43,9 +43,3 @@ schemes:
         Blocklog: all
     test:
       targets: [BlocklogTests]
-  BlocklogUnit:
-    build:
-      targets:
-        Blocklog: all
-    test:
-      targets: [BlocklogTests]

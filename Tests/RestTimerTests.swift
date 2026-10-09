@@ -218,6 +218,116 @@ struct RestTimerTests {
         #expect(RestTimer.restSeconds(for: nil, defaultRest: 90) == 90)
     }
 
+    // MARK: Reading
+
+    @Test func readingRoundsACountdownUpAndTruncatesOvertime() {
+        timer.start(duration: 30)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(28.4)).seconds == 2)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(29.999)).seconds == 1)
+        let atEnd = timer.reading(at: clock.date.addingTimeInterval(30))
+        #expect(atEnd.seconds == 0)
+        #expect(atEnd.isOvertime)
+        let justAfter = timer.reading(at: clock.date.addingTimeInterval(30.999))
+        #expect(justAfter.seconds == 0)
+        #expect(justAfter.isOvertime)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(31.001)).seconds == 1)
+    }
+
+    @Test func countdownSecondsStayAtZeroInOvertime() {
+        timer.start(duration: 30)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(28.4)).countdownSeconds == 2)
+        let overtime = timer.reading(at: clock.date.addingTimeInterval(32.5))
+        #expect(overtime.seconds == 2)
+        #expect(overtime.countdownSeconds == 0)
+        // A skipped tick from 4 left to 2 into overtime is no countdown tick.
+        #expect(!RestTimer.isCountdownTick(from: 4, to: overtime.countdownSeconds))
+    }
+
+    @Test func readingBeforeTheEndIsACountdown() {
+        timer.start(duration: 30)
+        let reading = timer.reading(at: clock.date.addingTimeInterval(29.5))
+        #expect(!reading.isOvertime)
+        #expect(reading.seconds == 1)
+    }
+
+    @Test func readingProgressDrainsFromOneToZeroAndStaysThere() {
+        timer.start(duration: 40)
+        #expect(timer.reading(at: clock.date).progress == 1)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(10)).progress == 0.75)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(40)).progress == 0)
+        #expect(timer.reading(at: clock.date.addingTimeInterval(90)).progress == 0)
+        // Before the start, as a view's timeline may read it, the progress is clamped to 1.
+        #expect(timer.reading(at: clock.date.addingTimeInterval(-5)).progress == 1)
+    }
+
+    @Test func readingUsesTheAdjustedTotal() {
+        timer.start(duration: 60)
+        timer.add(seconds: 15)  // total 75, end at 75
+        clock.advance(15)
+        let reading = timer.reading(at: clock.date)
+        #expect(reading.seconds == 60)
+        #expect(reading.progress == 0.8)
+        timer.add(seconds: -15)  // total 60, end at 60
+        #expect(timer.reading(at: clock.date).progress == 0.75)
+    }
+
+    @Test func anIdleReadingIsZero() {
+        #expect(
+            timer.reading(at: clock.date)
+                == RestTimer.Reading(
+                    seconds: 0, countdownSeconds: 0, isOvertime: false, progress: 0))
+    }
+
+    @Test func theTimelineAnchorIsTheRestStartOrNowWhenIdle() {
+        #expect(timer.timelineAnchor == clock.date)
+        timer.start(duration: 90)
+        clock.advance(20)
+        #expect(timer.timelineAnchor == clock.date.addingTimeInterval(-20))
+        timer.add(seconds: 15)
+        #expect(timer.timelineAnchor == clock.date.addingTimeInterval(-20))
+    }
+
+    // MARK: Stored values
+
+    @Test func anIdleTimerStoresZero() {
+        #expect(timer.storedEnd == 0)
+        #expect(timer.storedTotal == 0)
+        timer.start(duration: 90)
+        timer.skip()
+        #expect(timer.storedEnd == 0)
+        #expect(timer.storedTotal == 0)
+    }
+
+    @Test func aRunningRestRoundTripsThroughItsStoredValues() {
+        timer.start(duration: 90)
+        timer.add(seconds: 15)
+        #expect(timer.storedEnd == clock.date.addingTimeInterval(105).timeIntervalSince1970)
+        #expect(timer.storedTotal == 105)
+        clock.advance(5)
+        let other = RestTimer(now: { clock.date }, notifications: notifications)
+        other.restore(storedEnd: timer.storedEnd, storedTotal: timer.storedTotal)
+        #expect(other.endDate == timer.endDate)
+        #expect(other.total == 105)
+        #expect(other.remaining == 100)
+    }
+
+    @Test func storedZeroOrNegativeMeansNoRest() {
+        timer.start(duration: 90)
+        timer.restore(storedEnd: 0, storedTotal: 90)
+        #expect(!timer.isRunning)
+        timer.start(duration: 90)
+        timer.restore(storedEnd: -1, storedTotal: 0)
+        #expect(!timer.isRunning)
+        #expect(timer.total == nil)
+    }
+
+    @Test func aStoredEndInThePastRestoresAsSilentOvertime() {
+        timer.restore(
+            storedEnd: clock.date.addingTimeInterval(-5).timeIntervalSince1970, storedTotal: 90)
+        #expect(timer.isOvertime)
+        #expect(!timer.signalEndIfDue(appActive: true))
+    }
+
     @Test func formatsClockTime() {
         #expect(RestTimer.clock(90) == "1:30")
         #expect(RestTimer.clock(300) == "5:00")
@@ -245,7 +355,7 @@ struct RestTimerTests {
 
     @Test func checkingOffASetStartsTheRestAndUncheckingKeepsIt() throws {
         let (log, workout, set, _) = try store()
-        _ = try timer.checkOff(set, in: workout, using: log, defaultRest: 90)
+        _ = try log.checkOff(set, in: workout, defaultRest: 90)
         #expect(timer.remaining == 90)
         #expect(notifications.scheduled.last?.name == "Hammer Curl")
         clock.advance(30)
@@ -260,11 +370,11 @@ struct RestTimerTests {
         try log.addSet(to: workoutExercise)
         let second = try #require(workoutExercise.sets.first { $0 !== first })
         second.reps = 8
-        _ = try timer.checkOff(first, in: workout, using: log, defaultRest: 90)
+        _ = try log.checkOff(first, in: workout, defaultRest: 90)
         #expect(timer.checkedSet === first)
         clock.advance(120)  // overtime
         #expect(timer.checkedSet === first)
-        _ = try timer.checkOff(second, in: workout, using: log, defaultRest: 90)
+        _ = try log.checkOff(second, in: workout, defaultRest: 90)
         #expect(timer.checkedSet === second)
         timer.skip()
         #expect(timer.checkedSet == nil)
@@ -279,15 +389,51 @@ struct RestTimerTests {
     @Test func checkingOffUsesTheExerciseOverride() throws {
         let (log, workout, set, exercise) = try store()
         try log.setRestOverride(120, of: exercise)
-        _ = try timer.checkOff(set, in: workout, using: log, defaultRest: 90)
+        _ = try log.checkOff(set, in: workout, defaultRest: 90)
         #expect(timer.remaining == 120)
         try log.setRestOverride(nil, of: exercise)
         #expect(exercise.restOverrideSeconds == nil)
     }
 
+    @Test func aFailedCheckOffSaveStartsAndReplacesNoRest() throws {
+        let store = try ReadOnlyStore { context in
+            let workout = Workout(title: "Push Day", startDate: .now)
+            let workoutExercise = WorkoutExercise(
+                exercise: Exercise(
+                    name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell,
+                    kind: .weightReps),
+                position: 0)
+            context.insert(workout)
+            workout.exercises.append(workoutExercise)
+            workoutExercise.sets.append(WorkoutSet(position: 0, weight: 20, reps: 10))
+        }
+        defer { store.remove() }
+        let log = WorkoutLog(context: store.context, restTimer: timer)
+        let workout = try #require(log.inProgressWorkout())
+        let set = try #require(workout.exercises.first?.sets.first)
+
+        #expect(throws: (any Error).self) {
+            _ = try log.checkOff(set, in: workout, defaultRest: 90)
+        }
+        #expect(!timer.isRunning)
+        #expect(timer.checkedSet == nil)
+        #expect(notifications.scheduled.isEmpty)
+
+        // A rest already running is left as it was.
+        timer.start(duration: 60)
+        let end = timer.endDate
+        #expect(throws: (any Error).self) {
+            _ = try log.checkOff(set, in: workout, defaultRest: 90)
+        }
+        #expect(timer.endDate == end)
+        #expect(timer.total == 60)
+        #expect(timer.checkedSet == nil)
+        #expect(notifications.scheduled.count == 1)
+    }
+
     @Test func finishingStopsTheTimerAndCancelsTheNotification() throws {
         let (log, workout, set, _) = try store()
-        _ = try timer.checkOff(set, in: workout, using: log, defaultRest: 90)
+        _ = try log.checkOff(set, in: workout, defaultRest: 90)
         let cancelsBefore = notifications.cancelCount
         _ = try log.finish(workout, title: "Done", at: clock.date)
         #expect(!timer.isRunning)
@@ -297,7 +443,7 @@ struct RestTimerTests {
 
     @Test func discardingStopsTheTimerAndCancelsTheNotification() throws {
         let (log, workout, set, _) = try store()
-        _ = try timer.checkOff(set, in: workout, using: log, defaultRest: 90)
+        _ = try log.checkOff(set, in: workout, defaultRest: 90)
         let cancelsBefore = notifications.cancelCount
         try log.discard(workout)
         #expect(!timer.isRunning)

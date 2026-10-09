@@ -99,9 +99,9 @@ struct SetRow: View {
                         if set.isCompleted {
                             attempt { try $0.toggleCompleted(set) }
                         } else {
-                            attempt {
-                                focusedRepsSetID.wrappedValue = try restTimer.checkOff(
-                                    set, in: workout, using: $0, defaultRest: defaultRest)?.id
+                            attempt(restTimer: restTimer) {
+                                focusedRepsSetID.wrappedValue = try $0.checkOff(
+                                    set, in: workout, defaultRest: defaultRest)?.id
                             }
                         }
                     }
@@ -261,9 +261,11 @@ struct SetRow: View {
     }
 
     /// Runs a change through the workout log, showing the alert if it fails to save.
-    private func attempt(_ change: (WorkoutLog) throws -> Void) {
+    private func attempt(
+        restTimer: RestTimer? = nil, _ change: (WorkoutLog) throws -> Void
+    ) {
         do {
-            try change(WorkoutLog(context: modelContext))
+            try change(WorkoutLog(context: modelContext, restTimer: restTimer))
         } catch {
             saveFailed = true
         }

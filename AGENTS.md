@@ -15,7 +15,7 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 
 Local checks: before review and commit, `just test-unit` must pass. Acceptance of a flow or screen is checked by a `blind-tester` delegate when the ticket needs it, not by UI tests. CI runs the unit tests on every push.
 
-- `just ci-test BlocklogUnit`: the exact command CI runs; use it to reproduce a CI failure.
+- `just ci-test Blocklog`: the exact command CI runs; use it to reproduce a CI failure.
 - Every test recipe turns on test timeouts (240 s per test, 300 s at most), so a hung test fails in minutes.
 - `just ci-report <run-id>`: download a failed CI run's artifacts and print its test failures, crash reports and log tail; use it first when CI fails.
 - `just run`: install and launch on the simulator and save `build/run.png`, for a manual check.

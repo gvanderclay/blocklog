@@ -55,7 +55,7 @@ _xcb name *args:
 build: generate
     @just _xcb build -scheme Blocklog -destination "id=$(just _udid)" build
 
-# Compile the app and both test bundles without running them; the test recipes then only relink.
+# Compile the app and the test bundle without running them; the test recipes then only relink.
 build-tests: generate
     @just _xcb build-tests -scheme Blocklog -destination "id=$(just _udid)" build-for-testing
 
@@ -63,13 +63,13 @@ build-tests: generate
 test: test-unit
 
 test-unit: generate
-    @just _xcb test-unit -scheme BlocklogUnit -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
+    @just _xcb test-unit -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
 
 # Run one test, e.g. `just test-one BlocklogTests/hostedInApp()`.
 test-one identifier: generate
     @just _xcb test-one -scheme Blocklog -destination "id=$(just _udid)" "-only-testing:{{identifier}}" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
 
-# CI and local test run for one scheme (BlocklogUnit).
+# CI and local test run for one scheme (Blocklog).
 ci-test scheme: generate
     #!/usr/bin/env bash
     set -euo pipefail

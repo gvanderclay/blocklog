@@ -50,7 +50,7 @@ jobs:
       # Below the job's limit, so a stalled run still leaves time to report and upload its logs.
       - name: Build and test
         id: tests
-        run: just ci-test BlocklogUnit
+        run: just ci-test Blocklog
         timeout-minutes: 16
       - name: Save compilation cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !cancelled() && steps.cas.outputs.cache-hit != 'true'
@@ -69,14 +69,14 @@ jobs:
           TEST_OUTCOME: ${{ steps.tests.outcome }}
         run: /usr/bin/python3 scripts/ci-report.py build
       # The logs also upload after ci-test retried a test runner that never started, or a test recovered on retry.
-      - if: failure() || cancelled() || hashFiles('build/results/BlocklogUnit-retry.xcresult/Info.plist') != '' || steps.report.outputs.recovered == '1'
+      - if: failure() || cancelled() || hashFiles('build/results/Blocklog-retry.xcresult/Info.plist') != '' || steps.report.outputs.recovered == '1'
         name: Collect simulator logs
         timeout-minutes: 4
         run: |
           mkdir -p build/logs
           xcrun simctl spawn booted log show --last 20m --style compact | gzip >build/logs/simulator.log.gz || true
           cp ~/Library/Logs/DiagnosticReports/*.ips build/logs/ || true
-      - if: failure() || cancelled() || hashFiles('build/results/BlocklogUnit-retry.xcresult/Info.plist') != '' || steps.report.outputs.recovered == '1'
+      - if: failure() || cancelled() || hashFiles('build/results/Blocklog-retry.xcresult/Info.plist') != '' || steps.report.outputs.recovered == '1'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unit-failure

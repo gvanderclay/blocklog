@@ -50,6 +50,44 @@ final class RestTimer {
 
     func isOvertime(at date: Date) -> Bool { endDate.map { date >= $0 } ?? false }
 
+    /// What a rest looks like at one moment, for a view to render.
+    struct Reading: Equatable {
+        /// The whole seconds shown: the seconds left rounded up while counting down, the seconds past the
+        /// end truncated in overtime; 0 when idle.
+        let seconds: Int
+        /// The seconds left rounded up, 0 from the end on. The countdown haptics and the ring's animation follow
+        /// it, so they never fire from the overtime count.
+        let countdownSeconds: Int
+        /// True when the rest has run out and counts up.
+        let isOvertime: Bool
+        /// The share of the rest left, from 0 to 1.
+        let progress: Double
+    }
+
+    /// The reading at the given time.
+    func reading(at date: Date) -> Reading {
+        let left = remaining(at: date)
+        let overtime = isOvertime(at: date)
+        let countdown = Int(left.rounded(.up))
+        return Reading(
+            seconds: overtime ? Int(self.overtime(at: date)) : countdown,
+            countdownSeconds: countdown,
+            isOvertime: overtime,
+            progress: min(max(left / (total ?? 1), 0), 1))
+    }
+
+    /// Where a once-a-second timeline starts: the rest's start, in the past (a future anchor freezes a
+    /// view until it arrives), so every tick falls on the end date's seconds.
+    var timelineAnchor: Date {
+        endDate.map { $0.addingTimeInterval(-(total ?? 0)) } ?? now()
+    }
+
+    /// The end date as stored between launches: seconds since 1970, and 0 when idle.
+    var storedEnd: Double { endDate?.timeIntervalSince1970 ?? 0 }
+
+    /// The total length as stored between launches; 0 when idle.
+    var storedTotal: Double { total ?? 0 }
+
     /// Reschedules the pending notification, so a changed Timer Sound applies to the rest in progress.
     /// Does nothing when idle or in overtime.
     func timerSoundChanged() {
@@ -75,8 +113,10 @@ final class RestTimer {
         exercise?.restOverrideSeconds ?? defaultRest
     }
 
-    /// Starts or restarts the countdown and schedules the notification.
-    func start(duration: Int, exerciseName: String? = nil) {
+    /// Starts or restarts the countdown and schedules the notification. A given `checkedSet` becomes the
+    /// set the change hint reads.
+    func start(duration: Int, exerciseName: String? = nil, checkedSet: WorkoutSet? = nil) {
+        if let checkedSet { self.checkedSet = checkedSet }
         guard duration > 0 else { return }
         self.exerciseName = exerciseName
         endDate = now().addingTimeInterval(TimeInterval(duration))
@@ -123,6 +163,13 @@ final class RestTimer {
         return appActive
     }
 
+    /// Takes the values stored by `storedEnd` and `storedTotal`: an end date of 0 or less means no rest.
+    func restore(storedEnd: Double, storedTotal: Double) {
+        restore(
+            endDate: storedEnd > 0 ? Date(timeIntervalSince1970: storedEnd) : nil,
+            total: storedTotal)
+    }
+
     /// Takes the stored end date and total at launch; an end date already past shows overtime, silently.
     func restore(endDate: Date?, total: TimeInterval?) {
         guard let endDate, let total else {
@@ -132,24 +179,6 @@ final class RestTimer {
         self.endDate = endDate
         self.total = total
         hasSignalledEnd = endDate <= now()
-    }
-
-    /// Checks the set off through the workout log and starts the rest for its exercise, as the checkmark
-    /// and the keyboard's Done both do. An already checked set, or one that can't be checked off, starts
-    /// nothing. Returns the set to focus next.
-    func checkOff(
-        _ set: WorkoutSet, in workout: Workout, using log: WorkoutLog, defaultRest: Int
-    ) throws -> WorkoutSet? {
-        let wasChecked = set.isCompleted
-        let next = try log.checkOffAndAdvance(set, in: workout)
-        if !wasChecked, set.isCompleted {
-            let exercise = set.workoutExercise?.exercise
-            start(
-                duration: Self.restSeconds(for: exercise, defaultRest: defaultRest),
-                exerciseName: exercise?.name)
-            checkedSet = set
-        }
-        return next
     }
 
     private func scheduleNotification() {

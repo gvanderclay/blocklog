@@ -5,7 +5,7 @@ import SwiftData
 @MainActor
 struct WorkoutLog {
     let context: ModelContext
-    /// The rest timer that Finish and Discard stop. Nil where no timer is involved.
+    /// The rest timer that check-off starts and Finish and Discard stop. Nil where no timer is involved.
     var restTimer: RestTimer?
 
     // MARK: Reading
@@ -98,6 +98,21 @@ struct WorkoutLog {
             try toggleCompleted(set)
         }
         return Self.nextEmptySet(after: set.id, in: workout)
+    }
+
+    /// Checks the set off through `checkOffAndAdvance` and, once that has saved, starts the rest for its
+    /// exercise, as the checkmark and the keyboard's Done both do. An already checked set, one that can't be
+    /// checked off, or a failed save starts nothing. Returns the set to focus next.
+    func checkOff(_ set: WorkoutSet, in workout: Workout, defaultRest: Int) throws -> WorkoutSet? {
+        let wasChecked = set.isCompleted
+        let next = try checkOffAndAdvance(set, in: workout)
+        if !wasChecked, set.isCompleted {
+            let exercise = set.workoutExercise?.exercise
+            restTimer?.start(
+                duration: RestTimer.restSeconds(for: exercise, defaultRest: defaultRest),
+                exerciseName: exercise?.name, checkedSet: set)
+        }
+        return next
     }
 
     /// Starts an empty workout titled for its start time. Nil while another workout is in progress.

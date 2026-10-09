@@ -30,8 +30,7 @@ final class RestNotifications: RestNotifying {
 
     private let center: any RestNotificationCenter
     private let foregroundSilencer = ForegroundSilencer()
-    /// False in unit tests, which must not raise the system's permission alert.
-    private let requestsPermission: Bool
+    private let now: () -> Date
     private var hasRequestedPermission = false
     /// The last queued operation; the next one waits for it.
     private var tail: Task<Void, Never>?
@@ -40,10 +39,10 @@ final class RestNotifications: RestNotifying {
 
     init(
         center: any RestNotificationCenter = UNUserNotificationCenter.current(),
-        requestsPermission: Bool = true
+        now: @escaping () -> Date = { .now }
     ) {
         self.center = center
-        self.requestsPermission = requestsPermission
+        self.now = now
         (center as? UNUserNotificationCenter)?.delegate = foregroundSilencer
     }
 
@@ -58,15 +57,15 @@ final class RestNotifications: RestNotifying {
         let soundOn = UserDefaults.standard.object(forKey: "timerSoundEnabled") as? Bool ?? true
         content.sound =
             soundOn ? UNNotificationSound(named: UNNotificationSoundName("rest-chime.caf")) : nil
-        let askFirst = requestsPermission && !hasRequestedPermission
-        hasRequestedPermission = hasRequestedPermission || requestsPermission
+        let askFirst = !hasRequestedPermission
+        hasRequestedPermission = true
         generation += 1
         let mine = generation
         enqueue { [self] in
             if askFirst { _ = try? await center.requestAuthorization(options: [.alert, .sound]) }
             // The trigger is built only now, from the time left, so a wait on the permission prompt
             // doesn't make it late; an end that passed meanwhile schedules nothing.
-            let remaining = date.timeIntervalSinceNow
+            let remaining = date.timeIntervalSince(now())
             guard mine == generation, remaining > 0 else { return }
             let request = UNNotificationRequest(
                 identifier: Self.identifier, content: content,

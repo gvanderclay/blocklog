@@ -274,27 +274,14 @@ struct BackupTests {
             try Backup(context: source.mainContext).storedCounts() == Backup.counts(of: document))
     }
 
-    /// A store on disk whose saves fail, standing in for a full disk, holding what `populate` adds.
+    /// A store whose saves fail, standing in for a full disk, holding what `populate` adds.
     @Test func aFailedSaveRestoresTheStore() throws {
-        let url = URL.temporaryDirectory.appending(path: "\(UUID()).store")
-        defer {
-            for suffix in ["", "-wal", "-shm"] {
-                try? FileManager.default.removeItem(atPath: url.path() + suffix)
-            }
+        let store = try ReadOnlyStore { context in
+            try StarterExercises.seedIfEmpty(context)
+            try populate(context)
         }
-        let schema = Schema([
-            Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
-            RoutineExercise.self,
-        ])
-        do {
-            let writable = try ModelContainer(
-                for: schema, configurations: ModelConfiguration(schema: schema, url: url))
-            try StarterExercises.seedIfEmpty(writable.mainContext)
-            try populate(writable.mainContext)
-        }
-        let readOnly = try ModelContainer(
-            for: schema,
-            configurations: ModelConfiguration(schema: schema, url: url, allowsSave: false))
+        defer { store.remove() }
+        let readOnly = store.container
         let context = readOnly.mainContext
         let backup = Backup(context: context)
         let before = try exported(readOnly)

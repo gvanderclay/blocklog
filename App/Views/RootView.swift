@@ -53,9 +53,7 @@ struct RootView: View {
             // Only at launch: reopen straight into a workout left in progress.
             guard !hasCheckedForInProgressWorkout else { return }
             hasCheckedForInProgressWorkout = true
-            restTimer.restore(
-                endDate: storedRestEnd > 0 ? Date(timeIntervalSince1970: storedRestEnd) : nil,
-                total: storedRestTotal)
+            restTimer.restore(storedEnd: storedRestEnd, storedTotal: storedRestTotal)
             storeRest()
             presentedWorkout = WorkoutLog(context: modelContext).inProgressWorkout()
         }
@@ -71,8 +69,8 @@ extension RootView {
     }
 
     private func storeRest() {
-        storedRestEnd = restTimer.endDate?.timeIntervalSince1970 ?? 0
-        storedRestTotal = restTimer.total ?? 0
+        storedRestEnd = restTimer.storedEnd
+        storedRestTotal = restTimer.storedTotal
     }
 }
 

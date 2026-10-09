@@ -61,18 +61,21 @@ struct NextSetTests {
 
     @Test func changeLineFromThirtyToThirtySevenPointFive() {
         let sets = addExercise([(30, true), (37.5, false)])
-        #expect(NextSet.changeLine(after: sets[0]) == "Pin 30 → 40 · remove 1 adder")
+        let change = NextSet.change(after: sets[0])
+        #expect(change?.line == "Pin 30 → 40 · remove 1 adder")
+        #expect(change?.now == 30)
+        #expect(change?.next == 37.5)
         #expect(PowerBlockTable.setupLine(for: sets[1].weight) == "Pin 40 · 1 adder")
     }
 
     @Test func equalWeightsGiveNoHint() {
         let sets = addExercise([(30, true), (30, false)])
-        #expect(NextSet.changeLine(after: sets[0]) == nil)
+        #expect(NextSet.change(after: sets[0]) == nil)
     }
 
     @Test func noWeightOnEitherSideGivesNoHint() {
         let sets = addExercise([(nil, true), (30, false), (nil, false)])
-        #expect(NextSet.changeLine(after: sets[0]) == nil)
-        #expect(NextSet.changeLine(after: sets[1]) == nil)
+        #expect(NextSet.change(after: sets[0]) == nil)
+        #expect(NextSet.change(after: sets[1]) == nil)
     }
 }
