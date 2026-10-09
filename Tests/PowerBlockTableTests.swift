@@ -68,6 +68,43 @@ struct PowerBlockTableTests {
         }
     }
 
+    @Test func diagramStateForEverySetting() throws {
+        let rails: [PowerBlockTable.Location] = [
+            .handleOnly, .firstSlot, .slot(30), .slot(40), .slot(50), .slot(60), .slot(70),
+            .slot(80),
+            .slot(90),
+        ]
+        // Weight, the pin's rail (0 is the handle) and the installed adders, read off the block.
+        let expected: [(weight: Double, rail: Int, adders: Int)] = [
+            (5, 0, 0), (7.5, 0, 1), (10, 0, 2), (15, 1, 0), (17.5, 1, 1), (20, 1, 2),
+            (25, 2, 0), (27.5, 2, 1), (30, 2, 2), (35, 3, 0), (37.5, 3, 1), (40, 3, 2),
+            (45, 4, 0), (47.5, 4, 1), (50, 4, 2), (55, 5, 0), (57.5, 5, 1), (60, 5, 2),
+            (65, 6, 0), (67.5, 6, 1), (70, 6, 2), (75, 7, 0), (77.5, 7, 1), (80, 7, 2),
+            (85, 8, 0), (87.5, 8, 1), (90, 8, 2),
+        ]
+        #expect(expected.map(\.weight) == PowerBlockTable.weights)
+        for row in expected {
+            let state = try #require(PowerBlockTable.diagramState(for: row.weight))
+            #expect(state.selected == rails[row.rail], "\(row.weight) lb")
+            #expect(state.selectedIndex == row.rail, "\(row.weight) lb")
+            #expect(state.hasPin == (row.rail > 0), "\(row.weight) lb")
+            #expect(state.lifted == Array(rails[...row.rail]), "\(row.weight) lb")
+            #expect(state.adders == row.adders, "\(row.weight) lb")
+        }
+    }
+
+    @Test func locationsRunFromHandleToSlotNinetyWithPrintedLabels() {
+        #expect(PowerBlockTable.locations.count == 9)
+        #expect(
+            PowerBlockTable.locations.map(\.label) == [
+                "Handle", nil, "30", "40", "50", "60", "70", "80", "90",
+            ])
+    }
+
+    @Test func noDiagramStateForAWeightThatIsNotASetting() {
+        #expect(PowerBlockTable.diagramState(for: 12.5) == nil)
+    }
+
     @Test func setupLineOfASetFollowsItsWeight() {
         #expect(PowerBlockTable.setupLine(for: 27.5) == "Pin 30 · 1 adder")
         #expect(

@@ -26,6 +26,29 @@ enum PowerBlockTable {
         var setupText: String {
             self == .handleOnly ? "Handle only" : "Pin \(slotName)"
         }
+
+        /// The printed label beside the location in the diagram: "Handle", a slot number, or nil for the unnumbered first slot.
+        var label: String? {
+            switch self {
+            case .handleOnly: "Handle"
+            case .firstSlot: nil
+            case .slot(let number): "\(number)"
+            }
+        }
+    }
+
+    /// What the diagram draws for one setting.
+    @MainActor
+    struct DiagramState: Equatable {
+        /// The pin's location and its position in `locations`.
+        let selected: Location
+        let selectedIndex: Int
+        /// False for handle-only settings, where the pin is in no slot.
+        let hasPin: Bool
+        /// The locations from the handle down to the selected one, drawn lifted.
+        let lifted: [Location]
+        /// How many adders are in the handle, 0 to 2.
+        let adders: Int
     }
 
     /// How to set the block for one weight: where the pin goes and how many adders are in the handle.
@@ -39,6 +62,10 @@ enum PowerBlockTable {
             "\(location.setupText) · \(adders == 0 ? "no adders" : PowerBlockTable.adderPhrase(adders))"
         }
     }
+
+    /// The block's locations from the handle down to slot 90.
+    static let locations: [Location] =
+        [.handleOnly, .firstSlot] + stride(from: 30, through: 90, by: 10).map { .slot($0) }
 
     /// Every PowerBlock setting in ascending order.
     private static let settings: [(weight: Double, setup: Setup)] = [
@@ -97,6 +124,15 @@ enum PowerBlockTable {
     /// The setup for a weight, or nil when the weight is not a setting.
     static func setup(for weight: Double) -> Setup? {
         settings.first { $0.weight == weight }?.setup
+    }
+
+    /// What the diagram draws for a weight, or nil when the weight is not a setting.
+    static func diagramState(for weight: Double) -> DiagramState? {
+        guard let setup = setup(for: weight), let index = locations.firstIndex(of: setup.location)
+        else { return nil }
+        return DiagramState(
+            selected: setup.location, selectedIndex: index, hasPin: setup.location != .handleOnly,
+            lifted: Array(locations[...index]), adders: setup.adders)
     }
 
     /// The setup line for a set's weight, such as "Pin 30 · 1 adder"; nil with no weight ("BW", duration).

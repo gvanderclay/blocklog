@@ -10,40 +10,38 @@ struct PowerBlockDiagram: View {
     @ScaledMetric(relativeTo: .footnote) private var rowHeight = 26
     @ScaledMetric(relativeTo: .footnote) private var labelWidth = 56
 
-    /// One rail, top to bottom. The band colors copy the Elite EXP's rails (design.md allows these custom colors).
-    @MainActor
-    private struct Rail {
-        let label: String?
-        let band: Color?
-        let location: PowerBlockTable.Location
+    /// The Elite EXP's rail band colors (design.md allows these custom colors).
+    private func band(for location: PowerBlockTable.Location) -> Color? {
+        switch location {
+        case .handleOnly: nil
+        case .firstSlot, .slot(90): .black
+        case .slot(30): .white
+        case .slot(40): .purple
+        case .slot(50): .green
+        case .slot(60): .yellow
+        case .slot(70): .blue
+        case .slot(80): .red
+        case .slot: nil
+        }
     }
-
-    private static let rails: [Rail] = [
-        Rail(label: "Handle", band: nil, location: .handleOnly),
-        Rail(label: nil, band: .black, location: .firstSlot),
-        Rail(label: "30", band: .white, location: .slot(30)),
-        Rail(label: "40", band: .purple, location: .slot(40)),
-        Rail(label: "50", band: .green, location: .slot(50)),
-        Rail(label: "60", band: .yellow, location: .slot(60)),
-        Rail(label: "70", band: .blue, location: .slot(70)),
-        Rail(label: "80", band: .red, location: .slot(80)),
-        Rail(label: "90", band: .black, location: .slot(90)),
-    ]
 
     var body: some View {
         let setup = PowerBlockTable.setup(for: weight)
-        let pinIndex = Self.rails.firstIndex { $0.location == setup?.location } ?? 0
+        let state = PowerBlockTable.diagramState(for: weight)
+        let pinIndex = state?.selectedIndex ?? 0
         VStack(spacing: 12) {
             ZStack(alignment: .topLeading) {
                 // Leading-aligned, so labels, rails and the pin share one origin whatever trails a row.
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Self.rails.indices, id: \.self) { index in
+                    ForEach(PowerBlockTable.locations.indices, id: \.self) { index in
+                        let location = PowerBlockTable.locations[index]
                         railRow(
-                            Self.rails[index], index: index, pinIndex: pinIndex,
-                            adders: setup?.adders ?? 0)
+                            location, index: index,
+                            lifted: state.map { $0.lifted.contains(location) } ?? (index == 0),
+                            adders: state?.adders ?? 0)
                     }
                 }
-                if pinIndex > 0 {
+                if state?.hasPin ?? false {
                     pin
                         .offset(x: labelWidth + 8, y: CGFloat(pinIndex) * rowHeight)
                         // Under Reduce Motion a new identity cross-fades instead of sliding.
@@ -67,15 +65,17 @@ struct PowerBlockDiagram: View {
         reduceMotion ? .easeInOut(duration: 0.25) : .spring(duration: 0.4, bounce: 0.25)
     }
 
-    private func railRow(_ rail: Rail, index: Int, pinIndex: Int, adders: Int) -> some View {
+    private func railRow(
+        _ location: PowerBlockTable.Location, index: Int, lifted: Bool, adders: Int
+    ) -> some View {
         HStack(spacing: 8) {
-            Text(rail.label ?? "")
+            Text(location.label ?? "")
                 .font(.footnote)
                 .monospacedDigit()
                 .frame(width: labelWidth, alignment: .trailing)
             ZStack {
                 Capsule().fill(Color.secondary.opacity(0.35)).frame(height: 6)
-                if let band = rail.band {
+                if let band = band(for: location) {
                     Capsule().fill(band).frame(width: 36, height: 8)
                         .overlay(Capsule().stroke(Color.primary, lineWidth: 1))
                 }
@@ -85,12 +85,12 @@ struct PowerBlockDiagram: View {
                 HStack(spacing: 6) {
                     ForEach(0..<2, id: \.self) { adder($0 < adders) }
                 }
-            } else if rail.label == nil {
+            } else if location == .firstSlot {
                 Text("first slot").font(.footnote).foregroundStyle(.secondary)
             }
         }
         .frame(height: rowHeight)
-        .opacity(index <= pinIndex ? 1 : 0.3)
+        .opacity(lifted ? 1 : 0.3)
     }
 
     /// A circle on the handle: filled when installed, outlined when not.
