@@ -179,7 +179,10 @@ private struct ResumeRow: View {
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
         }
-        .accessibilityElement(children: .combine)
+        // The ticking time is the value, not the label, so the element's name stays steady.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(Text(startDate, style: .timer))
         .accessibilityHint("Resumes the workout")
     }
 }

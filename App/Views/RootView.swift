@@ -39,6 +39,8 @@ struct RootView: View {
             }
             .accessibilityIdentifier("tabs.settings")
         }
+        // Under the workout cover, the tabs stay in the accessibility tree; hide them while it shows.
+        .accessibilityHidden(presentedWorkout != nil)
         .fullScreenCover(item: $presentedWorkout) { workout in
             WorkoutScreen(workout: workout, progressions: $progressions)
         }
