@@ -12,9 +12,12 @@ struct WorkoutTab: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
-    @Query(RoutineLibrary.routinesByName) private var routines: [Routine]
+    @Query(ProgrammeLibrary.myRoutines) private var routines: [Routine]
+    @Query(ProgrammeLibrary.programmesByName) private var programmes: [Programme]
     @State private var saveFailed = false
     @State private var isCreatingRoutine = false
+    @State private var isCreatingProgramme = false
+    @State private var newProgrammeName = ""
     @State private var routineToDelete: Routine?
     @State private var isShowingStarterRoutines = false
     /// A workout started from the Starter Routines sheet, shown once the sheet has closed.
@@ -48,8 +51,18 @@ struct WorkoutTab: View {
                     .disabled(!inProgressWorkouts.isEmpty)
                     .accessibilityIdentifier("workoutTab.startEmpty")
                 }
+                Section("Programmes") {
+                    ForEach(programmes.enumerated(), id: \.element.id) { index, programme in
+                        ProgrammeRow(programme: programme, index: index, present: presentStarted)
+                    }
+                    Button("New Programme", systemImage: "plus") {
+                        newProgrammeName = ""
+                        isCreatingProgramme = true
+                    }
+                    .accessibilityIdentifier("workoutTab.newProgramme")
+                }
                 Section {
-                    if routines.isEmpty {
+                    if routines.isEmpty && programmes.isEmpty {
                         ForEach(StarterRoutine.suggestions(in: StarterRoutine.bundled)) {
                             starterRoutine in
                             StarterRoutineLink(
@@ -77,14 +90,17 @@ struct WorkoutTab: View {
                     }
                     .accessibilityIdentifier("workoutTab.starterRoutines")
                 } header: {
-                    Text("Routines")
+                    Text("My Routines")
                 } footer: {
-                    if routines.isEmpty {
+                    if routines.isEmpty && programmes.isEmpty {
                         Text("No routines yet. Try a starter routine, or make your own.")
                     }
                 }
             }
             .navigationTitle("Workout")
+            .navigationDestination(for: Programme.self) { programme in
+                ProgrammeDetail(programme: programme, present: presentStarted)
+            }
             .navigationDestination(for: Routine.self) { routine in
                 RoutineDetail(routine: routine, present: presentStarted)
             }
@@ -108,6 +124,14 @@ struct WorkoutTab: View {
             } message: { _ in
                 Text("Workouts started from it are kept.")
             }
+            .alert("New Programme", isPresented: $isCreatingProgramme) {
+                TextField("Name", text: $newProgrammeName)
+                    .accessibilityIdentifier("workoutTab.newProgrammeName")
+                Button("Cancel", role: .cancel) {}
+                    .accessibilityIdentifier("workoutTab.newProgrammeCancel")
+                Button("Create") { createProgramme() }
+                    .accessibilityIdentifier("workoutTab.newProgrammeCreate")
+            }
             .saveFailedAlert(isPresented: $saveFailed)
         }
     }
@@ -118,6 +142,14 @@ extension WorkoutTab {
         guard let started = startedFromStarterRoutines else { return }
         startedFromStarterRoutines = nil
         presentStarted(started)
+    }
+
+    private func createProgramme() {
+        do {
+            try ProgrammeLibrary(context: modelContext).create(named: newProgrammeName)
+        } catch {
+            saveFailed = true
+        }
     }
 
     private func delete(_ routine: Routine) {
@@ -149,5 +181,33 @@ private struct ResumeRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityHint("Resumes the workout")
+    }
+}
+
+/// A programme's name and "Up next: <routine>", with a Start button for that routine. A tap opens the programme.
+private struct ProgrammeRow: View {
+    let programme: Programme
+    let index: Int
+    let present: (RoutineStart.Started) -> Void
+
+    var body: some View {
+        let upNext = ProgrammeLibrary.upNext(in: programme)
+        // Start sits beside the link, not inside it, so it stays its own accessibility element.
+        HStack {
+            NavigationLink(value: programme) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(programme.name)
+                    Text(upNext.map { "Up next: \($0.name)" } ?? "No routines yet")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("workoutTab.programme.\(index).upNext")
+                }
+            }
+            .accessibilityIdentifier("workoutTab.programme.\(index)")
+            if let upNext {
+                StartRoutineButton(routine: upNext, present: present)
+                    .accessibilityIdentifier("workoutTab.programme.\(index).start")
+            }
+        }
     }
 }

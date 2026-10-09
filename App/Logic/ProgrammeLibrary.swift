@@ -8,6 +8,17 @@ import SwiftData
 struct ProgrammeLibrary {
     let context: ModelContext
 
+    /// The routines in no programme (My Routines), sorted by name. Views use it in `@Query`.
+    static var myRoutines: FetchDescriptor<Routine> {
+        FetchDescriptor(
+            predicate: #Predicate { $0.programme == nil }, sortBy: [SortDescriptor(\.name)])
+    }
+
+    /// Every programme, sorted by name. Views use it in `@Query`.
+    static var programmesByName: FetchDescriptor<Programme> {
+        FetchDescriptor(sortBy: [SortDescriptor(\.name)])
+    }
+
     /// The programme's routines in position order.
     static func orderedRoutines(of programme: Programme) -> [Routine] {
         programme.routines

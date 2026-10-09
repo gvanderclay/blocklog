@@ -6,6 +6,8 @@ import SwiftUI
 struct RoutineEditor: View {
     /// The routine to edit; nil creates a new one.
     let routine: Routine?
+    /// The programme a new routine is added to the end of; nil for My Routines.
+    private var programme: Programme?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -19,6 +21,13 @@ struct RoutineEditor: View {
     init(routine: Routine?) {
         self.routine = routine
         self.draft = routine.map(RoutineDraft.init(routine:)) ?? RoutineDraft()
+    }
+
+    /// A new routine at the end of the programme.
+    init(newIn programme: Programme) {
+        self.routine = nil
+        self.programme = programme
+        self.draft = RoutineDraft()
     }
 
     /// A new routine starting from the draft, such as a starter routine's.
@@ -96,7 +105,11 @@ struct RoutineEditor: View {
 
     private func save() {
         do {
-            try RoutineLibrary(context: modelContext).save(draft, to: routine)
+            if let programme {
+                try ProgrammeLibrary(context: modelContext).add(draft, to: programme)
+            } else {
+                try RoutineLibrary(context: modelContext).save(draft, to: routine)
+            }
             dismiss()
         } catch {
             saveFailed = true

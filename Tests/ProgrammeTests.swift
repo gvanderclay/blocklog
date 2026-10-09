@@ -58,6 +58,15 @@ struct ProgrammeTests {
         return workout
     }
 
+    // MARK: My Routines
+
+    @Test func myRoutinesHoldsOnlyRoutinesInNoProgramme() throws {
+        _ = try programme(["Push", "Pull"])
+        try RoutineLibrary(context: context).save(try draft("Arms"), to: nil)
+
+        #expect(try context.fetch(ProgrammeLibrary.myRoutines).map(\.name) == ["Arms"])
+    }
+
     // MARK: Create, rename and delete
 
     @Test func createSavesATrimmedNameAndRefusesABlankOne() throws {
