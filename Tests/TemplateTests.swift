@@ -210,4 +210,54 @@ struct TemplateTests {
 
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<Exercise>()) == count + 1)
     }
+
+    /// Asserts a failed save left nothing behind: no exercise, workout or routine, stored or pending.
+    private func expectNothingSaved(in store: ReadOnlyStore) throws {
+        let context = store.context
+        #expect(!context.hasChanges)
+        #expect(try context.fetch(FetchDescriptor<Exercise>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<Workout>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<Routine>()).isEmpty)
+        // A fresh context reads what the store holds on disk.
+        let fresh = ModelContext(store.container)
+        #expect(try fresh.fetchCount(FetchDescriptor<Exercise>()) == 0)
+        #expect(try fresh.fetchCount(FetchDescriptor<Workout>()) == 0)
+        #expect(try fresh.fetchCount(FetchDescriptor<Routine>()) == 0)
+    }
+
+    // Each test starts from an empty store, so every starter the template names is inserted on use.
+
+    @Test func aFailedDraftRollsBackTheInsertedStarters() throws {
+        let store = try ReadOnlyStore()
+        defer { store.remove() }
+        let failing = TemplateLibrary(context: store.context)
+
+        #expect(throws: (any Error).self) { try failing.draft(of: try template("Full Body")) }
+
+        try expectNothingSaved(in: store)
+    }
+
+    @Test func aFailedStartRollsBackTheInsertedStarters() throws {
+        let store = try ReadOnlyStore()
+        defer { store.remove() }
+        let failing = TemplateLibrary(context: store.context)
+
+        #expect(throws: (any Error).self) {
+            try failing.startWorkout(from: try template("Golden Six"))
+        }
+
+        try expectNothingSaved(in: store)
+    }
+
+    @Test func aFailedAddProgrammeRollsBackTheInsertedStarters() throws {
+        let store = try ReadOnlyStore()
+        defer { store.remove() }
+        let failing = TemplateLibrary(context: store.context)
+        let upperLower = try #require(
+            Template.programmes(in: try Template.load()).first { $0.name == "Upper/Lower" })
+
+        #expect(throws: (any Error).self) { try failing.addProgramme(upperLower) }
+
+        try expectNothingSaved(in: store)
+    }
 }
