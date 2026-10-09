@@ -101,12 +101,15 @@ struct BackupDocument: Codable, Equatable {
     // MARK: Reading and writing JSON
 
     /// Dates are ISO 8601 with fractional seconds, so a restored date is exact to the millisecond.
-    private static let fractionalDates = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+    /// Nonisolated, with `text(for:)`, because the JSON coders' date closures run off the main actor; the
+    /// format style is an immutable `Sendable` value.
+    private nonisolated static let fractionalDates = Date.ISO8601FormatStyle(
+        includingFractionalSeconds: true)
 
     /// The file's text for a date: the date rounded to the millisecond. The format style truncates, so the
     /// rounded value is nudged half a millisecond up; otherwise a parsed .135 stored a hair under .135 would
     /// print as .134, and every export and import would lose a millisecond.
-    private static func text(for date: Date) -> String {
+    private nonisolated static func text(for date: Date) -> String {
         let milliseconds = (date.timeIntervalSince1970 * 1000).rounded()
         return Date(timeIntervalSince1970: (milliseconds + 0.5) / 1000).formatted(fractionalDates)
     }
