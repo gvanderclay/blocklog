@@ -234,6 +234,47 @@ struct ProgrammeTests {
         #expect(ProgrammeLibrary.upNext(in: programme)?.name == "Legs")
     }
 
+    // MARK: Finish summary
+
+    /// Starts the routine, checks off its first set and finishes, as the workout screen and finish sheet do.
+    private func finishSummary(of routine: Routine) throws -> WorkoutSummary {
+        let started = try #require(
+            try RoutineStart(context: context).startWorkout(from: routine, at: start))
+        let workoutExercise = try #require(started.workout.exercises.first)
+        let set = try #require(WorkoutLog.orderedSets(of: workoutExercise).first)
+        set.repsText = "8"
+        try WorkoutLog(context: context).toggleCompleted(set)
+        return try #require(
+            try WorkoutLog(context: context).finish(
+                started.workout, title: "", at: start.addingTimeInterval(3_600)))
+    }
+
+    @Test func finishingPushInPPLLeavesPullUpNext() throws {
+        let programme = try programme(["Push", "Pull", "Legs"])
+
+        let summary = try finishSummary(of: try routine("Push", in: programme))
+
+        #expect(summary.nextInProgramme?.programme == "PPL")
+        #expect(summary.nextInProgramme?.routine == "Pull")
+    }
+
+    @Test func finishingTheLastRoutineWrapsToTheFirst() throws {
+        let programme = try programme(["Push", "Pull", "Legs"])
+
+        let summary = try finishSummary(of: try routine("Legs", in: programme))
+
+        #expect(summary.nextInProgramme?.routine == "Push")
+    }
+
+    @Test func finishingARoutineInNoProgrammeShowsNoNextLine() throws {
+        let mine = try #require(
+            try RoutineLibrary(context: context).save(try draft("Arms"), to: nil))
+
+        let summary = try finishSummary(of: mine)
+
+        #expect(summary.nextInProgramme == nil)
+    }
+
     /// A read-only store holding a programme of Push, Pull and Legs, so every save fails.
     private func failingProgrammeStore() throws -> ReadOnlyStore {
         try ReadOnlyStore { context in

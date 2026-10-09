@@ -67,7 +67,7 @@ Each touch is specified in its feature ticket; this is the rule that ticket impl
 - Set rows have a long-press `.contextMenu` (ticket 08) as well as swipe actions.
 - Empty states use `ContentUnavailableView` with an SF Symbol and one sentence; an empty search uses `ContentUnavailableView.search`.
 - Destructive actions confirm with a destructive-role button that names the action ("Discard Workout", "Delete Routine"), plus Cancel. Confirm: discarding a workout, deleting a workout, routine or programme, removing an exercise that has checked sets, and replacing data on import. Exception: deleting a single set (swipe or menu) happens at once, because it is quick to redo. Removing a routine from a programme isn't destructive (the routine moves to My Routines), so it asks nothing.
-- Finishing a workout shows a short summary (ticket 06).
+- Finishing a workout shows a short summary (ticket 06); after a programme workout it adds a secondary line, "Next in <programme>: <routine>", which starts nothing.
 - Tapping a Previous value copies it into an unchecked set (ticket 09).
 - The setup diagram animates between setups (ticket 14).
 

@@ -248,7 +248,8 @@ struct WorkoutLog {
             title: workout.title,
             duration: .seconds(end.timeIntervalSince(workout.startDate)),
             completedSetCount: workout.exercises.reduce(0) { $0 + $1.sets.count },
-            exerciseCount: workout.exercises.count)
+            exerciseCount: workout.exercises.count,
+            nextInProgramme: ProgrammeLibrary.nextInProgramme(after: workout))
     }
 
     /// Deletes the workout with its exercises and sets.
@@ -299,6 +300,8 @@ struct WorkoutSummary {
     let duration: Duration
     let completedSetCount: Int
     let exerciseCount: Int
+    /// Nil when the workout's routine is in no programme.
+    let nextInProgramme: NextInProgramme?
 }
 
 @MainActor

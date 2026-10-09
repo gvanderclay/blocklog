@@ -92,7 +92,8 @@ struct FinishSheet: View {
     }
 }
 
-/// "Workout N", the title, and the duration, completed sets and exercise count.
+/// "Workout N", the title, and the duration, completed sets and exercise count; after a programme
+/// workout, "Next in <programme>: <routine>".
 private struct FinishSummary: View {
     let summary: WorkoutSummary
 
@@ -120,6 +121,13 @@ private struct FinishSummary: View {
                     : AnyLayout(HStackLayout(alignment: .top, spacing: 24))
                 layout { stats }
                     .padding(.top, 8)
+                if let next = summary.nextInProgramme {
+                    Text("Next in \(next.programme): \(next.routine)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                        .accessibilityIdentifier("finish.upNext")
+                }
             }
             .multilineTextAlignment(.center)
             .padding()

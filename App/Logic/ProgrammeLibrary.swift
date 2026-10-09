@@ -41,6 +41,15 @@ struct ProgrammeLibrary {
         return routines[(newest.0 + 1) % routines.count]
     }
 
+    /// The programme of the workout's routine and the routine up next in it, for the finish summary. Nil when
+    /// the workout has no routine or the routine is in no programme. Read it after the finish is saved.
+    static func nextInProgramme(after workout: Workout) -> NextInProgramme? {
+        guard let programme = workout.routine?.membership?.programme,
+            let routine = upNext(in: programme)
+        else { return nil }
+        return NextInProgramme(programme: programme.name, routine: routine.name)
+    }
+
     /// Gives the routines the positions of their place in `ordered`, in `programme`. Doesn't save.
     static func place(_ ordered: [Routine], in programme: Programme) {
         for (position, routine) in ordered.enumerated() {
@@ -119,4 +128,11 @@ struct ProgrammeLibrary {
         Self.place(others, in: programme)
         try context.saveOrRollBack()
     }
+}
+
+/// The "Next in <programme>: <routine>" line of the finish summary.
+@MainActor
+struct NextInProgramme {
+    let programme: String
+    let routine: String
 }
