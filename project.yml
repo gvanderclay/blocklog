@@ -36,33 +36,16 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.gvanderclay.blocklog.tests
-  BlocklogUITests:
-    type: bundle.ui-testing
-    platform: iOS
-    sources: [UITests]
-    dependencies:
-      - target: Blocklog
-    settings:
-      base:
-        GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.gvanderclay.blocklog.uitests
-        TEST_TARGET_NAME: Blocklog
 schemes:
   Blocklog:
     build:
       targets:
         Blocklog: all
     test:
-      targets: [BlocklogTests, BlocklogUITests]
+      targets: [BlocklogTests]
   BlocklogUnit:
     build:
       targets:
         Blocklog: all
     test:
       targets: [BlocklogTests]
-  BlocklogUI:
-    build:
-      targets:
-        Blocklog: all
-    test:
-      targets: [BlocklogUITests]

@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Developer/Xcode/CompilationCache.noindex
-          key: cas-v1-xcode-27.0-${{ hashFiles('App/**', 'Tests/**', 'UITests/**', 'project.yml') }}
+          key: cas-v1-xcode-27.0-${{ hashFiles('App/**', 'Tests/**', 'project.yml') }}
           restore-keys: cas-v1-xcode-27.0-
       # Below the job's limit, so a stalled run still leaves time to report and upload its logs.
       - name: Build and test
@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Developer/Xcode/CompilationCache.noindex
-          key: cas-v1-xcode-27.0-${{ hashFiles('App/**', 'Tests/**', 'UITests/**', 'project.yml') }}
+          key: cas-v1-xcode-27.0-${{ hashFiles('App/**', 'Tests/**', 'project.yml') }}
       # Runs before the slow log collection. It is its own step so that `gh run view --log-failed`
       # shows the report, and fails only when the test step failed (scripts/ci-report.py).
       - name: Report CI failure
@@ -80,73 +80,6 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unit-failure
-          path: |
-            build/logs/
-            build/results/
-          retention-days: 7
-
-  ui:
-    runs-on: xcode-27
-    # 36 = 4 setup + 3 compilation cache restore + 16 build and test (simslim runs inside it, beside the build) + 3 report
-    #      + 4 log collection + 3 cache save + 3 upload.
-    timeout-minutes: 36
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Print versions
-        run: |
-          echo "ImageOS=$ImageOS ImageVersion=$ImageVersion"
-          xcodebuild -version
-          xcrun swift --version
-          xcrun simctl list runtimes
-      # Also installs the pinned simslim (mise.toml).
-      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
-        with:
-          version: 2026.10.4
-          install: true
-          cache: true
-      # Xcode's compilation cache (ci-test turns it on). The key names the Xcode version and the sources;
-      # a miss restores the newest cache for the same Xcode. Only pushes to main save it (below).
-      - id: cas
-        name: Restore compilation cache
-        timeout-minutes: 3
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/Library/Developer/Xcode/CompilationCache.noindex
-          key: cas-v1-xcode-27.0-${{ hashFiles('App/**', 'Tests/**', 'UITests/**', 'project.yml') }}
-          restore-keys: cas-v1-xcode-27.0-
-      # Below the job's limit, so a stalled run still leaves time to report and upload its logs.
-      - name: Build and test
-        id: tests
-        run: just ci-test BlocklogUI
-        timeout-minutes: 16
-      - name: Save compilation cache
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !cancelled() && steps.cas.outputs.cache-hit != 'true'
-        timeout-minutes: 3
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/Library/Developer/Xcode/CompilationCache.noindex
-          key: cas-v1-xcode-27.0-${{ hashFiles('App/**', 'Tests/**', 'UITests/**', 'project.yml') }}
-      # Runs before the slow log collection. It is its own step so that `gh run view --log-failed`
-      # shows the report, and fails only when the test step failed (scripts/ci-report.py).
-      - name: Report CI failure
-        id: report
-        if: always()
-        timeout-minutes: 3
-        env:
-          TEST_OUTCOME: ${{ steps.tests.outcome }}
-        run: /usr/bin/python3 scripts/ci-report.py build
-      # The logs also upload after ci-test retried a test runner that never started, or a test recovered on retry.
-      - if: failure() || cancelled() || hashFiles('build/results/BlocklogUI-retry.xcresult/Info.plist') != '' || steps.report.outputs.recovered == '1'
-        name: Collect simulator logs
-        timeout-minutes: 4
-        run: |
-          mkdir -p build/logs
-          xcrun simctl spawn booted log show --last 20m --style compact | gzip >build/logs/simulator.log.gz || true
-          cp ~/Library/Logs/DiagnosticReports/*.ips build/logs/ || true
-      - if: failure() || cancelled() || hashFiles('build/results/BlocklogUI-retry.xcresult/Info.plist') != '' || steps.report.outputs.recovered == '1'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ui-failure
           path: |
             build/logs/
             build/results/

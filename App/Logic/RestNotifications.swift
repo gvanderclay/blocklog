@@ -30,7 +30,7 @@ final class RestNotifications: RestNotifying {
 
     private let center: any RestNotificationCenter
     private let foregroundSilencer = ForegroundSilencer()
-    /// False under `-ui-testing`, where the system's permission alert would block the UI tests.
+    /// False in unit tests, which must not raise the system's permission alert.
     private let requestsPermission: Bool
     private var hasRequestedPermission = false
     /// The last queued operation; the next one waits for it.
@@ -40,7 +40,7 @@ final class RestNotifications: RestNotifying {
 
     init(
         center: any RestNotificationCenter = UNUserNotificationCenter.current(),
-        requestsPermission: Bool = !CommandLine.arguments.contains("-ui-testing")
+        requestsPermission: Bool = true
     ) {
         self.center = center
         self.requestsPermission = requestsPermission

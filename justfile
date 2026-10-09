@@ -10,10 +10,6 @@ xcbeautify := "mise exec -- xcbeautify"
 no_diag := "-collect-test-diagnostics never"
 # A hung test fails in minutes (allowances round up to whole minutes).
 timeouts := "-test-timeouts-enabled YES -default-test-execution-time-allowance 240 -maximum-test-execution-time-allowance 300"
-# Screenshots run only through `just screenshot`.
-skip_shots := "-skip-testing:BlocklogUITests/ScreenshotTests"
-# VoiceOver speaks aloud from the simulator, so it runs only in CI (`ci-test BlocklogUI`), never locally.
-skip_voiceover := "-skip-testing:BlocklogUITests/VoiceOverTests"
 
 default:
     @just --list
@@ -28,7 +24,7 @@ generate:
 
 # Format the Swift sources in place with the toolchain's swift format; settings are in .swift-format.
 fmt:
-    xcrun swift format --in-place --recursive App Tests UITests scripts
+    xcrun swift format --in-place --recursive App Tests scripts
 
 # Synthesize the rest-end chime into App/Resources/rest-chime.caf.
 chime:
@@ -63,21 +59,17 @@ build: generate
 build-tests: generate
     @just _xcb build-tests -scheme Blocklog -destination "id=$(just _udid)" build-for-testing
 
-# Run every test (unit and UI) on the simulator.
-test: generate
-    @just _xcb test -scheme Blocklog -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} {{skip_voiceover}} test
+# Run every test (all unit tests) on the simulator.
+test: test-unit
 
 test-unit: generate
     @just _xcb test-unit -scheme BlocklogUnit -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
-
-test-ui: generate
-    @just _xcb test-ui -scheme BlocklogUI -destination "id=$(just _udid)" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} {{skip_shots}} {{skip_voiceover}} test
 
 # Run one test, e.g. `just test-one BlocklogTests/hostedInApp()`.
 test-one identifier: generate
     @just _xcb test-one -scheme Blocklog -destination "id=$(just _udid)" "-only-testing:{{identifier}}" -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test
 
-# CI and local test run for one scheme: BlocklogUnit or BlocklogUI.
+# CI and local test run for one scheme (BlocklogUnit).
 ci-test scheme: generate
     #!/usr/bin/env bash
     set -euo pipefail
@@ -124,8 +116,6 @@ ci-test scheme: generate
     }
     prepare_simulator &
     prep=$!
-    extra=()
-    [[ "{{scheme}}" == BlocklogUI ]] && extra=(-retry-tests-on-failure -test-iterations 2 -skip-testing:BlocklogUITests/ScreenshotTests)
     renderer=()
     [[ -n "${GITHUB_ACTIONS:-}" ]] && renderer=(--renderer github-actions)
     rm -rf "build/results/{{scheme}}.xcresult" "build/results/{{scheme}}-retry.xcresult"
@@ -152,7 +142,7 @@ ci-test scheme: generate
     result="build/results/{{scheme}}.xcresult"
     while ((status == 0)); do
         xcodebuild test-without-building "${common[@]}" -resultBundlePath "$result" -parallel-testing-enabled NO \
-            {{no_diag}} {{timeouts}} ${extra[@]+"${extra[@]}"} 2>&1 | tee -a "$log" | "${xcb[@]}" || status=$?
+            {{no_diag}} {{timeouts}} 2>&1 | tee -a "$log" | "${xcb[@]}" || status=$?
         say "tests exited $status"
         # A simulator's first boot keeps it busy for minutes, and on CI the test runner then started too
         # slowly to bootstrap (killed or aborted before any test ran). Retry that, once, on the warmer simulator.
@@ -180,33 +170,6 @@ run: build
     xcrun simctl launch "$udid" {{bundle_id}}
     sleep 8  # ponytail: fixed wait for the launch animation; poll the accessibility tree if it proves flaky
     xcrun simctl io "$udid" screenshot build/run.png
-
-# Capture ScreenshotTests in light, dark and dark at the largest accessibility text size.
-screenshot: generate
-    #!/usr/bin/env bash
-    set -euo pipefail
-    udid=$(just _udid)
-    xcrun simctl boot "$udid" 2>/dev/null || true
-    xcrun simctl bootstatus "$udid" >/dev/null
-    reset() { xcrun simctl ui "$udid" appearance light; xcrun simctl ui "$udid" content_size large; }
-    trap reset EXIT
-    rm -rf build/screenshots
-    for mode in light dark ax-large; do
-        case $mode in
-            light) xcrun simctl ui "$udid" appearance light; xcrun simctl ui "$udid" content_size large ;;
-            dark) xcrun simctl ui "$udid" appearance dark; xcrun simctl ui "$udid" content_size large ;;
-            ax-large) xcrun simctl ui "$udid" appearance dark; xcrun simctl ui "$udid" content_size accessibility-extra-extra-extra-large ;;
-        esac
-        result="build/results/screenshot-$mode-$(date +%Y%m%d-%H%M%S).xcresult"
-        mkdir -p build/logs build/results "build/screenshots/$mode"
-        xcodebuild -project {{project}} -derivedDataPath {{derived}} -resultBundlePath "$result" \
-            -scheme BlocklogUI -destination "id=$udid" -only-testing:BlocklogUITests/ScreenshotTests -parallel-testing-enabled NO {{no_diag}} {{timeouts}} test -jobs 2 COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tee "build/logs/screenshot-$mode.log" | {{xcbeautify}}
-        xcrun xcresulttool export attachments --path "$result" --output-path "build/screenshots/$mode"
-        # Exports are named by UUID; rename each to <screen-name>.png from the manifest.
-        python3 -c 'import json,os,sys; d=sys.argv[1]; [os.rename(os.path.join(d, a["exportedFileName"]), os.path.join(d, a["suggestedHumanReadableName"].rsplit("_", 2)[0] + ".png")) for t in json.load(open(os.path.join(d, "manifest.json"))) for a in t["attachments"]]' "build/screenshots/$mode"
-    done
-    ls build/screenshots/*
 
 # Build, sign, install and launch on the connected iPhone (or $DEVICE).
 device: generate

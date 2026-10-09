@@ -49,4 +49,4 @@ The domain terms Blocklog uses in code, tests and UI text. A term in parentheses
 
 ## Process
 
-- **Checkpoint**: the ticket that ends a phase. It runs the accessibility audits and a screenshot design review, installs the app on the phone, waits for the user's feel check and real workout, and tags the commit `phase-N`.
+- **Checkpoint**: the ticket that ends a phase. It runs the accessibility audits and a design review on the phone, installs the app on the phone, waits for the user's feel check and real workout, and tags the commit `phase-N`.

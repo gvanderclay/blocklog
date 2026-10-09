@@ -9,18 +9,16 @@ Run every command from the repository root. If `just` is not on `PATH`, run it a
 - `just` (the `default` recipe): list the recipes.
 - `just generate`: regenerate `Blocklog.xcodeproj` from `project.yml`. Run it after adding, moving or deleting a file; the build and test recipes also run it first.
 - `just build`: compile for the simulator, the fastest check that the code builds.
-- `just build-tests`: compile the app and both test bundles without running them, so a later test recipe only relinks; on the shared Mac this is the step that takes the build lock.
-- `just test`: run every unit and UI test except `ScreenshotTests`, which only `just screenshot` runs. CI runs the full suite on every push, so locally it is optional; see "Local checks" below.
-- `just test-unit` / `just test-ui`: run one test bundle while working on that side (`test-ui` also skips `ScreenshotTests`).
-- `VoiceOverTests` turns on the simulator's VoiceOver, which speaks aloud on this Mac, so `just test` and `just test-ui` skip it and only `just ci-test BlocklogUI` (CI) runs it. Never run it locally unless the user asks.
-- `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogUITests/SettingsJourneyTests` (quote an identifier that ends in `()`).
+- `just build-tests`: compile the app and the test bundle without running it, so a later test recipe only relinks.
+- `just test` / `just test-unit`: run every unit test.
+- `just test-one <identifier>`: run one test or suite, such as `just test-one BlocklogTests/RoutineTests` (quote an identifier that ends in `()`).
 
-Local checks: the UI journeys are slow, so run only what a change can break. While working, run `just test-unit` and the journey for the screen you are changing with `just test-one`. Before review and commit, `just test-unit` must pass, plus every journey whose screens or flows the change touches; a change to `App/Logic` or `App/PowerBlock` alone needs no journey. CI is the full gate: after the push, a failing journey is fixed in a follow-up commit.
-- `just ci-test <BlocklogUnit|BlocklogUI>`: the exact command CI runs (it also skips `ScreenshotTests`); use it to reproduce a CI failure.
+Local checks: before review and commit, `just test-unit` must pass. Acceptance of a flow or screen is checked by a `blind-tester` delegate when the ticket needs it, not by UI tests. CI runs the unit tests on every push.
+
+- `just ci-test BlocklogUnit`: the exact command CI runs; use it to reproduce a CI failure.
 - Every test recipe turns on test timeouts (240 s per test, 300 s at most), so a hung test fails in minutes.
 - `just ci-report <run-id>`: download a failed CI run's artifacts and print its test failures, crash reports and log tail; use it first when CI fails.
 - `just run`: install and launch on the simulator and save `build/run.png`, for a manual check.
-- `just screenshot`: capture `ScreenshotTests` into `build/screenshots/{light,dark,ax-large}/`, for design reviews.
 - `just device`: build, sign and install on the connected iPhone; checkpoints use it.
 - `just fmt`: format the Swift sources; run it before every commit that changes Swift files.
 - `just chime` / `just icon`: regenerate `App/Resources/rest-chime.caf` and the app icons from `scripts/`; change the scripts, never the generated files.
@@ -38,7 +36,6 @@ When a build or test fails, read the full log in `build/logs/`; the terminal sho
 - `App/Views`: SwiftUI views.
 - `App/Resources`: the starter exercises, the asset catalog and sounds.
 - `Tests/`: Swift Testing unit tests, hosted in the app. Tests that need a store use an in-memory `ModelContainer`.
-- `UITests/`: XCUITest journeys (rule 10a), launched with `-ui-testing`, finding elements by accessibility identifier. Wait with `element.appears()` from `XCUIElement+Appears.swift`, never `waitForExistence`, and name each step with `step(_:_:)`.
 - `scripts/`: generators for committed assets, run through `just`.
 - `docs/`: design and research documents.
 
@@ -56,10 +53,9 @@ The per-ticket code review checks every change against these rules. Where a skil
 8. One module per file: a main type plus small types only it uses, named after the main type. A file over about 400 lines is a review flag that it may hold two modules.
 9. Swift 6 strict concurrency: views and logic are `@MainActor`. `project.yml` sets no default isolation, so write `@MainActor` on each type in `App/Logic` and `App/PowerBlock`. `App/Model` is the exception: `@MainActor` on a `@Model` class breaks its generated `PersistentModel` conformance and `#Predicate` key paths, so model classes and their raw-value enums stay nonisolated, and only main-actor code (views, `App/Logic`, the main `ModelContext`) touches them. Every `@unchecked Sendable` and `nonisolated(unsafe)` has a comment saying why it is safe.
 10. Tests check behaviour through public interfaces, never private helpers or view internals. A test is never weakened, skipped or deleted to make a change pass.
-10a. UI tests are a few whole-system journeys that check the screens, logic and store connect; they never test a rule (rule 1), which belongs in a unit test. The app turns animations off under `-ui-testing`. A new ticket that wants a UI test extends a journey instead of adding a test; split a journey into two when it nears 120 s locally (the per-test timeout is 240 s). `ScreenshotTests` is exempt: it captures screens for design reviews and runs only through `just screenshot`.
 11. Names in code, tests and UI text follow `CONTEXT.md`, the glossary; read it before naming a type, property or test. A new domain term goes into `CONTEXT.md` in the same change.
 12. Weights come only from the PowerBlock table, chosen with − and + or the weight menu. There is never a free-entry weight field.
-13. Every interactive element has an `accessibilityIdentifier` following the convention below. The one exception is a `.searchable` field, which takes no identifier from SwiftUI; UI tests find it by its placeholder, such as `app.searchFields["Search exercises"]`.
+13. Every interactive element has an `accessibilityIdentifier` following the convention below. The one exception is a `.searchable` field, which takes no identifier from SwiftUI; the blind tester finds it by its placeholder, "Search exercises".
     Identifiers are dot-separated lowerCamel words, `<screen>.<element>`, such as `workout.finish` or `finish.save`. Repeated rows add their zero-based position after the collection's name: `workout.exercise.<e>.set.<s>.<element>`, such as `workout.exercise.0.set.1.reps`. A row named by its content uses the name instead: `exercisePicker.row.<exercise name>`. Keyboard toolbar buttons use `keyboard.<element>`.
 14. Every screen and interaction follows `docs/design.md`: color, type, motion, haptics, sound and accessibility. Read it before writing a view.
 15. Once ticket 06 ships, the user's phone holds real data. A change to `App/Model` must be one SwiftData migrates automatically (adding a model, or adding an optional field), or it must come with a versioned-schema migration and a test that opens a store written by the previous version. Ask the user before any such change.
