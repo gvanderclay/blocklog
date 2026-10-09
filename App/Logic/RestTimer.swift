@@ -13,6 +13,8 @@ final class RestTimer {
     private(set) var endDate: Date?
     /// The rest's length so far, with every ±15 included; nil when idle.
     private(set) var total: TimeInterval?
+    /// The set whose check-off started this rest, for the change hint; nil when idle or after a relaunch.
+    private(set) var checkedSet: WorkoutSet?
 
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let notifications: any RestNotifying
@@ -104,6 +106,7 @@ final class RestTimer {
     func skip() {
         endDate = nil
         total = nil
+        checkedSet = nil
         hasSignalledEnd = false
         notifications.cancel()
     }
@@ -144,6 +147,7 @@ final class RestTimer {
             start(
                 duration: Self.restSeconds(for: exercise, defaultRest: defaultRest),
                 exerciseName: exercise?.name)
+            checkedSet = set
         }
         return next
     }

@@ -254,6 +254,28 @@ struct RestTimerTests {
         #expect(timer.remaining == 60)
     }
 
+    @Test func theCheckedSetLastsThroughOvertimeUntilTheNextCheckOffOrSkip() throws {
+        let (log, workout, first, _) = try store()
+        let workoutExercise = try #require(first.workoutExercise)
+        try log.addSet(to: workoutExercise)
+        let second = try #require(workoutExercise.sets.first { $0 !== first })
+        second.reps = 8
+        _ = try timer.checkOff(first, in: workout, using: log, defaultRest: 90)
+        #expect(timer.checkedSet === first)
+        clock.advance(120)  // overtime
+        #expect(timer.checkedSet === first)
+        _ = try timer.checkOff(second, in: workout, using: log, defaultRest: 90)
+        #expect(timer.checkedSet === second)
+        timer.skip()
+        #expect(timer.checkedSet == nil)
+    }
+
+    @Test func aRestoredTimerHasNoCheckedSet() {
+        timer.restore(endDate: clock.date.addingTimeInterval(60), total: 90)
+        #expect(timer.isRunning)
+        #expect(timer.checkedSet == nil)
+    }
+
     @Test func checkingOffUsesTheExerciseOverride() throws {
         let (log, workout, set, exercise) = try store()
         try log.setRestOverride(120, of: exercise)
@@ -269,6 +291,7 @@ struct RestTimerTests {
         let cancelsBefore = notifications.cancelCount
         _ = try log.finish(workout, title: "Done", at: clock.date)
         #expect(!timer.isRunning)
+        #expect(timer.checkedSet == nil)
         #expect(notifications.cancelCount > cancelsBefore)
     }
 
@@ -278,6 +301,7 @@ struct RestTimerTests {
         let cancelsBefore = notifications.cancelCount
         try log.discard(workout)
         #expect(!timer.isRunning)
+        #expect(timer.checkedSet == nil)
         #expect(notifications.cancelCount > cancelsBefore)
     }
 }

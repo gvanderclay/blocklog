@@ -7,22 +7,58 @@ struct RestTimerBar: View {
     @Environment(RestTimer.self) private var restTimer
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var adjustCount = 0
+    @State private var previewWeights: PreviewWeights?
+
+    private struct PreviewWeights: Identifiable {
+        let now: Double
+        let next: Double
+        var id: Double { now * 1000 + next }
+    }
 
     var body: some View {
         // Anchored at the rest's start, in the past (a future anchor freezes the view until it arrives); whole
         // seconds of total keep every tick on the end date's seconds.
         let anchor =
             restTimer.endDate.map { $0.addingTimeInterval(-(restTimer.total ?? 0)) } ?? .now
-        TimelineView(.periodic(from: anchor, by: 1)) { context in
-            let remaining = restTimer.remaining(at: context.date)
-            content(
-                seconds: Int(remaining.rounded(.up)), remaining: remaining,
-                overtime: restTimer.overtime(at: context.date),
-                isOvertime: restTimer.isOvertime(at: context.date))
+        VStack(spacing: 8) {
+            TimelineView(.periodic(from: anchor, by: 1)) { context in
+                let remaining = restTimer.remaining(at: context.date)
+                content(
+                    seconds: Int(remaining.rounded(.up)), remaining: remaining,
+                    overtime: restTimer.overtime(at: context.date),
+                    isOvertime: restTimer.isOvertime(at: context.date))
+            }
+            changeHint
         }
         .padding()
         .background(.bar)
         .sensoryFeedback(.selection, trigger: adjustCount)
+    }
+
+    /// What to change on the block for the next set; fades in, and cross-fades when the next weight is edited.
+    @ViewBuilder private var changeHint: some View {
+        let weights = restTimer.checkedSet.flatMap { NextSet.weights(after: $0) }
+        let line = weights.flatMap { PowerBlockTable.changeLine(from: $0.now, to: $0.next) }
+        ZStack {
+            if let weights, let line {
+                Button {
+                    previewWeights = PreviewWeights(now: weights.now, next: weights.next)
+                } label: {
+                    Text(line)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .id(line)
+                .transition(.opacity)
+                .accessibilityHint("Shows the block change")
+                .accessibilityIdentifier("restTimer.change")
+            }
+        }
+        .animation(.default, value: line)
+        .sheet(item: $previewWeights) { ChangePreviewSheet(now: $0.now, next: $0.next) }
     }
 
     private func content(
