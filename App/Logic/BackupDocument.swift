@@ -239,7 +239,7 @@ struct BackupDocument: Codable, Equatable {
             try requireUniquePositions(routine.exercises.map(\.position), in: owner)
             for entry in routine.exercises {
                 try claim(entry.id, for: owner)
-                guard kinds[entry.exerciseID] != nil else {
+                guard let kind = kinds[entry.exerciseID] else {
                     throw BackupError.invalid("\(owner) uses an exercise that is not in the file.")
                 }
                 for type in entry.plannedSetTypes {
@@ -261,6 +261,17 @@ struct BackupDocument: Codable, Equatable {
                 {
                     throw BackupError.invalid(
                         "\(owner) has a target duration of \(seconds) seconds.")
+                }
+                // The stored fields must read as the exercise type's target, so a rep range on a timed exercise
+                // (or a duration on a rep exercise) is refused rather than imported as a mix.
+                let target = RoutineTarget(
+                    kind: kind, repRangeLow: entry.repRangeLow, repRangeHigh: entry.repRangeHigh,
+                    durationSeconds: entry.targetDurationSeconds)
+                if entry.repRangeLow != nil, target?.repRange == nil {
+                    throw BackupError.invalid("\(owner) has a rep range for a duration exercise.")
+                }
+                if entry.targetDurationSeconds != nil, target?.seconds == nil {
+                    throw BackupError.invalid("\(owner) has a target duration for a rep exercise.")
                 }
             }
         }

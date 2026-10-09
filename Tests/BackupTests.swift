@@ -482,24 +482,6 @@ struct BackupTests {
         #expect(try exported(target).exercises[0].restOverrideSeconds == nil)
     }
 
-    @Test func importKeepsARoutineTargetThatDoesNotMatchItsExerciseTypeAsWritten() throws {
-        var document = try exported(makeSource())
-        // The bench entry also gets a duration and the plank entry a range; ticket 22f will reject both.
-        document.routines[0].exercises[0].targetDurationSeconds = 45
-        document.routines[0].exercises[1].repRangeLow = 5
-        document.routines[0].exercises[1].repRangeHigh = 9
-        let target = try emptyContainer()
-        try Backup(context: target.mainContext).replaceAll(
-            with: BackupDocument.read(document.encoded()))
-
-        let stored = try target.mainContext.fetch(FetchDescriptor<RoutineExercise>())
-            .sorted { $0.position < $1.position }
-        #expect(stored.map(\.repRangeLow) == [8, 5])
-        #expect(stored.map(\.repRangeHigh) == [12, 9])
-        #expect(stored.map(\.targetDurationSeconds) == [45, 60])
-        #expect(try exported(target) == document)
-    }
-
     @Test func rejectsAWeightThatIsNotAPowerBlockSetting() throws {
         try expectRejected(containing: "12.5 lb") {
             $0.workouts[0].exercises[0].sets[1].weight = 12.5
@@ -572,5 +554,31 @@ struct BackupTests {
         try expectRejected(containing: "target duration of 0") {
             $0.routines[0].exercises[1].targetDurationSeconds = 0
         }
+    }
+
+    @Test func rejectsATargetThatDoesNotMatchItsExerciseType() throws {
+        // Routine exercise 0 is a weight and reps exercise, 1 a duration exercise.
+        try expectRejected(containing: "target duration for a rep exercise") {
+            $0.routines[0].exercises[0].targetDurationSeconds = 45
+        }
+        try expectRejected(containing: "rep range for a duration exercise") {
+            $0.routines[0].exercises[1].repRangeLow = 5
+            $0.routines[0].exercises[1].repRangeHigh = 9
+        }
+    }
+
+    @Test func acceptsARoutineExerciseWithNeitherRangeNorDuration() throws {
+        var document = try exported(makeSource())
+        document.routines[0].exercises[0].repRangeLow = nil
+        document.routines[0].exercises[0].repRangeHigh = nil
+        document.routines[0].exercises[1].targetDurationSeconds = nil
+        let target = try emptyContainer()
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(document.encoded()))
+
+        let stored = try target.mainContext.fetch(FetchDescriptor<RoutineExercise>())
+            .sorted { $0.position < $1.position }
+        #expect(stored.map(\.repRangeLow) == [nil, nil])
+        #expect(stored.map(\.targetDurationSeconds) == [nil, nil])
     }
 }
