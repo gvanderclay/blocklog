@@ -49,7 +49,7 @@ struct SetRow: View {
                 .accessibilityLabel("Set type")
                 .accessibilityValue(label)
                 .accessibilityIdentifier("\(identifierPrefix).typeMenu")
-                previousValue(previous, kind: kind)
+                previousValue(previous)
                 switch kind {
                 case .weightReps:
                     if let weight = set.weight {
@@ -209,8 +209,8 @@ struct SetRow: View {
 
     /// Last time's values: a button that copies them into an unchecked set, or plain text when it can't.
     @ViewBuilder
-    private func previousValue(_ previous: PreviousValues?, kind: ExerciseKind) -> some View {
-        let text = previous?.text(for: kind) ?? "—"
+    private func previousValue(_ previous: SetValues?) -> some View {
+        let text = previous?.text ?? "—"
         let label = Text(text)
             .font(.footnote)
             .fontDesign(.rounded)
@@ -234,7 +234,7 @@ struct SetRow: View {
             }
         }
         .accessibilityLabel("Previous")
-        .accessibilityValue(previous?.spokenText(for: kind) ?? "none")
+        .accessibilityValue(previous?.spokenText ?? "none")
         .accessibilityIdentifier("\(identifierPrefix).previous")
     }
 

@@ -29,26 +29,25 @@ struct Progression {
     /// range, or a last weight of 90 lb with no next setting. "Last time" is the workout the previous-set
     /// lookup uses.
     func suggestion(for workoutExercise: WorkoutExercise) -> Suggestion? {
-        guard let kind = workoutExercise.exercise?.kind, kind != .duration,
-            let range = RoutineLibrary.repRange(for: workoutExercise)
-        else { return nil }
+        guard let range = RoutineLibrary.repRange(for: workoutExercise) else { return nil }
         let working = PreviousSetLookup(context: context).lastWorkingSets(for: workoutExercise)
+        // A timed exercise's sets have no reps, so they never reach the top of the range.
         guard !working.isEmpty, working.allSatisfy({ ($0.reps ?? 0) >= range.upperBound }) else {
             return nil
         }
         let hit = "you hit \(range.upperBound) on every set"
-        guard let heaviest = working.compactMap(\.weight).max() else {
+        let heaviest = working.compactMap { values in values.weight.map { ($0, values) } }
+            .max { $0.0 < $1.0 }
+        guard let (weight, values) = heaviest else {
             // Bodyweight with no added weight: the first added block stays the user's decision.
-            return kind == .bodyweightReps
-                ? Suggestion(
-                    weight: nil, reps: range.lowerBound,
-                    text: "You hit \(range.upperBound) on every set: consider adding weight",
-                    showsArrow: false) : nil
+            return Suggestion(
+                weight: nil, reps: range.lowerBound,
+                text: "You hit \(range.upperBound) on every set: consider adding weight",
+                showsArrow: false)
         }
-        guard let next = PowerBlockTable.next(after: heaviest) else { return nil }
-        let old =
-            kind == .bodyweightReps
-            ? AddedWeight.label(for: heaviest) : "\(heaviest.formatted()) lb"
+        guard let next = PowerBlockTable.next(after: weight), let old = values.weightLabel else {
+            return nil
+        }
         return Suggestion(
             weight: next, reps: range.lowerBound, text: "Up from \(old): \(hit)", showsArrow: true)
     }

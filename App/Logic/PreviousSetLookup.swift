@@ -12,14 +12,14 @@ struct PreviousSetLookup {
     /// The values of the previous counted set paired with `set`, or nil when there is none or `set` is a
     /// warm-up. The workout the set belongs to is never its own previous, so a finished workout being edited
     /// is skipped.
-    func previous(for set: WorkoutSet) -> PreviousValues? {
+    func previous(for set: WorkoutSet) -> SetValues? {
         guard let number = SetNumbering.countedNumber(of: set) else { return nil }
         return lastTime(for: set, index: number - 1, matching: SetNumbering.isCounted)
     }
 
     /// The values of last time's warm-up paired with the warm-up `set` by order among warm-ups, or nil when
     /// there is none or `set` is not a warm-up. Skips the set's own workout like `previous(for:)`.
-    func previousWarmUp(for set: WorkoutSet) -> PreviousValues? {
+    func previousWarmUp(for set: WorkoutSet) -> SetValues? {
         guard set.setType == .warmUp, let workoutExercise = set.workoutExercise,
             let index = WorkoutLog.orderedSets(of: workoutExercise)
                 .filter({ $0.setType == .warmUp }).firstIndex(where: { $0 === set })
@@ -29,22 +29,22 @@ struct PreviousSetLookup {
 
     /// The values of every working set (normal and failure) in last time's workout exercise for
     /// `workoutExercise`, in order; empty when there is no last time. Skips the exercise's own workout.
-    func lastWorkingSets(for workoutExercise: WorkoutExercise) -> [PreviousValues] {
+    func lastWorkingSets(for workoutExercise: WorkoutExercise) -> [SetValues] {
         guard let match = lastTime(of: workoutExercise) else { return [] }
         return WorkoutLog.orderedSets(of: match).filter { SetNumbering.isWorking($0.setType) }.map(
-            values(of:))
+            \.values)
     }
 
     /// The set at `index` among the sets whose type matches, in the set's exercise's first occurrence in
     /// the most recent other finished workout containing it.
     private func lastTime(
         for set: WorkoutSet, index: Int, matching include: (SetType) -> Bool
-    ) -> PreviousValues? {
+    ) -> SetValues? {
         guard let workoutExercise = set.workoutExercise, let match = lastTime(of: workoutExercise)
         else { return nil }
         let previousSets = WorkoutLog.orderedSets(of: match).filter { include($0.setType) }
         guard previousSets.indices.contains(index) else { return nil }
-        return values(of: previousSets[index])
+        return previousSets[index].values
     }
 
     /// The first occurrence of the exercise in the most recent finished workout, other than the exercise's
@@ -65,40 +65,4 @@ struct PreviousSetLookup {
         return WorkoutLog.orderedExercises(of: source).first { $0.exercise === exercise }
     }
 
-    private func values(of set: WorkoutSet) -> PreviousValues {
-        PreviousValues(
-            weight: set.weight, reps: set.reps, durationSeconds: set.durationSeconds)
-    }
-}
-
-/// What a previous set recorded: its weight (the added weight on bodyweight reps, nil for none), its reps and
-/// its duration. Which of them show depends on the exercise kind.
-@MainActor
-struct PreviousValues: Equatable {
-    let weight: Double?
-    let reps: Int?
-    let durationSeconds: Int?
-
-    /// The value beside a set: "35 lb × 10", "BW × 12", "+10 lb × 8" or "45 s".
-    func text(for kind: ExerciseKind) -> String {
-        switch kind {
-        case .weightReps: "\((weight ?? 0).formatted()) lb × \(repsText)"
-        case .bodyweightReps: "\(AddedWeight.label(for: weight)) × \(repsText)"
-        case .duration: "\(durationSeconds.map(String.init) ?? "—") s"
-        }
-    }
-
-    /// The value read aloud: "35 pounds times 10", "bodyweight times 12", "10 pounds added times 8" or "45 seconds".
-    func spokenText(for kind: ExerciseKind) -> String {
-        switch kind {
-        case .weightReps: "\((weight ?? 0).formatted()) pounds times \(repsText)"
-        case .bodyweightReps:
-            "\(weight.map { "\($0.formatted()) pounds added" } ?? "bodyweight") times \(repsText)"
-        case .duration: "\(durationSeconds.map(String.init) ?? "—") seconds"
-        }
-    }
-
-    private var repsText: String {
-        reps.map(String.init) ?? "—"
-    }
 }

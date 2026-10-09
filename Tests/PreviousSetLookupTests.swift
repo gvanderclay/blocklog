@@ -15,7 +15,7 @@ struct PreviousSetLookupTests {
         log = WorkoutLog(context: container.mainContext)
     }
 
-    private func lookup(_ set: WorkoutSet) -> PreviousValues? {
+    private func lookup(_ set: WorkoutSet) -> SetValues? {
         PreviousSetLookup(context: container.mainContext).previous(for: set)
     }
 
@@ -284,35 +284,18 @@ struct PreviousSetLookupTests {
     }
 
     @Test(arguments: [
-        (
-            ExerciseKind.weightReps, Double?.some(35), Int?.some(10), Int?.none, "35 lb × 10",
-            "35 pounds times 10"
-        ),
-        (
-            ExerciseKind.bodyweightReps, Double?.none, Int?.some(12), Int?.none, "BW × 12",
-            "bodyweight times 12"
-        ),
-        (
-            ExerciseKind.bodyweightReps, Double?.some(10), Int?.some(8), Int?.none, "+10 lb × 8",
-            "10 pounds added times 8"
-        ),
-        (ExerciseKind.duration, Double?.none, Int?.none, Int?.some(45), "45 s", "45 seconds"),
-        (
-            ExerciseKind.weightReps, Double?.some(35), Int?.none, Int?.none, "35 lb × —",
-            "35 pounds times —"
-        ),
-        (
-            ExerciseKind.bodyweightReps, Double?.some(10), Int?.none, Int?.none, "+10 lb × —",
-            "10 pounds added times —"
-        ),
-        (ExerciseKind.duration, Double?.none, Int?.none, Int?.none, "— s", "— seconds"),
+        (SetValues.weightReps(weight: 35, reps: 10), "35 lb × 10", "35 pounds times 10"),
+        (.bodyweightReps(addedWeight: nil, reps: 12), "BW × 12", "bodyweight times 12"),
+        (.bodyweightReps(addedWeight: 10, reps: 8), "+10 lb × 8", "10 pounds added times 8"),
+        (.duration(seconds: 45), "45 s", "45 seconds"),
+        (.weightReps(weight: 35, reps: nil), "35 lb × —", "35 pounds times —"),
+        (.bodyweightReps(addedWeight: 10, reps: nil), "+10 lb × —", "10 pounds added times —"),
+        (.duration(seconds: nil), "— s", "— seconds"),
     ])
     func previousValuesReadAsTheirDisplayFormats(
-        kind: ExerciseKind, weight: Double?, reps: Int?, duration: Int?, shown: String,
-        spoken: String
+        values: SetValues, shown: String, spoken: String
     ) {
-        let values = PreviousValues(weight: weight, reps: reps, durationSeconds: duration)
-        #expect(values.text(for: kind) == shown)
-        #expect(values.spokenText(for: kind) == spoken)
+        #expect(values.text == shown)
+        #expect(values.spokenText == spoken)
     }
 }

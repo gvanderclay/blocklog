@@ -209,9 +209,7 @@ struct WorkoutLog {
         guard !set.isCompleted,
             let previous = PreviousSetLookup(context: context).previous(for: set)
         else { return false }
-        set.weight = previous.weight
-        set.reps = previous.reps
-        set.durationSeconds = previous.durationSeconds
+        set.values = previous
         try context.saveOrRollBack()
         return true
     }
