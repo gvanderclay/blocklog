@@ -297,6 +297,15 @@ struct PreviousSetLookupTests {
             "10 pounds added times 8"
         ),
         (ExerciseKind.duration, Double?.none, Int?.none, Int?.some(45), "45 s", "45 seconds"),
+        (
+            ExerciseKind.weightReps, Double?.some(35), Int?.none, Int?.none, "35 lb × —",
+            "35 pounds times —"
+        ),
+        (
+            ExerciseKind.bodyweightReps, Double?.some(10), Int?.none, Int?.none, "+10 lb × —",
+            "10 pounds added times —"
+        ),
+        (ExerciseKind.duration, Double?.none, Int?.none, Int?.none, "— s", "— seconds"),
     ])
     func previousValuesReadAsTheirDisplayFormats(
         kind: ExerciseKind, weight: Double?, reps: Int?, duration: Int?, shown: String,

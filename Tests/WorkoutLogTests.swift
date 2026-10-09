@@ -341,6 +341,92 @@ struct WorkoutLogTests {
         #expect(set.isCompleted == false)
     }
 
+    @Test func secondsTextKeepsAtMostFourDigitsAndClearingOrZeroingUnchecksADurationSet() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        try log.addExercise(try exercise("Plank"), to: workout)
+        let set = try #require(workout.exercises.first?.sets.first)
+
+        set.durationText = "12a345"
+        #expect(set.durationSeconds == 1234)
+        #expect(set.durationText == "1234")
+        try log.toggleCompleted(set)
+        #expect(set.isCompleted)
+
+        set.durationText = "0"
+        #expect(set.durationSeconds == 0)
+        #expect(!set.isCompleted)
+        #expect(!WorkoutLog.canCheckOff(set))
+
+        set.durationText = "30"
+        try log.toggleCompleted(set)
+        set.durationText = ""
+        #expect(set.durationSeconds == nil)
+        #expect(!set.isCompleted)
+    }
+
+    @Test func repsTextKeepsAtMostThreeDigits() throws {
+        let set = try #require(try workout(sets: 1).exercises.first?.sets.first)
+        set.repsText = "12345"
+        #expect(set.reps == 123)
+    }
+
+    @Test func aBodyweightSetChecksOffOnlyWithReps() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        try log.addExercise(try exercise("Pull-up"), to: workout)
+        let set = try #require(workout.exercises.first?.sets.first)
+        #expect(!WorkoutLog.canCheckOff(set))
+        try log.toggleCompleted(set)
+        #expect(!set.isCompleted)
+
+        set.repsText = "6"
+        try log.toggleCompleted(set)
+        #expect(set.isCompleted)
+        set.repsText = ""
+        #expect(!set.isCompleted)
+    }
+
+    @Test func addSetOnADurationExerciseCopiesTheSecondsAndHasNoWeightOrReps() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        try log.addExercise(try exercise("Plank"), to: workout)
+        let workoutExercise = try #require(workout.exercises.first)
+        let first = try #require(workoutExercise.sets.first)
+        #expect(first.weight == nil && first.reps == nil)
+        first.durationText = "45"
+        try log.setType(.drop, of: first)
+
+        try log.addSet(to: workoutExercise)
+
+        let second = WorkoutLog.orderedSets(of: workoutExercise)[1]
+        #expect(second.durationSeconds == 45)
+        #expect(second.weight == nil && second.reps == nil)
+        #expect(second.setType == .drop)
+        #expect(!second.isCompleted)
+    }
+
+    @Test func duplicatingCopiesTheValuesOfABodyweightSetAndADurationSet() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        try log.addExercise(try exercise("Pull-up"), to: workout)
+        try log.addExercise(try exercise("Plank"), to: workout)
+        let exercises = WorkoutLog.orderedExercises(of: workout)
+        let pullUp = try #require(WorkoutLog.orderedSets(of: exercises[0]).first)
+        let plank = try #require(WorkoutLog.orderedSets(of: exercises[1]).first)
+        try log.setAddedWeight(10, of: pullUp)
+        pullUp.repsText = "6"
+        plank.durationText = "45"
+        try log.toggleCompleted(pullUp)
+        try log.toggleCompleted(plank)
+
+        try log.duplicateSet(pullUp)
+        try log.duplicateSet(plank)
+
+        let pullUpCopy = WorkoutLog.orderedSets(of: exercises[0])[1]
+        #expect(pullUpCopy.weight == 10 && pullUpCopy.reps == 6)
+        #expect(pullUpCopy.durationSeconds == nil && !pullUpCopy.isCompleted)
+        let plankCopy = WorkoutLog.orderedSets(of: exercises[1])[1]
+        #expect(plankCopy.durationSeconds == 45)
+        #expect(plankCopy.weight == nil && plankCopy.reps == nil && !plankCopy.isCompleted)
+    }
+
     @Test func finishJoinsTitleLinesWithSpaces() throws {
         let workout = try workout(sets: 1)
         try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
