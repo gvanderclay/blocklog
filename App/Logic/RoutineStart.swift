@@ -12,11 +12,11 @@ struct RoutineStart {
         let progressions: AppliedProgressions
     }
 
-    /// One exercise to start with: its planned set types, and the target duration for a duration exercise.
+    /// One exercise to start with: its planned set types and its target, nil when it has none.
     private struct Planned {
         let exercise: Exercise
         let setTypes: [SetType]
-        let targetDurationSeconds: Int?
+        let target: RoutineTarget?
     }
 
     /// Starts a workout titled with the routine's name and linked to it, holding the routine's exercises and
@@ -41,7 +41,7 @@ struct RoutineStart {
                     setTypes: routineExercise.plannedSetTypeRawValues.map {
                         SetType(rawValue: $0) ?? .normal
                     },
-                    targetDurationSeconds: routineExercise.targetDurationSeconds)
+                    target: routineExercise.target)
             }
         }
         let workout = Workout(title: routine.name, startDate: date, routine: routine)
@@ -58,7 +58,7 @@ struct RoutineStart {
         let planned = draft.exercises.map {
             Planned(
                 exercise: $0.exercise, setTypes: $0.sets.map(\.type),
-                targetDurationSeconds: $0.target.seconds)
+                target: $0.target)
         }
         return try start(Workout(title: title, startDate: date), with: planned)
     }
@@ -81,8 +81,7 @@ struct RoutineStart {
             for set in workoutExercise.sets {
                 prefill(
                     set, kind: exercise.kind,
-                    targetDurationSeconds: plannedExercise.targetDurationSeconds,
-                    progression: progression)
+                    target: plannedExercise.target, progression: progression)
             }
             if let progression {
                 let stepped =
@@ -97,7 +96,7 @@ struct RoutineStart {
 
     /// Reads history for the set, then writes the values it starts with.
     private func prefill(
-        _ set: WorkoutSet, kind: ExerciseKind, targetDurationSeconds: Int?,
+        _ set: WorkoutSet, kind: ExerciseKind, target: RoutineTarget?,
         progression: Progression.Suggestion?
     ) {
         let lookup = PreviousSetLookup(context: context)
@@ -109,6 +108,6 @@ struct RoutineStart {
             previous: set.setType == .warmUp
                 ? lookup.previousWarmUp(for: set) : lookup.previous(for: set),
             progression: SetNumbering.isWorking(set.setType) ? stepUp : nil,
-            targetSeconds: targetDurationSeconds)
+            targetSeconds: target?.seconds)
     }
 }
