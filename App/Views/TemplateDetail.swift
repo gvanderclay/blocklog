@@ -32,10 +32,7 @@ struct TemplateDetail: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.exercise)
                         Text(
-                            RoutineLibrary.summary(
-                                setCount: entry.sets.count, repLow: entry.repLow,
-                                repHigh: entry.repHigh,
-                                targetDurationSeconds: entry.targetDurationSeconds)
+                            RoutineLibrary.summary(setCount: entry.sets.count, target: entry.target)
                         )
                         .font(.subheadline)
                         .fontDesign(.rounded)
@@ -43,9 +40,7 @@ struct TemplateDetail: View {
                         .foregroundStyle(.secondary)
                         .accessibilityLabel(
                             RoutineLibrary.spokenSummary(
-                                setCount: entry.sets.count, repLow: entry.repLow,
-                                repHigh: entry.repHigh,
-                                targetDurationSeconds: entry.targetDurationSeconds)
+                                setCount: entry.sets.count, target: entry.target)
                         )
                         .accessibilityIdentifier("templateDetail.exercise.\(index).summary")
                     }

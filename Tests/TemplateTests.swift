@@ -40,13 +40,39 @@ struct TemplateTests {
                 let kind = try #require(kinds[entry.exercise], "\(entry.exercise) isn't a starter")
                 #expect(!entry.sets.isEmpty)
                 if kind == .duration {
-                    #expect(entry.targetDurationSeconds != nil && entry.repRange == nil)
+                    #expect(entry.target?.seconds != nil)
                 } else {
-                    let range = try #require(entry.repRange)
-                    #expect(range.count == 2 && range[0] <= range[1])
+                    #expect(entry.target?.repRange != nil)
                 }
             }
         }
+    }
+
+    /// The one-entry template `{"exercise": "Plank", "sets": ["normal"], <fields>}` as JSON.
+    private func decoded(_ fields: String) throws -> Template {
+        let json = """
+            {"name": "T", "kind": "oneOff", "why": "w",
+             "exercises": [{"exercise": "Plank", "sets": ["normal"]\(fields)}]}
+            """
+        return try JSONDecoder().decode(Template.self, from: Data(json.utf8))
+    }
+
+    @Test func anEntryReadsItsRepRangeOrDurationAsATarget() throws {
+        #expect(try decoded(#", "repRange": [8, 12]"#).exercises[0].target == .repRange(8...12))
+        #expect(try decoded(#", "repRange": [5, 5]"#).exercises[0].target == .repRange(5...5))
+        #expect(
+            try decoded(#", "targetDurationSeconds": 45"#).exercises[0].target
+                == .duration(seconds: 45))
+        #expect(try decoded("").exercises[0].target == nil)
+    }
+
+    @Test(arguments: [
+        #", "repRange": [12]"#, #", "repRange": [12, 8]"#, #", "repRange": [8, 12, 15]"#,
+        #", "repRange": []"#, #", "repRange": [0, 12]"#, #", "repRange": [8, 51]"#,
+        #", "targetDurationSeconds": 0"#, #", "repRange": [8, 12], "targetDurationSeconds": 45"#,
+    ])
+    func anEntryWithAMalformedTargetFailsToLoad(fields: String) {
+        #expect(throws: DecodingError.self) { try decoded(fields) }
     }
 
     @Test func groupsProgrammesOneOffsAndSuggestions() throws {

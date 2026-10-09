@@ -14,17 +14,51 @@ struct Template: Decodable, Identifiable {
         case oneOff
     }
 
-    /// One exercise of the template, named as in `starter-exercises.json`, with a rep range or a target duration.
+    /// One exercise of the template, named as in `starter-exercises.json`, with a target: a rep range or a
+    /// target duration.
     @MainActor
-    struct Entry: Decodable {
+    struct Entry: @MainActor Decodable {
         let exercise: String
         let sets: [SetType]
-        /// Low and high.
-        let repRange: [Int]?
-        let targetDurationSeconds: Int?
+        /// Nil when the entry gives neither. The file writes the range as `repRange`, two numbers (low, high);
+        /// decoding fails for one that isn't, or for an entry with both a range and a duration.
+        let target: RoutineTarget?
 
-        var repLow: Int? { repRange?.first }
-        var repHigh: Int? { repRange?.last }
+        private enum CodingKeys: String, CodingKey {
+            case exercise, sets, repRange, targetDurationSeconds
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            exercise = try container.decode(String.self, forKey: .exercise)
+            sets = try container.decode([SetType].self, forKey: .sets)
+            let ends = try container.decodeIfPresent([Int].self, forKey: .repRange)
+            let seconds = try container.decodeIfPresent(Int.self, forKey: .targetDurationSeconds)
+            switch (ends, seconds) {
+            case (nil, nil): target = nil
+            case (let ends?, nil):
+                guard ends.count == 2,
+                    let range = RoutineTarget(validRepRangeLow: ends[0], high: ends[1])
+                else {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: .repRange, in: container,
+                        debugDescription: "A rep range is two numbers, low then high, from 1 to 50."
+                    )
+                }
+                target = range
+            case (nil, let seconds?):
+                guard let duration = RoutineTarget(validDurationSeconds: seconds) else {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: .targetDurationSeconds, in: container,
+                        debugDescription: "A target duration is above 0 seconds.")
+                }
+                target = duration
+            case (.some, .some):
+                throw DecodingError.dataCorruptedError(
+                    forKey: .repRange, in: container,
+                    debugDescription: "An entry has a rep range or a target duration, not both.")
+            }
+        }
     }
 
     /// The sessions of one programme, in file order.

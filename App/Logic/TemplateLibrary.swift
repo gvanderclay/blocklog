@@ -43,9 +43,7 @@ struct TemplateLibrary {
             return RoutineDraft.Entry(
                 exercise: exercise,
                 sets: entry.sets.map { RoutineDraft.PlannedSet(type: $0) },
-                target: RoutineTarget(
-                    kind: exercise.kind, repRangeLow: entry.repLow, repRangeHigh: entry.repHigh,
-                    durationSeconds: entry.targetDurationSeconds))
+                target: entry.target)
         }
         return draft
     }
