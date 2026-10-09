@@ -29,17 +29,22 @@ struct HistoryTab: View {
                                 .tint(.red)
                                 .accessibilityIdentifier("history.row.\(index).delete")
                         }
+                        // On the row, so the confirmation appears beside the swiped row.
+                        .deleteWorkoutDialog(
+                            item: Binding(
+                                get: { workoutToDelete == workout ? workout : nil },
+                                set: { workoutToDelete = $0 })
+                        ) { workout in
+                            do {
+                                try WorkoutLog(context: modelContext).discard(workout)
+                            } catch {
+                                saveFailed = true
+                            }
+                        }
                     }
                 }
             }
             .navigationTitle("History")
-            .deleteWorkoutDialog(item: $workoutToDelete) { workout in
-                do {
-                    try WorkoutLog(context: modelContext).discard(workout)
-                } catch {
-                    saveFailed = true
-                }
-            }
             .saveFailedAlert(isPresented: $saveFailed)
         }
     }
