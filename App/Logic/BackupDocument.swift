@@ -245,7 +245,7 @@ struct BackupDocument: Codable, Equatable {
                 switch (entry.repRangeLow, entry.repRangeHigh) {
                 case (nil, nil): break
                 case (let low?, let high?):
-                    guard 1 <= low, low <= high, high <= Self.maxRepRange else {
+                    guard RoutineTarget(validRepRangeLow: low, high: high) != nil else {
                         throw BackupError.invalid(
                             "\(owner) has the rep range \(low)–\(high); it must be 1 to \(Self.maxRepRange) with the low end first."
                         )
@@ -253,7 +253,9 @@ struct BackupDocument: Codable, Equatable {
                 default:
                     throw BackupError.invalid("\(owner) has only one end of a rep range.")
                 }
-                if let seconds = entry.targetDurationSeconds, seconds <= 0 {
+                if let seconds = entry.targetDurationSeconds,
+                    RoutineTarget(validDurationSeconds: seconds) == nil
+                {
                     throw BackupError.invalid(
                         "\(owner) has a target duration of \(seconds) seconds.")
                 }
