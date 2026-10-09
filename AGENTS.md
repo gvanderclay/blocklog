@@ -85,3 +85,7 @@ Tickets live in the untracked `.scratch/blocklog/issues/`.
 - Writing unit tests: `swift-testing-expert`.
 - The per-ticket review: code-review.
 - The phase architecture reviews: codebase-design and ponytail-audit.
+
+## Tools evaluated
+
+- `pi-xcode-mcp` (phase 2 checkpoint): skip. No view has a `#Preview`, so its preview render has nothing to render; `just build` and `just test-one` already cover builds and tests; and it needs two `sudo xcrun mcp-server approve` steps plus a slow workspace open. Revisit if the app gains previews.
