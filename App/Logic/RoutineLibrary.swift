@@ -18,24 +18,38 @@ struct RoutineLibrary {
 
     /// A routine exercise's plan: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration.
     static func summary(of routineExercise: RoutineExercise) -> String {
-        let count = routineExercise.plannedSetTypeRawValues.count
-        if let seconds = routineExercise.targetDurationSeconds { return "\(count) × \(seconds) s" }
-        guard let low = routineExercise.repRangeLow, let high = routineExercise.repRangeHigh else {
-            return "\(count) × —"
-        }
+        summary(
+            setCount: routineExercise.plannedSetTypeRawValues.count,
+            repLow: routineExercise.repRangeLow, repHigh: routineExercise.repRangeHigh,
+            targetDurationSeconds: routineExercise.targetDurationSeconds)
+    }
+
+    /// A plan of `setCount` sets: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration.
+    static func summary(
+        setCount count: Int, repLow: Int?, repHigh: Int?, targetDurationSeconds: Int?
+    )
+        -> String
+    {
+        if let seconds = targetDurationSeconds { return "\(count) × \(seconds) s" }
+        guard let low = repLow, let high = repHigh else { return "\(count) × —" }
         return "\(count) × \(low)–\(high)"
     }
 
     /// The plan read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
     static func spokenSummary(of routineExercise: RoutineExercise) -> String {
-        let count = routineExercise.plannedSetTypeRawValues.count
+        spokenSummary(
+            setCount: routineExercise.plannedSetTypeRawValues.count,
+            repLow: routineExercise.repRangeLow, repHigh: routineExercise.repRangeHigh,
+            targetDurationSeconds: routineExercise.targetDurationSeconds)
+    }
+
+    /// A plan of `setCount` sets read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
+    static func spokenSummary(
+        setCount count: Int, repLow: Int?, repHigh: Int?, targetDurationSeconds: Int?
+    ) -> String {
         let sets = count == 1 ? "1 set" : "\(count) sets"
-        if let seconds = routineExercise.targetDurationSeconds {
-            return "\(sets) of \(seconds) seconds"
-        }
-        guard let low = routineExercise.repRangeLow, let high = routineExercise.repRangeHigh else {
-            return sets
-        }
+        if let seconds = targetDurationSeconds { return "\(sets) of \(seconds) seconds" }
+        guard let low = repLow, let high = repHigh else { return sets }
         return "\(sets) of \(low) to \(high) reps"
     }
 
@@ -71,6 +85,20 @@ struct RoutineLibrary {
     func save(_ draft: RoutineDraft, to routine: Routine?, at date: Date = .now) throws -> Routine?
     {
         guard draft.canSave else { return nil }
+        let target = write(draft, to: routine, at: date)
+        try context.saveOrRollBack()
+        return target
+    }
+
+    /// Writes each draft that can be saved into a new routine, and saves them all at once.
+    @discardableResult
+    func saveNew(_ drafts: [RoutineDraft], at date: Date = .now) throws -> [Routine] {
+        let routines = drafts.filter(\.canSave).map { write($0, to: nil, at: date) }
+        try context.saveOrRollBack()
+        return routines
+    }
+
+    private func write(_ draft: RoutineDraft, to routine: Routine?, at date: Date) -> Routine {
         let target = routine ?? Routine(name: draft.trimmedName, creationDate: date)
         if routine == nil { context.insert(target) }
         target.name = draft.trimmedName
@@ -87,7 +115,6 @@ struct RoutineLibrary {
             context.insert(routineExercise)
             target.exercises.append(routineExercise)
         }
-        try context.saveOrRollBack()
         return target
     }
 

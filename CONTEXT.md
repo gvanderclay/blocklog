@@ -26,6 +26,10 @@ The domain terms Blocklog uses in code, tests and UI text. A term in parentheses
 - **Pre-fill**: the values a workout started from a routine gives each set: last time's weight and reps by counted-set order, last time's warm-ups by order among warm-ups, the target duration for a duration set, and 5 lb (or "BW") with empty reps when there is nothing from last time.
 - **Progression note**: the line under an exercise in a workout started from a routine that explains a pre-filled step up, such as "↑ Up from 35 lb: you hit 12 on every set", or "You hit 12 on every set: consider adding weight" for bodyweight without added weight. It is not stored.
 - **Structural change**: a difference between a finished workout and the routine it started from that makes Finish ask to update the routine: an exercise added, removed, swapped or reordered, or a set added or removed. Weight, reps, duration and set-type edits are not structural.
+- **Template** (`Template`): a bundled plan from `templates.json`, read-only, that starts a one-off workout or seeds a routine. Starting one gives a workout titled with its name, pre-filled like a routine start but with no routine link. "Add to My Routines" opens the routine editor on a routine draft of it.
+- **Programme** (`Template.Programme`): the templates meant to be used together as one weekly plan, such as Upper/Lower (Upper Body and Lower Body). "Add Programme" adds every session as a routine.
+- **One-off workout**: a template that stands on its own rather than as a programme session, such as Golden Six.
+- **Estimated time**: a template's rough length, every set taking the default rest plus 40 seconds.
 
 ## PowerBlock
 

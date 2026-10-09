@@ -1,0 +1,100 @@
+[
+  {
+    "name": "Full Body",
+    "kind": "routine",
+    "programme": "Full Body",
+    "why": "One repeatable session covering squat, hinge, push, pull, overhead press, calves and trunk; repeat it three nonconsecutive days a week.",
+    "exercises": [
+      {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "One-Arm Dumbbell Row", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Romanian Deadlift", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Standing Dumbbell Shoulder Press", "sets": ["normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Calf Raise", "sets": ["normal", "normal"], "repRange": [12, 20]},
+      {"exercise": "Plank", "sets": ["normal", "normal"], "targetDurationSeconds": 45}
+    ]
+  },
+  {
+    "name": "Upper Body",
+    "kind": "routine",
+    "programme": "Upper/Lower",
+    "why": "Horizontal and vertical pressing and pulling plus small doses of shoulders and arms; alternate with Lower Body four days a week.",
+    "exercises": [
+      {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Chest-Supported Dumbbell Row", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Seated Dumbbell Shoulder Press", "sets": ["normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Pull-up", "sets": ["normal", "normal"], "repRange": [5, 10]},
+      {"exercise": "Dumbbell Lateral Raise", "sets": ["normal", "normal"], "repRange": [15, 25]},
+      {"exercise": "Dumbbell Curl", "sets": ["normal", "normal"], "repRange": [10, 15]},
+      {"exercise": "Overhead Dumbbell Triceps Extension", "sets": ["normal", "normal"], "repRange": [12, 20]}
+    ]
+  },
+  {
+    "name": "Lower Body",
+    "kind": "routine",
+    "programme": "Upper/Lower",
+    "why": "Squat, hinge, single-leg work, hip extension, calves and trunk; alternate with Upper Body four days a week.",
+    "exercises": [
+      {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Romanian Deadlift", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Bulgarian Split Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Glute Bridge", "sets": ["normal", "normal"], "repRange": [10, 15]},
+      {"exercise": "Dumbbell Calf Raise", "sets": ["normal", "normal", "normal"], "repRange": [12, 20]},
+      {"exercise": "Plank", "sets": ["normal", "normal"], "targetDurationSeconds": 45}
+    ]
+  },
+  {
+    "name": "Push",
+    "kind": "routine",
+    "programme": "Push/Pull/Legs",
+    "why": "Chest, shoulders and triceps, trimmed from a published push/pull/legs plan to fit a home session.",
+    "exercises": [
+      {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Incline Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Seated Dumbbell Shoulder Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Lateral Raise", "sets": ["normal", "normal", "normal"], "repRange": [15, 25]},
+      {"exercise": "Overhead Dumbbell Triceps Extension", "sets": ["normal", "normal", "normal"], "repRange": [12, 20]}
+    ]
+  },
+  {
+    "name": "Pull",
+    "kind": "routine",
+    "programme": "Push/Pull/Legs",
+    "why": "Vertical and horizontal pulling, rear shoulders, traps and biceps, so the back work isn't all rows; needs a pull-up bar.",
+    "exercises": [
+      {"exercise": "Pull-up", "sets": ["normal", "normal", "normal"], "repRange": [5, 10]},
+      {"exercise": "Chest-Supported Dumbbell Row", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Rear Delt Fly", "sets": ["normal", "normal", "normal"], "repRange": [15, 25]},
+      {"exercise": "Dumbbell Shrug", "sets": ["normal", "normal"], "repRange": [10, 15]},
+      {"exercise": "Dumbbell Curl", "sets": ["normal", "normal"], "repRange": [10, 15]},
+      {"exercise": "Hammer Curl", "sets": ["normal", "normal"], "repRange": [10, 15]}
+    ]
+  },
+  {
+    "name": "Legs",
+    "kind": "routine",
+    "programme": "Push/Pull/Legs",
+    "why": "Squats, hinges and single-leg work that keep legs loaded within a home dumbbell ceiling, plus core.",
+    "exercises": [
+      {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Romanian Deadlift", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Bulgarian Split Squat", "sets": ["normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Hip Thrust", "sets": ["normal", "normal"], "repRange": [10, 15]},
+      {"exercise": "Dumbbell Calf Raise", "sets": ["normal", "normal", "normal"], "repRange": [12, 20]},
+      {"exercise": "Hanging Knee Raise", "sets": ["normal", "normal"], "repRange": [8, 15]}
+    ]
+  },
+  {
+    "name": "Golden Six",
+    "kind": "oneOff",
+    "why": "A dumbbell adaptation of Arnold's Golden Six: a classic six-movement full-body strength session.",
+    "exercises": [
+      {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Chin-up", "sets": ["normal", "normal", "normal"], "repRange": [5, 10]},
+      {"exercise": "Seated Dumbbell Shoulder Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
+      {"exercise": "Dumbbell Curl", "sets": ["normal", "normal"], "repRange": [10, 15]},
+      {"exercise": "Crunch", "sets": ["normal", "normal"], "repRange": [12, 20]}
+    ]
+  }
+]

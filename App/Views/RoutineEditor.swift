@@ -21,6 +21,12 @@ struct RoutineEditor: View {
         self.draft = routine.map(RoutineDraft.init(routine:)) ?? RoutineDraft()
     }
 
+    /// A new routine starting from the draft, such as a template's.
+    init(newFrom draft: RoutineDraft) {
+        self.routine = nil
+        self.draft = draft
+    }
+
     var body: some View {
         NavigationStack {
             List {

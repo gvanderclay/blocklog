@@ -87,6 +87,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Delete, discard, remove | `trash` |
 | Duplicate | `plus.square.on.square` |
 | Reorder | `arrow.up.arrow.down` |
+| Templates | `rectangle.stack` |
 | Rest time | `timer` |
 | Progression note | `arrow.up.circle.fill` |
 | Finish summary | `checkmark.seal.fill` |

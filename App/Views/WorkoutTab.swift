@@ -1,7 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// Starts an empty workout or one from a routine, resumes the one in progress, and lists the routines.
+/// Starts an empty workout or one from a routine, resumes the one in progress, lists the routines (or, with
+/// none, suggests templates) and opens the templates.
 struct WorkoutTab: View {
     /// Shows a workout in the full-screen workout screen.
     let present: (Workout) -> Void
@@ -15,6 +16,9 @@ struct WorkoutTab: View {
     @State private var saveFailed = false
     @State private var isCreatingRoutine = false
     @State private var routineToDelete: Routine?
+    @State private var isShowingTemplates = false
+    /// A workout started from the Templates sheet, shown once the sheet has closed.
+    @State private var startedFromTemplates: RoutineStart.Started?
 
     var body: some View {
         NavigationStack {
@@ -44,7 +48,14 @@ struct WorkoutTab: View {
                     .disabled(!inProgressWorkouts.isEmpty)
                     .accessibilityIdentifier("workoutTab.startEmpty")
                 }
-                Section("Routines") {
+                Section {
+                    if routines.isEmpty {
+                        ForEach(Template.suggestions(in: Template.bundled)) { template in
+                            TemplateLink(template: template, present: presentStarted)
+                                .accessibilityIdentifier(
+                                    "workoutTab.suggestedTemplate.\(template.name)")
+                        }
+                    }
                     ForEach(routines) { routine in
                         NavigationLink(routine.name, value: routine)
                             .accessibilityIdentifier("workoutTab.routine.\(routine.name)")
@@ -58,6 +69,16 @@ struct WorkoutTab: View {
                     }
                     Button("New Routine", systemImage: "plus") { isCreatingRoutine = true }
                         .accessibilityIdentifier("workoutTab.newRoutine")
+                    Button("Templates", systemImage: "rectangle.stack") {
+                        isShowingTemplates = true
+                    }
+                    .accessibilityIdentifier("workoutTab.templates")
+                } header: {
+                    Text("Routines")
+                } footer: {
+                    if routines.isEmpty {
+                        Text("No routines yet. Try a template, or make your own.")
+                    }
                 }
             }
             .navigationTitle("Workout")
@@ -66,6 +87,13 @@ struct WorkoutTab: View {
             }
             .sheet(isPresented: $isCreatingRoutine) {
                 RoutineEditor(routine: nil)
+            }
+            .sheet(isPresented: $isShowingTemplates, onDismiss: presentStartedFromTemplates) {
+                TemplatesSheet { started in
+                    // The workout screen can't cover the tab while this sheet is up.
+                    startedFromTemplates = started
+                    isShowingTemplates = false
+                }
             }
             .confirmationDialog(
                 "Delete this routine?", item: $routineToDelete, titleVisibility: .visible
@@ -81,6 +109,12 @@ struct WorkoutTab: View {
 }
 
 extension WorkoutTab {
+    private func presentStartedFromTemplates() {
+        guard let started = startedFromTemplates else { return }
+        startedFromTemplates = nil
+        presentStarted(started)
+    }
+
     private func delete(_ routine: Routine) {
         withAnimation(reduceMotion ? nil : .default) {
             do {

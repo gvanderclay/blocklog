@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Starts a workout from a routine, with each set pre-filled from history.
+/// Starts a workout from a routine or from a draft of one (a template's), with each set pre-filled from history.
 @MainActor
 struct RoutineStart {
     let context: ModelContext
@@ -10,6 +10,13 @@ struct RoutineStart {
     struct Started {
         let workout: Workout
         let progressions: AppliedProgressions
+    }
+
+    /// One exercise to start with: its planned set types, and the target duration for a duration exercise.
+    private struct Planned {
+        let exercise: Exercise
+        let setTypes: [SetType]
+        let targetDurationSeconds: Int?
     }
 
     /// Starts a workout titled with the routine's name and linked to it, holding the routine's exercises and
@@ -27,26 +34,54 @@ struct RoutineStart {
         // Read the routine's exercises before linking the workout to it. Linking first leaves
         // `routine.exercises` unloaded, and after a rollback reading it traps in SwiftData ("Could not cast
         // DefaultStoreSnapshotValueFuture to Array<RoutineExercise>").
-        let planned = RoutineLibrary.orderedExercises(of: routine).filter { $0.exercise != nil }
+        let planned = RoutineLibrary.orderedExercises(of: routine).compactMap { routineExercise in
+            routineExercise.exercise.map {
+                Planned(
+                    exercise: $0,
+                    setTypes: routineExercise.plannedSetTypeRawValues.map {
+                        SetType(rawValue: $0) ?? .normal
+                    },
+                    targetDurationSeconds: routineExercise.targetDurationSeconds)
+            }
+        }
         let workout = Workout(title: routine.name, startDate: date, routine: routine)
+        return try start(workout, with: planned)
+    }
+
+    /// Starts a workout with the given title and no routine link, holding the draft's exercises and planned
+    /// sets in order, pre-filled as `startWorkout(from:)` does, and saves. With no routine link, no
+    /// progression applies. Nil while another workout is in progress.
+    func startWorkout(titled title: String, from draft: RoutineDraft, at date: Date = .now) throws
+        -> Started?
+    {
+        guard WorkoutLog(context: context).inProgressWorkout() == nil else { return nil }
+        let planned = draft.exercises.map {
+            Planned(
+                exercise: $0.exercise, setTypes: $0.sets.map(\.type),
+                targetDurationSeconds: $0.isTimed ? $0.targetDurationSeconds : nil)
+        }
+        return try start(Workout(title: title, startDate: date), with: planned)
+    }
+
+    private func start(_ workout: Workout, with planned: [Planned]) throws -> Started {
         context.insert(workout)
         var progressions = AppliedProgressions()
-        for (position, routineExercise) in planned.enumerated() {
-            guard let exercise = routineExercise.exercise else { continue }
+        for (position, plannedExercise) in planned.enumerated() {
+            let exercise = plannedExercise.exercise
             let workoutExercise = WorkoutExercise(exercise: exercise, position: position)
             context.insert(workoutExercise)
             workout.exercises.append(workoutExercise)
             // Every set is in place before any lookup, because the lookup pairs a set by its order.
-            for (setPosition, raw) in routineExercise.plannedSetTypeRawValues.enumerated() {
-                let set = WorkoutSet(
-                    position: setPosition, setType: SetType(rawValue: raw) ?? .normal)
+            for (setPosition, type) in plannedExercise.setTypes.enumerated() {
+                let set = WorkoutSet(position: setPosition, setType: type)
                 context.insert(set)
                 workoutExercise.sets.append(set)
             }
             let progression = Progression(context: context).suggestion(for: workoutExercise)
             for set in workoutExercise.sets {
                 prefill(
-                    set, kind: exercise.kind, routineExercise: routineExercise,
+                    set, kind: exercise.kind,
+                    targetDurationSeconds: plannedExercise.targetDurationSeconds,
                     progression: progression)
             }
             if let progression {
@@ -61,12 +96,11 @@ struct RoutineStart {
     }
 
     private func prefill(
-        _ set: WorkoutSet, kind: ExerciseKind, routineExercise: RoutineExercise,
+        _ set: WorkoutSet, kind: ExerciseKind, targetDurationSeconds: Int?,
         progression: Progression.Suggestion?
     ) {
         if kind == .duration {
-            set.durationSeconds =
-                routineExercise.targetDurationSeconds ?? RoutineDraft.defaultTargetDuration
+            set.durationSeconds = targetDurationSeconds ?? RoutineDraft.defaultTargetDuration
             return
         }
         if let progression, let weight = progression.weight, SetNumbering.isWorking(set.setType) {
