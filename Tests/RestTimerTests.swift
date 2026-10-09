@@ -271,6 +271,16 @@ struct RestTimerTests {
         #expect(timer.reading(at: clock.date).progress == 0.75)
     }
 
+    @Test func aZeroTotalReadsZeroProgressNotNaN() {
+        timer.start(duration: 30)
+        timer.add(seconds: -15)
+        timer.add(seconds: -15)  // end and total both at 0 before the clock moves
+        #expect(timer.total == 0)
+        #expect(timer.reading(at: clock.date).progress == 0)
+        timer.restore(endDate: clock.date, total: 0)
+        #expect(timer.reading(at: clock.date).progress == 0)
+    }
+
     @Test func anIdleReadingIsZero() {
         #expect(
             timer.reading(at: clock.date)

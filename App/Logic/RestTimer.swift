@@ -69,11 +69,13 @@ final class RestTimer {
         let left = remaining(at: date)
         let overtime = isOvertime(at: date)
         let countdown = Int(left.rounded(.up))
+        // A total of 0 (both ±15 presses before the clock moves) has no share left, so it reads 0, not NaN.
+        let share = total.map { $0 > 0 ? left / $0 : 0 } ?? 0
         return Reading(
             seconds: overtime ? Int(self.overtime(at: date)) : countdown,
             countdownSeconds: countdown,
             isOvertime: overtime,
-            progress: min(max(left / (total ?? 1), 0), 1))
+            progress: min(max(share, 0), 1))
     }
 
     /// Where a once-a-second timeline starts: the rest's start, in the past (a future anchor freezes a
