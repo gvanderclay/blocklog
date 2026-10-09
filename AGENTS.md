@@ -59,6 +59,7 @@ The per-ticket code review checks every change against these rules. Where a skil
     Identifiers are dot-separated lowerCamel words, `<screen>.<element>`, such as `workout.finish` or `finish.save`. Repeated rows add their zero-based position after the collection's name: `workout.exercise.<e>.set.<s>.<element>`, such as `workout.exercise.0.set.1.reps`. A row named by its content uses the name instead: `exercisePicker.row.<exercise name>`. Keyboard toolbar buttons use `keyboard.<element>`.
 14. Every screen and interaction follows `docs/design.md`: color, type, motion, haptics, sound and accessibility. Read it before writing a view.
 15. Once ticket 06 ships, the user's phone holds real data. A change to `App/Model` must be one SwiftData migrates automatically (adding a model, or adding an optional field), or it must come with a versioned-schema migration and a test that opens a store written by the previous version. Ask the user before any such change.
+16. Stored fields that apply only in some cases (a set's weight, reps and seconds by exercise type; a routine exercise's rep range or target duration) stay flat optionals in `App/Model`, but one type in `App/Logic` reads them into a choice whose cases hold only the values that apply, and writes them back. Code outside that type, and import, read and write the fields only through it, never by branching on the raw fields. A new field of this kind gets its reading in the same change. Tickets 22d and 22e bring the existing code in line.
 
 ## Ticket workflow
 
