@@ -13,6 +13,7 @@ struct FinishSheet: View {
     @State private var title: String
     @State private var summary: WorkoutSummary?
     @State private var saveFailed = false
+    @State private var isAskingToUpdateRoutine = false
 
     init(workout: Workout, onDone: @escaping () -> Void) {
         self.workout = workout
@@ -57,6 +58,9 @@ struct FinishSheet: View {
                                 ).finish(
                                     workout, title: title)
                                 withAnimation { summary = saved }
+                                // The workout is saved; the alert only decides whether the routine changes.
+                                isAskingToUpdateRoutine =
+                                    saved != nil && RoutineDifference.isStructural(workout)
                             } catch {
                                 saveFailed = true
                             }
@@ -70,6 +74,21 @@ struct FinishSheet: View {
         // Once saved, the workout is finished: leaving goes through Done.
         .interactiveDismissDisabled(summary != nil)
         .saveFailedAlert(isPresented: $saveFailed)
+        .alert("Update “\(workout.routine?.name ?? "")”?", isPresented: $isAskingToUpdateRoutine) {
+            Button("Update Routine") {
+                guard let routine = workout.routine else { return }
+                do {
+                    try RoutineDifference(context: modelContext).update(routine, toMatch: workout)
+                } catch {
+                    saveFailed = true
+                }
+            }
+            .accessibilityIdentifier("updateRoutine.accept")
+            Button("Keep Routine", role: .cancel) {}
+                .accessibilityIdentifier("updateRoutine.decline")
+        } message: {
+            Text("You changed exercises or sets. Update the routine to match this workout?")
+        }
     }
 }
 
