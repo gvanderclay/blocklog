@@ -24,10 +24,13 @@ struct RoutineStart {
     /// The result also carries the progressions applied, for the screen to show.
     func startWorkout(from routine: Routine, at date: Date = .now) throws -> Started? {
         guard WorkoutLog(context: context).inProgressWorkout() == nil else { return nil }
+        // Read the routine's exercises before linking the workout to it. Linking first leaves
+        // `routine.exercises` unloaded, and after a rollback reading it traps in SwiftData ("Could not cast
+        // DefaultStoreSnapshotValueFuture to Array<RoutineExercise>").
+        let planned = RoutineLibrary.orderedExercises(of: routine).filter { $0.exercise != nil }
         let workout = Workout(title: routine.name, startDate: date, routine: routine)
         context.insert(workout)
         var progressions = AppliedProgressions()
-        let planned = RoutineLibrary.orderedExercises(of: routine).filter { $0.exercise != nil }
         for (position, routineExercise) in planned.enumerated() {
             guard let exercise = routineExercise.exercise else { continue }
             let workoutExercise = WorkoutExercise(exercise: exercise, position: position)

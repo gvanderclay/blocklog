@@ -276,15 +276,13 @@ struct RoutineStartTests {
         #expect(try context.fetchCount(FetchDescriptor<WorkoutExercise>()) == 0)
         #expect(try context.fetchCount(FetchDescriptor<WorkoutSet>()) == 0)
         #expect(routine.name == "Pull")
-        // Reading `routine.exercises` here traps in SwiftData ("Could not cast ... SnapshotValueFuture"), so
-        // the routine's plan is read through a fetch of its routine exercises instead.
-        let stored = try context.fetch(FetchDescriptor<RoutineExercise>())
-        #expect(stored.count == 1)
+        let planned = RoutineLibrary.orderedExercises(of: routine)
+        #expect(planned.count == 1)
         #expect(
-            stored.first?.plannedSetTypeRawValues == [
+            planned.first?.plannedSetTypeRawValues == [
                 SetType.normal.rawValue, SetType.normal.rawValue,
             ])
-        #expect(stored.first?.repRangeLow == 6)
-        #expect(stored.first?.repRangeHigh == 10)
+        #expect(planned.first?.repRangeLow == 6)
+        #expect(planned.first?.repRangeHigh == 10)
     }
 }
