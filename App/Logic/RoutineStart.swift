@@ -95,25 +95,20 @@ struct RoutineStart {
         return Started(workout: workout, progressions: progressions)
     }
 
+    /// Reads history for the set, then writes the values it starts with.
     private func prefill(
         _ set: WorkoutSet, kind: ExerciseKind, targetDurationSeconds: Int?,
         progression: Progression.Suggestion?
     ) {
-        if kind == .duration {
-            set.durationSeconds = targetDurationSeconds ?? RoutineDraft.defaultTargetDuration
-            return
-        }
-        if let progression, let weight = progression.weight, SetNumbering.isWorking(set.setType) {
-            set.weight = weight
-            set.reps = progression.reps
-            return
-        }
         let lookup = PreviousSetLookup(context: context)
-        let previous =
-            set.setType == .warmUp ? lookup.previousWarmUp(for: set) : lookup.previous(for: set)
-        let firstWeight = PowerBlockTable.weights[0]
-        // A bodyweight set's nil weight is "BW", so last time's nil is kept rather than defaulted.
-        set.weight = kind == .weightReps ? previous?.weight ?? firstWeight : previous?.weight
-        set.reps = previous?.reps
+        let stepUp = progression.flatMap { suggestion in
+            suggestion.weight.map { (weight: $0, reps: suggestion.reps) }
+        }
+        set.values = SetValues.prefilled(
+            for: kind,
+            previous: set.setType == .warmUp
+                ? lookup.previousWarmUp(for: set) : lookup.previous(for: set),
+            progression: SetNumbering.isWorking(set.setType) ? stepUp : nil,
+            targetSeconds: targetDurationSeconds)
     }
 }

@@ -150,6 +150,39 @@ struct WorkoutLogTests {
         #expect(set.weight == 5)
     }
 
+    @Test func aWeightTheSetsExerciseTypeCannotHoldChangesNothingAndSavesNothing() throws {
+        let store = try ReadOnlyStore { context in
+            let workout = Workout(title: "Core", startDate: .now)
+            context.insert(workout)
+            for (position, kind) in [ExerciseKind.duration, .weightReps].enumerated() {
+                let workoutExercise = WorkoutExercise(
+                    exercise: Exercise(
+                        name: "Exercise \(position)", muscleGroup: .core, equipment: .dumbbell,
+                        kind: kind),
+                    position: position)
+                workout.exercises.append(workoutExercise)
+                workoutExercise.sets.append(
+                    WorkoutSet(
+                        position: 0, weight: kind == .weightReps ? 5 : nil,
+                        durationSeconds: kind == .duration ? 30 : nil))
+            }
+        }
+        defer { store.remove() }
+        let log = WorkoutLog(context: store.context)
+        let exercises = WorkoutLog.orderedExercises(of: try #require(log.inProgressWorkout()))
+        let timed = try #require(exercises[0].sets.first)
+        let dumbbell = try #require(exercises[1].sets.first)
+
+        // A save would throw, because the store is read-only; neither call saves.
+        try log.setWeight(15, of: timed)
+        try log.setWeight(nil, of: dumbbell)
+
+        #expect(timed.weight == nil)
+        #expect(dumbbell.weight == 5)
+        #expect(!store.context.hasChanges)
+        #expect(throws: (any Error).self) { try log.setWeight(10, of: dumbbell) }
+    }
+
     @Test func aSetChecksOffOnlyWithRepsAndCanBeUnchecked() throws {
         let workout = try #require(try log.startEmptyWorkout())
         try log.addExercise(try exercise("Dumbbell Bench Press"), to: workout)
@@ -258,7 +291,7 @@ struct WorkoutLogTests {
         let plank = try #require(WorkoutLog.orderedSets(of: exercises[1]).first)
         #expect(pullUp.weight == nil && pullUp.reps == nil)
         #expect(plank.durationSeconds == nil)
-        #expect(!WorkoutLog.canCheckOff(plank))
+        #expect(!plank.values.canCheckOff)
 
         plank.durationText = "45"
         try log.toggleCompleted(plank)
@@ -266,12 +299,12 @@ struct WorkoutLogTests {
         plank.durationText = ""
         #expect(!plank.isCompleted)
 
-        try log.setAddedWeight(5, of: pullUp)
+        try log.setWeight(5, of: pullUp)
         try log.addSet(to: exercises[0])
         #expect(WorkoutLog.orderedSets(of: exercises[0]).last?.weight == 5)
-        try log.setAddedWeight(12.5, of: pullUp)
+        try log.setWeight(12.5, of: pullUp)
         #expect(pullUp.weight == 5)
-        try log.setAddedWeight(nil, of: pullUp)
+        try log.setWeight(nil, of: pullUp)
         #expect(pullUp.weight == nil)
     }
 
@@ -355,7 +388,7 @@ struct WorkoutLogTests {
         set.durationText = "0"
         #expect(set.durationSeconds == 0)
         #expect(!set.isCompleted)
-        #expect(!WorkoutLog.canCheckOff(set))
+        #expect(!set.values.canCheckOff)
 
         set.durationText = "30"
         try log.toggleCompleted(set)
@@ -374,7 +407,7 @@ struct WorkoutLogTests {
         let workout = try #require(try log.startEmptyWorkout())
         try log.addExercise(try exercise("Pull-up"), to: workout)
         let set = try #require(workout.exercises.first?.sets.first)
-        #expect(!WorkoutLog.canCheckOff(set))
+        #expect(!set.values.canCheckOff)
         try log.toggleCompleted(set)
         #expect(!set.isCompleted)
 
@@ -410,7 +443,7 @@ struct WorkoutLogTests {
         let exercises = WorkoutLog.orderedExercises(of: workout)
         let pullUp = try #require(WorkoutLog.orderedSets(of: exercises[0]).first)
         let plank = try #require(WorkoutLog.orderedSets(of: exercises[1]).first)
-        try log.setAddedWeight(10, of: pullUp)
+        try log.setWeight(10, of: pullUp)
         pullUp.repsText = "6"
         plank.durationText = "45"
         try log.toggleCompleted(pullUp)

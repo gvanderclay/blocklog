@@ -166,8 +166,8 @@ struct RoutineStartTests {
         let workoutExercise = try #require(source.exercises.first)
         try log.addSet(to: workoutExercise)
         let logged = WorkoutLog.orderedSets(of: workoutExercise)
-        try log.setAddedWeight(10, of: logged[0])
-        try log.setAddedWeight(nil, of: logged[1])
+        try log.setWeight(10, of: logged[0])
+        try log.setWeight(nil, of: logged[1])
         for set in logged {
             // Short of the range's top (8–12), so progression leaves the weights alone.
             set.repsText = "10"

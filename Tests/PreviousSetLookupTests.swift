@@ -226,7 +226,7 @@ struct PreviousSetLookupTests {
         let source = try #require(try log.startEmptyWorkout(at: try day(7)))
         try log.addExercise(try exercise("Push-up"), to: source)
         let sourceSet = try #require(try sets(of: source, "Push-up").first)
-        try log.setAddedWeight(10, of: sourceSet)
+        try log.setWeight(10, of: sourceSet)
         sourceSet.repsText = "8"
         try log.toggleCompleted(sourceSet)
         _ = try log.finish(source, title: "Push Day", at: try day(7))

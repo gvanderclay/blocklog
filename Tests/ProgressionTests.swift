@@ -41,11 +41,7 @@ struct ProgressionTests {
             if index > 0 { try log.addSet(to: workoutExercise) }
             let set = WorkoutLog.orderedSets(of: workoutExercise)[index]
             try log.setType(spec.0, of: set)
-            if workoutExercise.exercise?.kind == .bodyweightReps {
-                try log.setAddedWeight(spec.1, of: set)
-            } else if let weight = spec.1 {
-                try log.setWeight(weight, of: set)
-            }
+            try log.setWeight(spec.1, of: set)
             set.repsText = String(spec.2)
             try log.toggleCompleted(set)
         }

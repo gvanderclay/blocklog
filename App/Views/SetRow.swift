@@ -129,7 +129,7 @@ struct SetRow: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.borderless)
-                .disabled(!set.isCompleted && !WorkoutLog.canCheckOff(set))
+                .disabled(!set.isCompleted && !set.values.canCheckOff)
                 .accessibilityLabel("Set \(label)")
                 .accessibilityValue(set.isCompleted ? "done" : "not done")
                 .accessibilityIdentifier("\(identifierPrefix).check")
@@ -199,11 +199,7 @@ struct SetRow: View {
     /// Sets the weight from the row's control or the diagram sheet's, animated so the numbers roll.
     private func changeWeight(_ newWeight: Double?, kind: ExerciseKind) {
         withAnimation {
-            if kind == .bodyweightReps {
-                attempt { try $0.setAddedWeight(newWeight, of: set) }
-            } else if let newWeight {
-                attempt { try $0.setWeight(newWeight, of: set) }
-            }
+            attempt { try $0.setWeight(newWeight, of: set) }
         }
     }
 

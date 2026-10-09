@@ -63,14 +63,6 @@ struct WorkoutLog {
         FetchDescriptor(sortBy: [SortDescriptor(\.name)])
     }
 
-    /// A set can be checked off only once it has reps, or seconds for a duration exercise.
-    static func canCheckOff(_ set: WorkoutSet) -> Bool {
-        if set.workoutExercise?.exercise?.kind == .duration {
-            return (set.durationSeconds ?? 0) > 0
-        }
-        return (set.reps ?? 0) > 0
-    }
-
     /// Whether Finish can save the workout: it needs at least one checked set.
     static func hasCheckedSet(_ workout: Workout) -> Bool {
         workout.exercises.contains { $0.sets.contains(where: \.isCompleted) }
@@ -81,10 +73,7 @@ struct WorkoutLog {
     static func nextEmptySet(after setID: UUID, in workout: Workout) -> WorkoutSet? {
         let sets = orderedExercises(of: workout).flatMap(orderedSets(of:))
         guard let index = sets.firstIndex(where: { $0.id == setID }) else { return nil }
-        return sets[(index + 1)...].first {
-            $0.workoutExercise?.exercise?.kind == .duration
-                ? $0.durationSeconds == nil : $0.reps == nil
-        }
+        return sets[(index + 1)...].first { $0.values.isFieldEmpty }
     }
 
     // MARK: Changing
@@ -94,7 +83,7 @@ struct WorkoutLog {
     /// or the set can't be checked off.
     func checkOffAndAdvance(_ set: WorkoutSet, in workout: Workout) throws -> WorkoutSet? {
         if !set.isCompleted {
-            guard Self.canCheckOff(set) else { return nil }
+            guard set.values.canCheckOff else { return nil }
             try toggleCompleted(set)
         }
         return Self.nextEmptySet(after: set.id, in: workout)
@@ -139,17 +128,12 @@ struct WorkoutLog {
         try context.saveOrRollBack()
     }
 
-    /// Sets the weight, which must be a PowerBlock setting.
-    func setWeight(_ weight: Double, of set: WorkoutSet) throws {
-        guard PowerBlockTable.setup(for: weight) != nil else { return }
-        set.weight = weight
-        try context.saveOrRollBack()
-    }
-
-    /// Sets the added weight of a bodyweight set: nil for none ("BW"), else a PowerBlock setting.
-    func setAddedWeight(_ weight: Double?, of set: WorkoutSet) throws {
-        if let weight, PowerBlockTable.setup(for: weight) == nil { return }
-        set.weight = weight
+    /// Sets the weight, which must be a PowerBlock setting; a bodyweight set's added weight may also be nil
+    /// ("BW"). A weight the set's exercise type can't hold (none for weight × reps, any for duration) changes
+    /// nothing and saves nothing.
+    func setWeight(_ weight: Double?, of set: WorkoutSet) throws {
+        guard let changed = set.values.settingWeight(weight) else { return }
+        set.values = changed
         try context.saveOrRollBack()
     }
 
@@ -175,9 +159,8 @@ struct WorkoutLog {
         for later in workoutExercise.sets where later.position > set.position {
             later.position += 1
         }
-        let copy = WorkoutSet(
-            position: set.position + 1, setType: set.setType, weight: set.weight, reps: set.reps,
-            durationSeconds: set.durationSeconds)
+        let copy = WorkoutSet(position: set.position + 1, setType: set.setType)
+        copy.values = set.values
         context.insert(copy)
         workoutExercise.sets.append(copy)
         try context.saveOrRollBack()
@@ -216,7 +199,7 @@ struct WorkoutLog {
 
     /// Checks the set off, if it can be, or unchecks it.
     func toggleCompleted(_ set: WorkoutSet) throws {
-        guard set.isCompleted || Self.canCheckOff(set) else { return }
+        guard set.isCompleted || set.values.canCheckOff else { return }
         set.isCompleted.toggle()
         try context.saveOrRollBack()
     }
@@ -282,14 +265,10 @@ struct WorkoutLog {
     /// A first set starts at 5 lb for weight × reps, with empty reps; later sets copy the last one.
     private func appendSet(to workoutExercise: WorkoutExercise) {
         let last = Self.orderedSets(of: workoutExercise).last
-        let firstWeight =
-            workoutExercise.exercise?.kind == .weightReps ? PowerBlockTable.weights[0] : nil
         let set = WorkoutSet(
-            position: workoutExercise.sets.count,
-            setType: last?.setType ?? .normal,
-            weight: last == nil ? firstWeight : last?.weight,
-            reps: last?.reps,
-            durationSeconds: last?.durationSeconds)
+            position: workoutExercise.sets.count, setType: last?.setType ?? .normal)
+        set.values =
+            last?.values ?? SetValues.first(for: workoutExercise.exercise?.kind ?? .weightReps)
         context.insert(set)
         workoutExercise.sets.append(set)
     }
@@ -315,7 +294,7 @@ extension WorkoutSet {
         get { reps.map(String.init) ?? "" }
         set {
             reps = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(3)))
-            if !WorkoutLog.canCheckOff(self) { isCompleted = false }
+            if !values.canCheckOff { isCompleted = false }
         }
     }
 }
@@ -328,7 +307,7 @@ extension WorkoutSet {
         get { durationSeconds.map(String.init) ?? "" }
         set {
             durationSeconds = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(4)))
-            if !WorkoutLog.canCheckOff(self) { isCompleted = false }
+            if !values.canCheckOff { isCompleted = false }
         }
     }
 }
