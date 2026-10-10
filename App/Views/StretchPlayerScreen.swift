@@ -4,7 +4,7 @@ import SwiftUI
 /// The full-screen guided player for a stretch routine, a starter one or a Stretch-format routine: the stretch's
 /// name, its cue, the countdown, Easier and Harder chips, up next, and Back, Pause, Skip and +15. The last seconds
 /// of each hold tick and its end chimes.
-/// Finishing logs the routine as a workout; quitting early asks whether to save the holds done. The screen stays
+/// Finishing logs the routine as a workout; Finish before the end asks whether to save what was done or discard it. The screen stays
 /// awake while it shows, and leaving the app pauses it.
 struct StretchPlayerScreen: View {
     let player: StretchPlayer
@@ -37,8 +37,8 @@ struct StretchPlayerScreen: View {
                     }
                 } else {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Quit") { quit() }
-                            .accessibilityIdentifier("stretch.quit")
+                        Button("Finish") { askingToSave = true }
+                            .accessibilityIdentifier("stretch.finish")
                     }
                 }
             }
@@ -48,29 +48,31 @@ struct StretchPlayerScreen: View {
             pause: { player.countdown.pause() }
         )
         .onChange(of: player.countdown.isFinished) { _, finished in
-            if finished { save() }
+            // Ending with the Finish dialog open ends as it would without it.
+            if finished {
+                askingToSave = false
+                save()
+            }
         }
         .sensoryFeedback(.selection, trigger: addCount)
         .sensoryFeedback(trigger: player.loggedWorkout != nil) { _, logged in
             logged ? .success : nil
         }
         .confirmationDialog(
-            "Save what you did?", isPresented: $askingToSave, titleVisibility: .visible
+            "Finish early?", isPresented: $askingToSave, titleVisibility: .visible
         ) {
-            Button("Save") { saveAndClose() }
+            Button("Save What I Did") { saveAndClose() }
                 .accessibilityIdentifier("stretch.save")
             Button("Discard", role: .destructive) { dismiss() }
                 .accessibilityIdentifier("stretch.discard")
             Button("Keep Going", role: .cancel) {}
                 .accessibilityIdentifier("stretch.keepGoing")
         } message: {
-            Text("Save logs the holds you finished to History.")
+            Text(
+                "Save What I Did logs the holds so far, the current one for the seconds held, to History."
+            )
         }
         .saveFailedAlert(isPresented: $saveFailed)
-    }
-
-    private func quit() {
-        if player.hasCompletedHold { askingToSave = true } else { dismiss() }
     }
 
     /// Logs what was done; false, with the alert, when the save failed.
@@ -175,8 +177,15 @@ private struct StretchControls: View {
                 systemImage: player.countdown.isPaused ? "play.fill" : "pause.fill"
             ) { player.togglePause() }
             .accessibilityIdentifier("stretch.pause")
-            Button("Skip", systemImage: "forward.fill") { player.skip() }
-                .accessibilityIdentifier("stretch.skip")
+            // During a lead-in the button starts its hold, so it says so; during a hold it skips it.
+            if player.step?.kind == .leadIn {
+                Button("Start Now") { player.skip() }
+                    .font(.headline)
+                    .accessibilityIdentifier("stretch.startNow")
+            } else {
+                Button("Skip", systemImage: "forward.fill") { player.skip() }
+                    .accessibilityIdentifier("stretch.skip")
+            }
             Button("+15") {
                 added()
                 player.addTime()

@@ -23,7 +23,7 @@ final class AMRAPPlayer: Identifiable {
         case running
         /// Paused during the get-ready countdown or the time cap.
         case paused
-        /// The time cap has ended: the extra reps are entered.
+        /// The time cap has ended, or Finish early ended it: the extra reps are entered.
         case timeUp
         /// Logged.
         case finished
@@ -39,6 +39,11 @@ final class AMRAPPlayer: Identifiable {
         case resume
         /// Only while running.
         case roundDone
+        /// Ends the get-ready countdown and starts the time cap at once; only during get ready.
+        case startNow
+        /// Ends the countdown before the time cap is up, for the extra reps and Save; during get ready, running or
+        /// paused.
+        case finishEarly
         /// Sets the extra reps, held from 0 to one fewer than the round's reps; only at time up.
         case setExtraReps(Int)
     }
@@ -58,6 +63,8 @@ final class AMRAPPlayer: Identifiable {
     private(set) var countdown: PhasedCountdown<Step>?
     /// The rounds done, plus the extra reps once time is up.
     private(set) var score: AMRAPScore
+    /// Whether Finish early ended the countdown, rather than the time cap running out.
+    private(set) var endedEarly = false
     /// When Start was tapped; nil before.
     private(set) var startDate: Date?
     /// The workout `log` saved, so a second call logs nothing more.
@@ -149,11 +156,6 @@ final class AMRAPPlayer: Identifiable {
     /// The round being done, from 1.
     var roundNumber: Int { score.rounds + 1 }
 
-    /// Whether quitting has something to save: a round done or extra reps entered, not yet logged.
-    var hasSomethingToSave: Bool {
-        phase != .finished && (score.rounds > 0 || score.extraReps > 0)
-    }
-
     // MARK: Events
 
     /// Applies the event when the phase allows it, and returns the phase after it. An event the phase doesn't
@@ -180,6 +182,11 @@ final class AMRAPPlayer: Identifiable {
             countdown?.resume()
         case (.roundDone, .running):
             score = AMRAPScore(rounds: score.rounds + 1, extraReps: 0, of: round) ?? score
+        case (.startNow, .getReady):
+            countdown?.move(to: 1)
+        case (.finishEarly, .getReady), (.finishEarly, .running), (.finishEarly, .paused):
+            endedEarly = true
+            if let countdown { countdown.move(to: countdown.phases.count) }
         case (.setExtraReps(let reps), .timeUp):
             let held = min(max(reps, 0), round.repsPerRound - 1)
             score = AMRAPScore(rounds: score.rounds, extraReps: held, of: round) ?? score
@@ -194,8 +201,8 @@ final class AMRAPPlayer: Identifiable {
 
     // MARK: Logging
 
-    /// Saves a finished Timed AMRAP workout with the score (extra reps count only from time up; quitting early
-    /// logs the rounds done), titled with the routine's name, linked to the stored routine played (none for a
+    /// Saves a finished Timed AMRAP workout with the score (extra reps count only from time up, which Finish
+    /// early also reaches), titled with the routine's name, linked to the stored routine played (none for a
     /// starter routine), from Start to now. It holds one completed set per exercise with its total reps (see
     /// `AMRAPRound.totalReps(for:)`) and its weight; an exercise whose total is 0 is left out. Nil, saving
     /// nothing, before Start or for a score of 0 rounds + 0 reps; a second call returns the workout already logged. Rolls back and throws when the

@@ -19,6 +19,7 @@ struct WorkoutTab: View {
     @State private var isCreatingProgramme = false
     @State private var newProgrammeName = ""
     @State private var routineToDelete: Routine?
+    @State private var programmeToDelete: Programme?
     @State private var isShowingStarterRoutines = false
     /// A workout started from the Starter Routines sheet, shown once the sheet has closed.
     @State private var startedFromStarterRoutines: RoutineStart.Started?
@@ -54,6 +55,27 @@ struct WorkoutTab: View {
                 Section("Programmes") {
                     ForEach(programmes.enumerated(), id: \.element.id) { index, programme in
                         ProgrammeRow(programme: programme, index: index, present: presentStarted)
+                            .swipeActions(edge: .trailing) {
+                                // No destructive role: with it the list removes the row before the user confirms.
+                                Button("Delete", systemImage: "trash") {
+                                    programmeToDelete = programme
+                                }
+                                .tint(.red)
+                                .accessibilityIdentifier("workoutTab.programme.\(index).delete")
+                            }
+                            // On the row, so the dialog appears by it rather than at the top of the list.
+                            .confirmationDialog(
+                                "Delete this programme?",
+                                isPresented: Binding(
+                                    get: { programmeToDelete === programme },
+                                    set: { if !$0 { programmeToDelete = nil } }),
+                                titleVisibility: .visible
+                            ) {
+                                Button("Delete Programme", role: .destructive) { delete(programme) }
+                                    .accessibilityIdentifier("workoutTab.deleteProgrammeConfirm")
+                            } message: {
+                                Text("Its routines move to My Routines.")
+                            }
                     }
                     Button("New Programme", systemImage: "plus") {
                         newProgrammeName = ""
@@ -81,6 +103,19 @@ struct WorkoutTab: View {
                                     .tint(.red)
                                     .accessibilityIdentifier(
                                         "workoutTab.routine.\(routine.name).delete")
+                            }
+                            // On the row, so the dialog appears by it rather than at the top of the list.
+                            .confirmationDialog(
+                                "Delete this routine?",
+                                isPresented: Binding(
+                                    get: { routineToDelete === routine },
+                                    set: { if !$0 { routineToDelete = nil } }),
+                                titleVisibility: .visible
+                            ) {
+                                Button("Delete Routine", role: .destructive) { delete(routine) }
+                                    .accessibilityIdentifier("workoutTab.deleteRoutineConfirm")
+                            } message: {
+                                Text("Workouts started from it are kept.")
                             }
                     }
                     Button("New Routine", systemImage: "plus") { isCreatingRoutine = true }
@@ -116,14 +151,6 @@ struct WorkoutTab: View {
                     isShowingStarterRoutines = false
                 }
             }
-            .confirmationDialog(
-                "Delete this routine?", item: $routineToDelete, titleVisibility: .visible
-            ) { routine in
-                Button("Delete Routine", role: .destructive) { delete(routine) }
-                    .accessibilityIdentifier("workoutTab.deleteRoutineConfirm")
-            } message: { _ in
-                Text("Workouts started from it are kept.")
-            }
             .alert("New Programme", isPresented: $isCreatingProgramme) {
                 TextField("Name", text: $newProgrammeName)
                     .accessibilityIdentifier("workoutTab.newProgrammeName")
@@ -149,6 +176,16 @@ extension WorkoutTab {
             try ProgrammeLibrary(context: modelContext).create(named: newProgrammeName)
         } catch {
             saveFailed = true
+        }
+    }
+
+    private func delete(_ programme: Programme) {
+        withAnimation(reduceMotion ? nil : .default) {
+            do {
+                try ProgrammeLibrary(context: modelContext).delete(programme)
+            } catch {
+                saveFailed = true
+            }
         }
     }
 

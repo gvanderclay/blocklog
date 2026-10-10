@@ -3,8 +3,8 @@ import SwiftUI
 
 /// The full-screen guided player for a Timed AMRAP: before Start, the dumbbell weights, the round and last time's
 /// score; then the get-ready countdown, the big countdown with the round number and the round's exercises, Round
-/// done and Pause; at time up, the extra reps and Save; then today's and last time's score. Quitting after a round
-/// asks whether to save it. The screen stays awake while it shows, and leaving the app pauses it.
+/// done and Pause; at time up, the extra reps and Save; then today's and last time's score. Finish before time up
+/// asks whether to save what was done, through the extra reps, or discard it. The screen stays awake while it shows, and leaving the app pauses it.
 struct AMRAPPlayerScreen: View {
     let player: AMRAPPlayer
 
@@ -34,45 +34,61 @@ struct AMRAPPlayerScreen: View {
                         Button("Done") { dismiss() }
                             .accessibilityIdentifier("amrap.done")
                     }
+                case .setup:
+                    // Nothing has started, so there is nothing to save or discard.
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                            .accessibilityIdentifier("amrap.cancel")
+                    }
                 case .timeUp:
-                    quitItem
+                    finishItem(title: "Discard")
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { _ = save() }
                             .accessibilityIdentifier("amrap.save")
                     }
                 default:
-                    quitItem
+                    finishItem(title: "Finish")
                 }
             }
         }
         .guidedPlayerClock(
             player.countdown, advance: { player.advance() }, pause: { player.send(.pause) }
         )
+        // Time up with the Finish dialog open goes on as it would without it.
+        .onChange(of: player.phase) { _, phase in
+            if phase == .timeUp { askingToSave = false }
+        }
         .sensoryFeedback(.success, trigger: player.score.rounds)
         .sensoryFeedback(trigger: player.loggedWorkout != nil) { _, logged in
             logged ? .success : nil
         }
         .confirmationDialog(
-            "Save what you did?", isPresented: $askingToSave, titleVisibility: .visible
+            player.phase == .timeUp ? "Discard your score?" : "Finish early?",
+            isPresented: $askingToSave, titleVisibility: .visible
         ) {
-            Button("Save") { if save() { dismiss() } }
-                .accessibilityIdentifier("amrap.quitSave")
+            if player.phase != .timeUp {
+                Button("Save What I Did") { player.send(.finishEarly) }
+                    .accessibilityIdentifier("amrap.finishSave")
+            }
             Button("Discard", role: .destructive) { dismiss() }
                 .accessibilityIdentifier("amrap.discard")
-            Button("Keep Going", role: .cancel) {}
+            Button(player.phase == .timeUp ? "Cancel" : "Keep Going", role: .cancel) {}
                 .accessibilityIdentifier("amrap.keepGoing")
         } message: {
-            Text("Save logs your score so far, \(player.score.text), to History.")
+            if player.phase != .timeUp {
+                Text(
+                    "Save What I Did stops the clock, so you can add the reps of the round you’re in, then save."
+                )
+            }
         }
         .saveFailedAlert(isPresented: $saveFailed)
     }
 
-    private var quitItem: some ToolbarContent {
+    /// Finish, or Discard at time up beside Save; either asks before closing.
+    private func finishItem(title: String) -> some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
-            Button("Quit") {
-                if player.hasSomethingToSave { askingToSave = true } else { dismiss() }
-            }
-            .accessibilityIdentifier("amrap.quit")
+            Button(title) { askingToSave = true }
+                .accessibilityIdentifier("amrap.finish")
         }
     }
 
@@ -246,12 +262,28 @@ private struct AMRAPControls: View {
             .labelStyle(.iconOnly)
             .buttonStyle(.bordered)
             .accessibilityIdentifier("amrap.pause")
-            Button("Round done") { player.send(.roundDone) }
+            // During get ready, Start Now takes Round done's place, which can't be tapped until the clock runs.
+            if player.phase == .getReady {
+                // The frame sits on the label, so the visible button fills the row beside Pause.
+                Button {
+                    player.send(.startNow)
+                } label: {
+                    Text("Start Now").frame(maxWidth: .infinity)
+                }
                 .font(.headline)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("amrap.startNow")
+            } else {
+                Button {
+                    player.send(.roundDone)
+                } label: {
+                    Text("Round done").frame(maxWidth: .infinity)
+                }
+                .font(.headline)
                 .buttonStyle(.borderedProminent)
                 .disabled(player.phase != .running)
                 .accessibilityIdentifier("amrap.roundDone")
+            }
         }
         .controlSize(.large)
         .padding()
@@ -268,7 +300,7 @@ private struct AMRAPTimeUpView: View {
         let score = player.score
         Form {
             Section {
-                Text("Time’s up")
+                Text(player.endedEarly ? "Finished early" : "Time’s up")
                     .font(.title2.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("amrap.timeUp")

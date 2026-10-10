@@ -175,13 +175,25 @@ struct StretchPlayerTests {
         player.skip()
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 0, side: 2))
         #expect(remaining(player) == 10)
-        // From a lead-in, Skip passes its hold too.
+        player.skip()
         player.skip()
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 1, side: nil))
-        #expect(!player.hasCompletedHold)
+        player.skip()
         player.skip()
         #expect(player.countdown.isFinished)
         #expect(try player.log(in: context) == nil)
+    }
+
+    @Test func skipFromALeadInStartsItsHoldAtOnce() throws {
+        let player = try start(try mixedRoutine())
+        run(player, seconds: 3)
+        player.skip()
+        #expect(player.step == .init(kind: .hold, round: 1, entry: 0, side: 1))
+        #expect(remaining(player) == 30)
+        // The hold still counts once it runs to its end.
+        run(player, seconds: 30)
+        let workout = try #require(try player.log(in: context))
+        #expect(logged(workout) == ["Hip Flexor Stretch": [30]])
     }
 
     @Test func skipWhilePausedStaysPaused() throws {
@@ -189,8 +201,9 @@ struct StretchPlayerTests {
         player.togglePause()
         player.skip()
         #expect(player.countdown.isPaused)
+        #expect(player.step?.kind == .hold)
         run(player, seconds: 10)
-        #expect(remaining(player) == 10)
+        #expect(remaining(player) == 30)
     }
 
     @Test func backGoesToThePreviousHoldsLeadIn() throws {
@@ -271,21 +284,35 @@ struct StretchPlayerTests {
         #expect(WorkoutLog(context: fresh).inProgressWorkout() == nil)
     }
 
-    @Test func savingOnQuitLogsOnlyTheHoldsDone() throws {
+    @Test func savingOnFinishLogsOnlyTheHoldsDone() throws {
         let player = try start(try mixedRoutine(), rounds: 2)
         // Round 1: side 1 of the hip flexor with +15, then side 2 skipped; the pancake held.
         run(player, seconds: 10 + 10)
         player.addTime()
         run(player, seconds: 35)
+        // From the "Switch sides" lead-in: the first Skip starts side 2, the second leaves it uncounted.
+        player.skip()
         player.skip()
         run(player, seconds: 10 + 20)
-        // Round 2: the hip flexor's first side held, then quit mid-way through the second.
+        // Round 2: the hip flexor's first side held, then Finish mid-way through the second.
         run(player, seconds: 10 + 30 + 10 + 10)
-        #expect(player.hasCompletedHold)
 
         let workout = try #require(try player.log(in: context))
         #expect(logged(workout) == ["Hip Flexor Stretch": [45, 30], "Pancake Stretch": [20]])
         #expect(workout.endDate == clock.date)
+    }
+
+    @Test func savingOnFinishLogsTheHoldUnderWayForTheSecondsHeld() throws {
+        let player = try start(try mixedRoutine())
+        // Nothing held during the first lead-in.
+        run(player, seconds: 5)
+        #expect(try player.log(in: context) == nil)
+        run(player, seconds: 5 + 12)
+        player.togglePause()
+        run(player, seconds: 60)
+
+        let workout = try #require(try player.log(in: context))
+        #expect(logged(workout) == ["Hip Flexor Stretch": [12]])
     }
 
     @Test func aStretchResolvedToACustomExercisePlaysByTheRoutine() throws {

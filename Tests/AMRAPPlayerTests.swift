@@ -228,6 +228,20 @@ struct AMRAPPlayerTests {
 
     // MARK: Phases
 
+    @Test func startNowStartsTheTimeCapAtOnceOnlyDuringGetReady() throws {
+        let player = try start(try myAMRAP())
+        #expect(player.send(.startNow) == .setup)
+        player.send(.start)
+        run(player, seconds: 3)
+
+        #expect(player.send(.startNow) == .running)
+        #expect(player.countdown?.remaining(at: clock.date) == 60)
+        // Once running, Start Now does nothing more.
+        run(player, seconds: 5)
+        #expect(player.send(.startNow) == .running)
+        #expect(player.countdown?.remaining(at: clock.date) == 55)
+    }
+
     @Test func thePhasesRunGetReadyThenTheTimeCapThenTimeUp() throws {
         let player = try start(try myAMRAP())
         #expect(player.countdown == nil)
@@ -349,26 +363,43 @@ struct AMRAPPlayerTests {
         #expect(try startCindy().lastScore == (try score(14, 7)))
     }
 
-    @Test func quittingEarlyLogsTheRoundsDoneWithNoExtraReps() throws {
+    @Test func finishingEarlyGoesToTheExtraRepsAndLogsTheRoundsAndReps() throws {
         let player = try startCindy()
-        #expect(!player.hasSomethingToSave)
+        #expect(player.send(.finishEarly) == .setup)
         player.send(.start)
         run(player, seconds: 10)
-        #expect(!player.hasSomethingToSave)
         player.send(.roundDone)
         player.send(.roundDone)
         run(player, seconds: 300)
-        #expect(player.hasSomethingToSave)
+        #expect(!player.endedEarly)
 
+        #expect(player.send(.finishEarly) == .timeUp)
+        #expect(player.endedEarly)
+        // The clock is stopped: no time-up chime, and the score waits for Save.
+        #expect(run(player, seconds: 1_000).isEmpty)
+        player.send(.setExtraReps(8))
         let workout = try #require(try player.log(in: context))
 
-        #expect(workout.format.score == (try score(2, 0)))
+        #expect(workout.format.score == (try score(2, 8)))
         #expect(
             logged(workout) == [
-                "Pull-up": [.bodyweightReps(addedWeight: nil, reps: 10)],
-                "Push-up": [.bodyweightReps(addedWeight: nil, reps: 20)],
+                "Pull-up": [.bodyweightReps(addedWeight: nil, reps: 15)],
+                "Push-up": [.bodyweightReps(addedWeight: nil, reps: 23)],
                 "Squat": [.bodyweightReps(addedWeight: nil, reps: 30)],
             ])
+        #expect(workout.endDate == clock.date)
+    }
+
+    @Test func finishingEarlyWorksWhilePausedOrGettingReady() throws {
+        let paused = try startCindy()
+        paused.send(.start)
+        run(paused, seconds: 20)
+        paused.send(.pause)
+        #expect(paused.send(.finishEarly) == .timeUp)
+
+        let gettingReady = try startCindy()
+        gettingReady.send(.start)
+        #expect(gettingReady.send(.finishEarly) == .timeUp)
     }
 
     @Test func anExerciseWithNoRepsIsLeftOutAndNothingLogsBeforeStart() throws {
@@ -388,17 +419,14 @@ struct AMRAPPlayerTests {
             ])
     }
 
-    @Test func aScoreOfNothingLogsNothingAndQuitsWithoutAsking() throws {
+    @Test func aScoreOfNothingLogsNothing() throws {
         let player = try startCindy()
         player.send(.start)
         run(player, seconds: 1_210)
         #expect(player.phase == .timeUp)
 
-        #expect(!player.hasSomethingToSave)
         #expect(try player.log(in: context) == nil)
         #expect(try context.fetch(FetchDescriptor<Workout>()).isEmpty)
-        player.send(.setExtraReps(1))
-        #expect(player.hasSomethingToSave)
     }
 
     @Test func aFailedSaveRollsBackAndLeavesTheRoutineReadable() throws {

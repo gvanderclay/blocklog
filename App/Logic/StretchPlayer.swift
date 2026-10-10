@@ -140,20 +140,19 @@ final class StretchPlayer: Identifiable {
         return step.round < rounds ? stretches.first?.name : nil
     }
 
-    /// Whether any hold ran to its end, so quitting has something to save.
-    var hasCompletedHold: Bool {
-        countdown.completedSeconds.keys.contains { countdown.phases[$0].step.kind == .hold }
-    }
-
     // MARK: Controls
 
     func togglePause() {
         if countdown.isPaused { countdown.resume() } else { countdown.pause() }
     }
 
-    /// Leaves the current hold, or its lead-in, without counting it, for the next hold's lead-in; past the last
-    /// hold the routine finishes.
+    /// From a lead-in, starts its hold at once. From a hold, leaves it uncounted for the next hold's lead-in; past
+    /// the last hold the routine finishes.
     func skip() {
+        if step?.kind == .leadIn {
+            countdown.move(to: countdown.index + 1)
+            return
+        }
         let next = countdown.phases.indices.dropFirst(countdown.index + 1).first {
             countdown.phases[$0].step.kind == .leadIn
         }
@@ -175,15 +174,21 @@ final class StretchPlayer: Identifiable {
     /// Saves a finished workout titled with the routine's name, linked to the stored routine played (none for a
     /// starter routine), from the start of play to
     /// now, holding one completed duration set per stretch per round whose hold (either side, for a per-side
-    /// stretch) ran to its end. The set holds that hold's length with any added seconds, the longer side's for a
-    /// per-side stretch. A stretch whose stored exercise doesn't record a duration (a custom exercise sharing the
+    /// stretch) ran to its end, or is the hold under way when finishing early. The set holds that hold's length with
+    /// any added seconds, or the seconds held so far for the hold under way, the longer side's for a per-side
+    /// stretch. A stretch whose stored exercise doesn't record a duration (a custom exercise sharing the
     /// stretch's name) is left out. Nil, saving nothing, with nothing to log; a second call returns the workout
     /// already logged. Rolls back and throws when the save fails.
     func log(in context: ModelContext) throws -> Workout? {
         if let loggedWorkout { return loggedWorkout }
         // The longest completed hold by stretch, then round.
         var held: [Int: [Int: Int]] = [:]
-        for (position, seconds) in countdown.completedSeconds {
+        var holds = countdown.completedSeconds
+        if !countdown.isFinished {
+            let soFar = countdown.length - countdown.seconds(at: now())
+            holds[countdown.index] = max(holds[countdown.index] ?? 0, soFar)
+        }
+        for (position, seconds) in holds {
             let step = countdown.phases[position].step
             guard step.kind == .hold, seconds > 0 else { continue }
             held[step.entry, default: [:]][step.round] = max(

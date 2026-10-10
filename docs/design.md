@@ -51,12 +51,12 @@ Haptics go through SwiftUI's `.sensoryFeedback(_:trigger:)`, which follows the s
 | Stretch player: each of a hold's last 5 seconds | light impact | `.impact(weight: .light)` |
 | Stretch player: a hold reaches zero | warning | `.warning` |
 | Stretch player: +15 | selection | `.selection` |
-| Stretch routine logged (at its end, or Save on quit) | success | `.success` |
+| Stretch routine logged (at its end, or Save on Finish) | success | `.success` |
 | AMRAP player: each of the time cap's last 5 seconds | light impact | `.impact(weight: .light)` |
 | AMRAP player: time up | warning | `.warning` |
 | AMRAP player: Round done | success | `.success` |
 | AMRAP player: extra reps step | selection | `.selection` |
-| AMRAP logged (Save at time up, or Save on quit) | success | `.success` |
+| AMRAP logged (Save at time up, or Save on Finish) | success | `.success` |
 | Workout finished (summary appears) | success | `.success` |
 | Import completed | success | `.success` |
 
@@ -82,8 +82,8 @@ Each touch is specified in its feature ticket; this is the rule that ticket impl
 - Finishing a workout shows a short summary (ticket 06); after a programme workout it adds a secondary line, "Next in <programme>: <routine>", which starts nothing.
 - Tapping a Previous value copies it into an unchecked set (ticket 09).
 - The setup diagram animates between setups (ticket 14).
-- The stretch player keeps the screen awake while it shows (ticket 32b). Quitting after at least one finished hold asks "Save what you did?" (Save, Discard, Keep Going); quitting with none closes at once.
-- The AMRAP player (ticket 33b) is a `fullScreenCover` with Quit at the top left. Before Start it is a list: the dumbbell weights with − and + (or the weight menu), the round's exercises with their reps, last time's score, and Start. During the AMRAP it shows "Round N", "Get ready" or "Paused", the big countdown, and the round's exercises with reps and weight; a bottom bar holds Pause (icon only) and a prominent Round done, enabled only while the clock runs. At time up it is a form: "Time's up", an Extra reps stepper (0 to one fewer than a round's reps), the score, and Save at the top right; then the summary shows today's and last time's score with Done. It keeps the screen awake. Quitting after a round, or at time up, asks "Save what you did?" (Save, Discard, Keep Going); quitting with no round done closes at once.
+- The stretch player keeps the screen awake while it shows (ticket 32b). Finish at the top left always asks "Finish early?": Save What I Did (logs the holds so far, the one under way for the seconds held), Discard and Keep Going (the popover's tap outside). The clock keeps running while it asks; if the routine ends meanwhile, the dialog closes and the routine logs as usual.
+- The AMRAP player (ticket 33b) is a `fullScreenCover` with Cancel at the top left before Start (it closes at once) and Finish after. Before Start it is a list: the dumbbell weights with − and + (or the weight menu), the round's exercises with their reps, last time's score, and Start. During the AMRAP it shows "Round N", "Get ready" or "Paused", the big countdown, and the round's exercises with reps and weight; a bottom bar holds Pause (icon only) and a prominent Round done, enabled only while the clock runs. At time up it is a form: "Time's up" ("Finished early" after Finish early), an Extra reps stepper (0 to one fewer than a round's reps), the score, and Save at the top right; then the summary shows today's and last time's score with Done. It keeps the screen awake. Finish always asks "Finish early?": Save What I Did (stops the clock and opens the time-up form, for the reps of the round under way), Discard and Keep Going. The clock keeps running while it asks; if time runs out meanwhile, the dialog closes for the time-up form. At time up the top-left button reads Discard and asks "Discard your score?" (Discard, Cancel).
 
 ## SF Symbols
 
@@ -106,7 +106,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Rest time | `timer` |
 | Progression note | `arrow.up.circle.fill` |
 | Finish summary, stretch routine done, AMRAP summary | `checkmark.seal.fill` |
-| Stretch player Back / Skip | `backward.fill` / `forward.fill` |
+| Stretch player Back / Skip | `backward.fill` / `forward.fill` (during a lead-in, Skip is the text button Start Now) |
 | Pause / resume a guided player | `pause.fill` / `play.fill` |
 | More actions menu | `ellipsis.circle` |
 | Filter the exercise list | `line.3.horizontal.decrease.circle` |
@@ -182,7 +182,7 @@ Phase 6 (tickets 32a–32b):
 - [ ] With Timer Sounds off or the silent switch on: no ticks or chime, the taps still play.
 - [ ] +15: a selection tick, and the countdown rolls to the new time.
 - [ ] Pause, Skip and Back: the countdown and the stretch change at once, the text cross-fading.
-- [ ] Quit after a hold: "Save what you did?" asks first; Save shows the workout in History.
+- [ ] Finish after a hold: "Finish early?" asks first; Save shows the workout in History.
 
 Phase 7 (tickets 33a–33b):
 

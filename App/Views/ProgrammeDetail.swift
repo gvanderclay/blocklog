@@ -56,6 +56,13 @@ struct ProgrammeDetail: View {
                     isConfirmingDelete = true
                 }
                 .accessibilityIdentifier("programme.delete")
+                // On the button, so the dialog appears by it rather than at the top of the list.
+                .confirmationDialog("Delete this programme?", isPresented: $isConfirmingDelete) {
+                    Button("Delete Programme", role: .destructive) { delete() }
+                        .accessibilityIdentifier("programme.deleteConfirm")
+                } message: {
+                    Text("Its routines move to My Routines.")
+                }
             }
         }
         .navigationTitle(programme.name)
@@ -78,12 +85,6 @@ struct ProgrammeDetail: View {
                 .accessibilityIdentifier("programme.renameCancel")
             Button("Save") { rename() }
                 .accessibilityIdentifier("programme.renameSave")
-        }
-        .confirmationDialog("Delete this programme?", isPresented: $isConfirmingDelete) {
-            Button("Delete Programme", role: .destructive) { delete() }
-                .accessibilityIdentifier("programme.deleteConfirm")
-        } message: {
-            Text("Its routines move to My Routines.")
         }
         .sheet(isPresented: $isReordering) {
             ReorderSheet(items: routines, name: \.name) { ordered in
