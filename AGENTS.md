@@ -82,6 +82,7 @@ Tickets live in the untracked `.scratch/blocklog/issues/`.
 
 - Writing or changing SwiftUI views: Apple's `swiftui-specialist` and `swiftui-whats-new-27` from `just skills`.
 - Checkpoint design reviews only: `swiftui-pro`.
+- Checkpoint design reviews and UX-focused tickets: `ux-critique`, alongside blind tests (and `swiftui-pro` at checkpoints), not instead of them.
 - Actor-isolation or `Sendable` compiler errors: `swift-concurrency`.
 - Writing unit tests: `swift-testing-expert`.
 - The per-ticket review: code-review.
