@@ -115,14 +115,14 @@ Motion rules:
 ## 5. Delivery format
 
 - **Container:** HEVC with alpha in `.mov` (`hvc1`), with no audio track.
-- **Size and rate:** square 720 × 720 px *(spike may choose 540)*, 30 fps, 2–5 s per loop.
+- **Size and rate:** square 540 × 540 px *(the spike chose 540 over 720, section 10)*, 30 fps, 2–5 s per loop.
 - **Encode:**
 
       ffmpeg -y -framerate 30 -i build/animations/<slug>/frames/%04d.png -pix_fmt bgra \
-        -c:v hevc_videotoolbox -q:v <Q> -alpha_quality 0.9 -allow_sw 0 -tag:v hvc1 -an \
+        -c:v hevc_videotoolbox -q:v 70 -alpha_quality 0.9 -allow_sw 0 -tag:v hvc1 -an \
         -movflags +faststart App/Resources/Animations/<slug>.mov
 
-  `<Q>` is set by the spike. `alpha_quality` defaults to 0, which is unsafe for edges.
+  The spike set `-q:v` to 70. `alpha_quality` defaults to 0, which is unsafe for edges.
 - **Still:** the `still` frame as a PNG with alpha, same size, `App/Resources/Animations/<slug>.png`.
 - **Playback:** `AVQueuePlayer` with `AVPlayerLooper`, muted, in an `AVPlayerLayer`. This is AVFoundation, so no Swift package.
 - **Bundling:** XcodeGen bundles the files from `App/Resources` as it already does for the chime and the JSON. Files land flat in the bundle, which the unique slugs allow.
@@ -132,12 +132,14 @@ Measured *(spike, one test render: goblet squat, real figure and dumbbell)*:
 
 | What | Value |
 |---|---|
-| EEVEE seconds per frame, warm, 720 px | (spike) |
-| Clip bytes at two quality settings, 720 and 540 px | (spike) |
-| Still bytes | (spike) |
-| AVFoundation `ContainsAlphaChannel` | (spike) |
-| Two encodes byte-identical | (spike) |
-| EEVEE shadow catcher keeps alpha | (spike) |
+| EEVEE seconds per frame, warm, 720 px | 0.26 s (0.23 s at 540 px); 16 samples, M1, 72 frames in about 25 s including startup. The first frame costs about 1 s. |
+| Clip bytes at two quality settings, 720 and 540 px | 720 px: 324,325 at `-q:v 50`, 375,633 at 70, 433,112 at 80, 671,776 at 90. 540 px: 275,963 at 50, 314,037 at 70, 355,523 at 80, 514,500 at 90. Chosen: 540 px, `-q:v 70`. |
+| Still bytes | 118,272 at 540 px (201,006 at 720 px), PNG with alpha. |
+| AVFoundation `ContainsAlphaChannel` | 1 (codec `hvc1`, 72 frames decoded through `AVAssetReader`). Decoded frames composited on white and `#1C1C1E` show clean edges, no halo, at `-q:v 50` to 80. |
+| Two encodes byte-identical | No: the two files differ in 2 of 314,037 bytes (offsets 1343 and 5242). The renders are pixel-identical between runs. |
+| EEVEE shadow catcher keeps alpha | No. `Object.is_shadow_catcher` gives an opaque lit floor (alpha 255). A ShaderToRGB floor material gives noisy partial alpha and a visible floor edge. Decision: no shadow. |
+
+Budget check: (314,037 + 118,272) bytes × 86 = 37.2 MB, under the 40 MB soft target. At 720 px and `-q:v 70` it would be (375,633 + 201,006) × 86 = 49.6 MB.
 
 ## 6. Keying a clip to its exercise
 
@@ -219,6 +221,27 @@ Run under ticket 28, after the user approves the MPFB install (D3), and before p
 
 The on-device check (alpha on the phone, halos, gapless loop, music keeps playing) is ticket 29's first step, because it needs the info screen.
 
+**Spike results** (run 2026-10-09, M1 8 GB, Blender 5.2.2, work in `/tmp/blspike`):
+
+- **MPFB install.** The GitHub release has no assets; MPFB 2.0.17 comes from extensions.blender.org (sha256 `4f0a879d…a239a87`, 45,031,536 bytes, verified). Command, 2 s: `blender --background --factory-startup --command extension install-file -r user_default --enable mpfb.zip`. `--factory-startup` does not load the user extension, so each script runs `addon_utils.enable("bl_ext.user_default.mpfb", default_set=True, persistent=False)` and `addon_utils.enable("rigify", default_set=True, persistent=False)` first. It lands in `~/Library/Application Support/Blender/5.2/extensions/user_default/mpfb` (82 MB). To uninstall: `blender --command extension remove mpfb`.
+- **System assets.** The extension holds only the base mesh, rigs and targets; shorts, tops and skins are in the separate CC0 pack `makehuman_system_assets_cc0.zip` (280,737,770 bytes from `files.makehumancommunity.org/asset_packs/makehuman_system_assets/`). The spike read it from `/tmp/blspike/assets`, not from the Blender config. Ticket 29 must fetch it too, or commit the one clothing asset used.
+- **Figure build, 2.3 s headless.** `HumanService.create_human()`, `add_builtin_rig(…, "rigify.human_toes")`, `add_mhclo_asset(…)`, `RigService.generate_rigify_rig(meta, meta_rig_action="delete")`. The rig has the expected controls (`hand_ik.L/R`, `foot_ik.L/R`, `torso`, `chest`, `hips`). The figure is 1.66 m tall, `figure.blend` is 2.6 MB, and `create_human` needs its default scale 0.1 to give metres.
+- **Fallbacks taken.** (1) No shorts exist in the core CC0 pack, so the figure wears `male_casualsuit04` (T-shirt and long trousers), recoloured dark grey. (2) The plan's mannequin fallback was not needed. (3) 540 px chosen over 720 px for the size budget. (4) No shadow, since the EEVEE shadow catcher gave no alpha. (5) The contact sheets are EEVEE frames, not Workbench.
+- **Goblet squat.** Keyed per frame (72 baked frames, `torso` plus both `hand_ik` controls), the dumbbell on a Child Of constraint to `chest`. Feet stay on the floor (IK controls unkeyed). The hands hover around the dumbbell and do not grip it yet. The figure fills only about 45% of the frame height, so ticket 29 should tighten the framing.
+- **Deformation.** Standing, deep squat, arms overhead and lying on a bench all deform without collapse. The T-shirt shows a small gap at the shoulder with the arms overhead, and the lying pose arches the back because the pose was not tuned.
+- **Files.** Four-pose sheet: `/tmp/blspike/review/four-pose-sheet-white.png` and `…-dark.png`. Squat contact sheet (12 frames): `/tmp/blspike/review/squat-contact-sheet-white.png`. Scripts (`figure.py`, `lib.py`, `goblet.py`, `sheet.py`, `dec.swift`) are in the same folder.
+
+**Spike 2 results** (2026-10-09; the user judged spike 1's hands and squat unacceptable, and approved these):
+
+- **Form by numbers.** `squat.py` and `plank.py` pose against ACE and NASM references and print checks: goblet bottom with the hip 3 cm below the knee, trunk lean 27.7° ≤ shin lean 32.9°, heels flat, knees over toes, elbows inside knees; plank with hips 1.5 cm off the head–heel line and elbows under shoulders. Ticket 29 keeps these checks in shared code, so each exercise is a data file of key poses checked automatically, plus the user's review.
+- **Hands are a fixed library, fitted once.** `hands.py` holds the poses (grip, block hold, flat; add fist and relaxed). `closefit.py` closes fingers to contact; the fitted grip is stored in the hand bone's space (`grip_hand.json`) and reused, never refitted per exercise. Hand bone axes: X palm normal, Y wrist→knuckles, Z thumb side; the knuckle line is 14.7° oblique, so lay handles along it.
+- **Goblet hold with a PowerBlock (user):** the palms go under the top block with the fingers up its sides onto the top, one hand per side; hands never go around the handle. The heels hold the bottom edges, since palms can't reach under a 15 cm block; the palms still hover 6–11 mm off its sides.
+- **Dumbbell.** Rails at ±0.058 m so they sit either side of the wrist in the grip; the hand barely fits the 115 mm gap.
+- **Framing** is still loose (the squat camera frames standing and bottom together); ticket 29 tightens it.
+- **Files.** The spike scripts are kept in `scripts/animations/spike/` as the starting point for ticket 29's pipeline; they still use `/tmp/blspike` paths and the figure from `figure.py`. Review images: `/tmp/blspike/review2/` (lost on reboot).
+
+**Plan approved by the user, 2026-10-09.**
+
 ## 11. Approvals and decisions
 
 AGENTS.md rule 6: no Swift package is needed, since AVFoundation plays the clips. Rule 15: no model change. The user decides:
@@ -233,6 +256,8 @@ AGENTS.md rule 6: no Swift package is needed, since AVFoundation plays the clips
   - the description read by VoiceOver only, not shown;
   - the user is the form reviewer, with no paid trainer;
   - no CMU, Mixamo, AI motion generators or Blender MCP.
+
+**Answers (user, 2026-10-09):** D1 yes (Plank in the trial), D2 yes, D3 yes (install MPFB), D4 yes, D6 agreed. D5: aim for small files, but treat 40 MB as a soft target, not a hard limit; no Git LFS.
 
 ## 12. Rejected alternatives
 
