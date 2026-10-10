@@ -52,7 +52,10 @@ struct StretchPlayerScreen: View {
         .task(id: player.countdown.state) {
             while let wake = player.countdown.nextWake {
                 do {
-                    try await Task.sleep(for: .seconds(max(wake.timeIntervalSinceNow, 0)))
+                    // Zero tolerance: by default the system may wake a long sleep late in proportion to its
+                    // length (measured 0.74 s late after 25 s on an iPhone), which made the first tick late.
+                    try await Task.sleep(
+                        for: .seconds(max(wake.timeIntervalSinceNow, 0)), tolerance: .zero)
                 } catch { return }
                 play(player.countdown.advance())
             }

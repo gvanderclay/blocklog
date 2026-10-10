@@ -51,7 +51,10 @@ struct RootView: View {
         // One sleep until the end date, not a polling loop; a new end date (±15, restart) restarts it.
         .task(id: restTimer.endDate) {
             while restTimer.remaining > 0 {
-                do { try await Task.sleep(for: .seconds(restTimer.remaining)) } catch { return }
+                // Zero tolerance, or the system may chime a long rest late in proportion to its length.
+                do {
+                    try await Task.sleep(for: .seconds(restTimer.remaining), tolerance: .zero)
+                } catch { return }
             }
             announceEnd(appActive: scenePhase == .active)
         }
