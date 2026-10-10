@@ -23,7 +23,7 @@ struct BlocklogApp: App {
     /// Every model the store holds; tests open fixture stores with it too.
     static let schema = Schema([
         Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self, Routine.self,
-        RoutineExercise.self, Programme.self,
+        RoutineExercise.self, Program.self,
     ])
 
     /// The store with every model, seeded with any starter exercise it lacks.

@@ -58,7 +58,7 @@ struct StarterExercisesTests {
         #expect(after.exercises.filter { beforeIDs.contains($0.id) } == before.exercises)
         #expect(after.routines == before.routines)
         #expect(after.workouts == before.workouts)
-        #expect(after.programmes == before.programmes)
+        #expect(after.programs == before.programs)
         // The stretches are added, except Cat-Cow, which the store already has as the custom "cat-cow".
         let added = after.exercises.filter { !beforeIDs.contains($0.id) }
         #expect(added.count == 19)

@@ -28,13 +28,13 @@ struct StarterLibrary {
             titled: starterRoutine.name, from: try makeDraft(of: starterRoutine), at: date)
     }
 
-    /// Creates a programme of the starter programme's name holding a copy of each of its routines, in order,
+    /// Creates a program of the starter program's name holding a copy of each of its routines, in order,
     /// in one save.
     @discardableResult
-    func addProgramme(_ programme: StarterProgramme, at date: Date = .now) throws -> Programme? {
-        let drafts = try programme.routines.map(makeDraft(of:))
-        return try ProgrammeLibrary(context: context).create(
-            named: programme.name, holding: drafts, at: date)
+    func addProgram(_ program: StarterProgram, at date: Date = .now) throws -> Program? {
+        let drafts = try program.routines.map(makeDraft(of:))
+        return try ProgramLibrary(context: context).create(
+            named: program.name, holding: drafts, at: date)
     }
 
     /// The draft, inserting missing starter exercises without saving.

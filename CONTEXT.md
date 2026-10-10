@@ -1,6 +1,6 @@
 # Glossary
 
-The domain terms Blocklog uses in code, tests and UI text. A term in parentheses is its type name in code. Each word names one thing: plans (routines, starter routines, programmes) are what you start from, and records (workouts, sets) are what you did. "Session" is not a Blocklog term; say routine or workout.
+The domain terms Blocklog uses in code, tests and UI text. A term in parentheses is its type name in code. Each word names one thing: plans (routines, starter routines, programs) are what you start from, and records (workouts, sets) are what you did. "Session" is not a Blocklog term; say routine or workout.
 
 Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/spec.md` (phases 4–8) and not built yet.
 
@@ -11,7 +11,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Custom exercise**: an exercise the user creates from the exercise picker (`isCustom`). It is listed and logged like a starter exercise.
 - **Exercise picker** (`ExercisePicker`): the Add Exercise sheet. It lists exercises by muscle group, searches and filters them by equipment, and creates custom exercises.
 - **Workout** (`Workout`): the record of one training day you did or are doing: a title, a start date, an end date once finished, and its ordered workout exercises. Starting a routine or a starter routine creates one; a workout is never a plan. Finished workouts are the history that previous numbers and progression read.
-- **History** (`WorkoutHistory`): the History tab's list of finished workouts, newest start date first. A row shows the title (with the programme's name when the routine belongs to one, "Push · PPL"), the start date, the duration ("42m", "1h 05m") and the exercise count; it opens a detail that can be switched to editing mode (`PastWorkoutEditing`): every set of a past workout counts as done, so a set is **valid** when it has its exercise type's required values (reps, or seconds above 0), and Done is enabled only while every set is valid. Deleting a workout asks first and removes its exercises and sets.
+- **History** (`WorkoutHistory`): the History tab's list of finished workouts, newest start date first. A row shows the title (with the program's name when the routine belongs to one, "Push · PPL"), the start date, the duration ("42m", "1h 05m") and the exercise count; it opens a detail that can be switched to editing mode (`PastWorkoutEditing`): every set of a past workout counts as done, so a set is **valid** when it has its exercise type's required values (reps, or seconds above 0), and Done is enabled only while every set is valid. Deleting a workout asks first and removes its exercises and sets.
 - **Total time**: a finished workout's end date minus its start date, shown on the finish summary as "Total Time".
 - **In-progress workout**: the workout with no end date. At most one exists; the app reopens into it at launch, and starting another workout is disabled while it exists.
 - **All sets done**: the prompt that appears when checking off a workout's last unchecked set. It offers Finish or Keep Going, and that check-off starts no rest.
@@ -26,7 +26,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 
 ## Routines
 
-- **Routine** (`Routine`): the plan for one training day, such as "Push", holding ordered routine exercises. Starting it creates a workout. It stores structure, rep ranges and target durations, never weights: weights come from history. It belongs to at most one programme; one with none is listed in My Routines.
+- **Routine** (`Routine`): the plan for one training day, such as "Push", holding ordered routine exercises. Starting it creates a workout. It stores structure, rep ranges and target durations, never weights: weights come from history. It belongs to at most one program; one with none is listed in My Routines.
 - **Routine exercise** (`RoutineExercise`): one exercise in a routine: its position, its planned set types, and its **target**: a rep range (low–high, such as 8–12) for a rep exercise, or a target duration in seconds ("Target Duration" in the routine editor) for a duration exercise. The exercise's type decides which; a routine exercise can store neither (`RoutineTarget`).
 - **Planned set**: one set of a routine exercise. It holds only a set type; weights and reps come from history.
 - **Routine draft** (`RoutineDraft`): the routine editor's unsaved copy of a routine. Save writes it to the routine; Cancel drops it.
@@ -34,12 +34,12 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Progression note**: the line under an exercise in a workout started from a routine that explains a pre-filled step up, such as "↑ Up from 35 lb: you hit 12 on every set", or "You hit 12 on every set: consider adding weight" for bodyweight without added weight. It is not stored.
 - **Structural change**: a difference between a finished workout and the routine it started from that makes Finish ask to update the routine: an exercise added, removed, swapped or reordered, or a set added or removed. Weight, reps, duration and set-type edits are not structural, and a routine played in a guided player (Stretch or Timed AMRAP) never has one, since its logged sets don't mirror its plan.
 - **Starter routine** (`StarterRoutine`): a read-only routine bundled with the app, such as Push or Golden Six, listed in the starter library. Starting one gives a workout titled with its name, pre-filled like a routine start but with no routine link. "Add to My Routines" opens the routine editor on a routine draft of it.
-- **Starter programme** (`StarterProgramme`): starter routines meant to rotate as one programme, such as Push/Pull/Legs. "Add Programme" creates a programme holding copies of them, in order.
-- **Starter library**: the sheet listing the starter programmes, the starter routines that belong to none, and, under "Stretching", the stretch routines.
-- **Stretch routine**: a routine whose format is Stretch, such as the starter Full-Body Quick Stretch: one timed set of a stretch per entry, its target duration the hold. It plays in the guided player. A starter one can be copied into My Routines or a programme, where it stays a Stretch routine that can be edited and started.
+- **Starter program** (`StarterProgram`): starter routines meant to rotate as one program, such as Push/Pull/Legs. "Add Program" creates a program holding copies of them, in order.
+- **Starter library**: the sheet listing the starter programs, the starter routines that belong to none, and, under "Stretching", the stretch routines.
+- **Stretch routine**: a routine whose format is Stretch, such as the starter Full-Body Quick Stretch: one timed set of a stretch per entry, its target duration the hold. It plays in the guided player. A starter one can be copied into My Routines or a program, where it stays a Stretch routine that can be edited and started.
 - **Estimated time**: a starter routine's rough length, every set taking the default rest plus 40 seconds. A stretch routine's is one round: each hold, twice for a per-side stretch, plus a 10-second lead-in before each, without pauses between sides.
-- **Programme** (`Programme`) *(planned, phase 4)*: an ordered list of routines you rotate through, such as PPL: Push → Pull → Legs. It owns its routines: adding a routine copies it in, and a routine that leaves the programme, or whose programme is deleted, moves to My Routines. A routine's **programme membership** (`ProgrammeMembership`) is its programme and its position in it, from 0, held together.
-- **Up next** *(planned, phase 4)*: a programme's next routine: the one after the routine of the programme's newest finished workout, wrapping round, or the first with none. It is worked out, never stored; workouts of other routines never move it.
+- **Program** (`Program`) *(planned, phase 4)*: an ordered list of routines you rotate through, such as PPL: Push → Pull → Legs. It owns its routines: adding a routine copies it in, and a routine that leaves the program, or whose program is deleted, moves to My Routines. A routine's **program membership** (`ProgramMembership`) is its program and its position in it, from 0, held together.
+- **Up next** *(planned, phase 4)*: a program's next routine: the one after the routine of the program's newest finished workout, wrapping round, or the first with none. It is worked out, never stored; workouts of other routines never move it.
 - **Routine format** (`RoutineFormat`): how a routine plays: Sets (the default, stored as nil), Timed AMRAP with its time cap, or Stretch, chosen in the routine editor. A Timed AMRAP takes only rep exercises and a Stretch routine only duration exercises, so switching is refused while the routine holds one the new format doesn't allow; switching to Timed AMRAP gives each exercise one normal set at its range's high end. The bundled starter routines write it as a routine stores it: `"format": "stretch"`, or `"format": "timedAMRAP"` with `"timeCapSeconds"`.
 - **Workout format** (`WorkoutFormat`): how a workout was played: Sets, or Timed AMRAP holding its AMRAP score.
 
@@ -64,7 +64,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Overtime**: the rest timer after its end date. It counts up as "+m:ss" until Skip, the next check-off, Finish or Discard; reaching zero never ends the rest timer by itself.
 - **Rest notification**: the "Rest over" system notification (identifier `rest-timer`) scheduled at the rest timer's end date, so a locked or backgrounded phone still alerts. The app shows nothing for it in the foreground.
 - **Timer Sounds**: the Settings switch for every timer sound: the rest chime, in the foreground and on the rest notification, and the guided players' ticks and chimes. The haptics play either way.
-- **Backup document**: the versioned JSON file Export writes and Import reads, holding the training data: every exercise, routine and finished workout (and programme, from phase 4), not the settings. Import validates the whole document, then replaces all training data; it never merges.
+- **Backup document**: the versioned JSON file Export writes and Import reads, holding the training data: every exercise, routine and finished workout (and program, from phase 4), not the settings. Import validates the whole document, then replaces all training data; it never merges.
 
 ## Guided routines *(stretching built in phase 6; timed AMRAP in phase 7)*
 

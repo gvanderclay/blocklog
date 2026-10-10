@@ -39,8 +39,8 @@ struct BackupDocument: Codable, Equatable {
     var version: Int
     var exportedAt: Date
     var exercises: [ExerciseRecord]
-    /// Absent from files written before programmes, which read as none.
-    var programmes: [ProgrammeRecord]
+    /// Absent from files written before programs, which read as none.
+    var programs: [ProgramRecord]
     var routines: [RoutineRecord]
     var workouts: [WorkoutRecord]
 
@@ -58,7 +58,7 @@ struct BackupDocument: Codable, Equatable {
     }
 
     @MainActor
-    struct ProgrammeRecord: Codable, Equatable {
+    struct ProgramRecord: Codable, Equatable {
         var id: UUID
         var name: String
         var creationDate: Date
@@ -69,9 +69,9 @@ struct BackupDocument: Codable, Equatable {
         var id: UUID
         var name: String
         var creationDate: Date
-        /// The programme the routine belongs to, with `programmePosition`; both nil for My Routines.
-        var programmeID: UUID?
-        var programmePosition: Int?
+        /// The program the routine belongs to, with `programPosition`; both nil for My Routines.
+        var programID: UUID?
+        var programPosition: Int?
         /// The stored format raw value and time cap, verbatim; absent from version 2 files and for a Sets routine.
         var format: String? = nil
         var timeCapSeconds: Int? = nil
@@ -264,30 +264,30 @@ struct BackupDocument: Codable, Equatable {
             types[exercise.id] = ExerciseType(rawValue: exercise.type)
         }
 
-        var programmePositions: [UUID: [Int]] = [:]
-        for programme in programmes {
-            try claim(programme.id, for: "Programme “\(programme.name)”")
-            guard !ExerciseCatalog.normalized(programme.name).trimmed.isEmpty else {
-                throw BackupError.invalid("A programme has no name.")
+        var programPositions: [UUID: [Int]] = [:]
+        for program in programs {
+            try claim(program.id, for: "Program “\(program.name)”")
+            guard !ExerciseCatalog.normalized(program.name).trimmed.isEmpty else {
+                throw BackupError.invalid("A program has no name.")
             }
-            programmePositions[programme.id] = []
+            programPositions[program.id] = []
         }
 
         for routine in routines {
             let owner = "Routine “\(routine.name)”"
             try claim(routine.id, for: owner)
-            switch (routine.programmeID, routine.programmePosition) {
+            switch (routine.programID, routine.programPosition) {
             case (nil, nil): break
-            case (let programmeID?, let position?):
-                guard programmePositions[programmeID] != nil else {
+            case (let programID?, let position?):
+                guard programPositions[programID] != nil else {
                     throw BackupError.invalid(
-                        "\(owner) belongs to a programme that is not in the file.")
+                        "\(owner) belongs to a program that is not in the file.")
                 }
-                programmePositions[programmeID, default: []].append(position)
+                programPositions[programID, default: []].append(position)
             case (_?, nil):
-                throw BackupError.invalid("\(owner) has a programme but no position in it.")
+                throw BackupError.invalid("\(owner) has a program but no position in it.")
             case (nil, _?):
-                throw BackupError.invalid("\(owner) has a programme position but no programme.")
+                throw BackupError.invalid("\(owner) has a program position but no program.")
             }
             guard
                 let format = RoutineFormat(
@@ -365,10 +365,10 @@ struct BackupDocument: Codable, Equatable {
             }
         }
 
-        for programme in programmes
-        where !ProgrammeMembership.areValid(programmePositions[programme.id] ?? []) {
+        for program in programs
+        where !ProgramMembership.areValid(programPositions[program.id] ?? []) {
             throw BackupError.invalid(
-                "Programme “\(programme.name)” has routine positions that aren’t 0 to one less than its number of routines."
+                "Program “\(program.name)” has routine positions that aren’t 0 to one less than its number of routines."
             )
         }
 
@@ -428,14 +428,14 @@ struct BackupDocument: Codable, Equatable {
 }
 
 extension BackupDocument {
-    /// Reads `programmes` as empty when the key is absent; every other key is required.
+    /// Reads `programs` as empty when the key is absent; every other key is required.
     nonisolated init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         version = try container.decode(Int.self, forKey: .version)
         exportedAt = try container.decode(Date.self, forKey: .exportedAt)
         exercises = try container.decode([ExerciseRecord].self, forKey: .exercises)
-        programmes =
-            try container.decodeIfPresent([ProgrammeRecord].self, forKey: .programmes) ?? []
+        programs =
+            try container.decodeIfPresent([ProgramRecord].self, forKey: .programs) ?? []
         routines = try container.decode([RoutineRecord].self, forKey: .routines)
         workouts = try container.decode([WorkoutRecord].self, forKey: .workouts)
     }

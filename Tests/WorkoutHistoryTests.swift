@@ -41,14 +41,14 @@ struct WorkoutHistoryTests {
                 == nil)
     }
 
-    @Test func rowTitleAddsTheProgrammeName() throws {
+    @Test func rowTitleAddsTheProgramName() throws {
         let container = try BlocklogApp.makeContainer(inMemory: true)
         let context = container.mainContext
-        let programme = Programme(name: "PPL", creationDate: .now)
+        let program = Program(name: "PPL", creationDate: .now)
         let routine = Routine(name: "Push", creationDate: .now)
-        context.insert(programme)
+        context.insert(program)
         context.insert(routine)
-        routine.membership = ProgrammeMembership(programme: programme, position: 0)
+        routine.membership = ProgramMembership(program: program, position: 0)
         let workout = workout(minutes: 1, in: context)
         workout.title = "Push"
         #expect(WorkoutHistory.rowTitle(of: workout) == "Push")

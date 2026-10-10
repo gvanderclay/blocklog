@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The bundled starter routines: each programme's routines, the standalone ones, then the stretch routines. A row
+/// The bundled starter routines: each program's routines, the standalone ones, then the stretch routines. A row
 /// opens its detail.
 struct StarterRoutinesSheet: View {
     /// Shows a workout started from a starter routine.
@@ -11,9 +11,9 @@ struct StarterRoutinesSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(StarterRoutine.programmes(in: StarterRoutine.bundled)) { programme in
-                    Section("\(programme.name) Programme") {
-                        ForEach(programme.routines) { starterRoutine in
+                ForEach(StarterRoutine.programs(in: StarterRoutine.bundled)) { program in
+                    Section("\(program.name) Program") {
+                        ForEach(program.routines) { starterRoutine in
                             StarterRoutineLink(starterRoutine: starterRoutine, present: present)
                                 .accessibilityIdentifier(
                                     "starterRoutines.row.\(starterRoutine.name)")

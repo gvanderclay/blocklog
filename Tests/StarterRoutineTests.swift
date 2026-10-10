@@ -74,12 +74,12 @@ struct StarterRoutineTests {
         #expect(throws: DecodingError.self) { try decoded(fields) }
     }
 
-    @Test func groupsProgrammesStandalonesAndSuggestions() throws {
+    @Test func groupsProgramsStandalonesAndSuggestions() throws {
         let starterRoutines = try StarterRoutine.load()
-        let programmes = StarterRoutine.programmes(in: starterRoutines)
-        #expect(programmes.map(\.name) == ["Full Body", "Upper/Lower", "Push/Pull/Legs"])
+        let programs = StarterRoutine.programs(in: starterRoutines)
+        #expect(programs.map(\.name) == ["Full Body", "Upper/Lower", "Push/Pull/Legs"])
         #expect(
-            programmes.map { $0.routines.map(\.name) } == [
+            programs.map { $0.routines.map(\.name) } == [
                 ["Full Body"], ["Upper Body", "Lower Body"], ["Push", "Pull", "Legs"],
             ])
         #expect(
@@ -94,11 +94,11 @@ struct StarterRoutineTests {
                 "Full Body", "Upper Body",
             ])
         #expect(
-            StarterRoutine.programme(of: try starterRoutine("Lower Body"), in: starterRoutines)?
+            StarterRoutine.program(of: try starterRoutine("Lower Body"), in: starterRoutines)?
                 .name
                 == "Upper/Lower")
         #expect(
-            StarterRoutine.programme(of: try starterRoutine("Golden Six"), in: starterRoutines)
+            StarterRoutine.program(of: try starterRoutine("Golden Six"), in: starterRoutines)
                 == nil)
     }
 
@@ -112,13 +112,13 @@ struct StarterRoutineTests {
         #expect(fullBody.summary(restSeconds: 90) == "7 exercises · about 39 min")
     }
 
-    @Test func stretchRoutinesHoldOneTimedSetOfAStretchPerEntryAndNoProgramme() throws {
+    @Test func stretchRoutinesHoldOneTimedSetOfAStretchPerEntryAndNoProgram() throws {
         let stretchRoutines = StarterRoutine.stretching(in: try StarterRoutine.load())
         let stretches = Dictionary(
             uniqueKeysWithValues: try container.mainContext.fetch(FetchDescriptor<Exercise>())
                 .filter { $0.muscleGroup == .stretching }.map { ($0.name, $0) })
         for routine in stretchRoutines {
-            #expect(routine.programme == nil)
+            #expect(routine.program == nil)
             for entry in routine.exercises {
                 #expect(stretches[entry.exercise] != nil, "\(entry.exercise) isn't a stretch")
                 #expect(entry.sets == [.normal])
@@ -197,18 +197,18 @@ struct StarterRoutineTests {
         #expect(!container.mainContext.hasChanges)
     }
 
-    @Test func addProgrammeCreatesAProgrammeHoldingCopiesOfItsRoutinesInOrder() throws {
+    @Test func addProgramCreatesAProgramHoldingCopiesOfItsRoutinesInOrder() throws {
         let upperLower = try #require(
-            StarterRoutine.programmes(in: try StarterRoutine.load()).first {
+            StarterRoutine.programs(in: try StarterRoutine.load()).first {
                 $0.name == "Upper/Lower"
             })
 
-        try library.addProgramme(upperLower)
+        try library.addProgram(upperLower)
 
         let fresh = ModelContext(container)
-        let programme = try #require(try fresh.fetch(FetchDescriptor<Programme>()).first)
-        #expect(programme.name == "Upper/Lower")
-        let routines = ProgrammeLibrary.orderedRoutines(of: programme)
+        let program = try #require(try fresh.fetch(FetchDescriptor<Program>()).first)
+        #expect(program.name == "Upper/Lower")
+        let routines = ProgramLibrary.orderedRoutines(of: program)
         #expect(routines.map(\.name) == upperLower.routines.map(\.name))
         #expect(routines.map { $0.membership?.position } == [0, 1])
         #expect(try fresh.fetchCount(FetchDescriptor<Routine>()) == 2)
@@ -272,7 +272,7 @@ struct StarterRoutineTests {
         #expect(try fresh.fetchCount(FetchDescriptor<Exercise>()) == 0)
         #expect(try fresh.fetchCount(FetchDescriptor<Workout>()) == 0)
         #expect(try fresh.fetchCount(FetchDescriptor<Routine>()) == 0)
-        #expect(try fresh.fetchCount(FetchDescriptor<Programme>()) == 0)
+        #expect(try fresh.fetchCount(FetchDescriptor<Program>()) == 0)
     }
 
     // Each test starts from an empty store, so every starter the starter routine names is inserted on use.
@@ -299,16 +299,16 @@ struct StarterRoutineTests {
         try expectNothingSaved(in: store)
     }
 
-    @Test func aFailedAddProgrammeRollsBackTheInsertedStarters() throws {
+    @Test func aFailedAddProgramRollsBackTheInsertedStarters() throws {
         let store = try ReadOnlyStore()
         defer { store.remove() }
         let failing = StarterLibrary(context: store.context)
         let upperLower = try #require(
-            StarterRoutine.programmes(in: try StarterRoutine.load()).first {
+            StarterRoutine.programs(in: try StarterRoutine.load()).first {
                 $0.name == "Upper/Lower"
             })
 
-        #expect(throws: (any Error).self) { try failing.addProgramme(upperLower) }
+        #expect(throws: (any Error).self) { try failing.addProgram(upperLower) }
 
         try expectNothingSaved(in: store)
     }

@@ -1,15 +1,15 @@
 import SwiftData
 import SwiftUI
 
-/// Offers a copy of one of My Routines, a copy of a starter routine, or a new routine to add to a programme.
+/// Offers a copy of one of My Routines, a copy of a starter routine, or a new routine to add to a program.
 struct AddRoutineSheet: View {
-    let programme: Programme
+    let program: Program
     /// Called when New Routine is tapped; the sheet closes first.
     let onNewRoutine: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query(ProgrammeLibrary.myRoutines) private var myRoutines: [Routine]
+    @Query(ProgramLibrary.myRoutines) private var myRoutines: [Routine]
     @State private var saveFailed = false
 
     var body: some View {
@@ -60,7 +60,7 @@ struct AddRoutineSheet: View {
 
     private func add(_ draft: RoutineDraft) {
         do {
-            try ProgrammeLibrary(context: modelContext).add(draft, to: programme)
+            try ProgramLibrary(context: modelContext).add(draft, to: program)
             dismiss()
         } catch {
             saveFailed = true

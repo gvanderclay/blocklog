@@ -1,7 +1,7 @@
 [
   {
     "name": "Full Body",
-    "programme": "Full Body",
+    "program": "Full Body",
     "why": "One repeatable routine covering squat, hinge, push, pull, overhead press, calves and trunk; repeat it three nonconsecutive days a week.",
     "exercises": [
       {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
@@ -15,7 +15,7 @@
   },
   {
     "name": "Upper Body",
-    "programme": "Upper/Lower",
+    "program": "Upper/Lower",
     "why": "Horizontal and vertical pressing and pulling plus small doses of shoulders and arms; alternate with Lower Body four days a week.",
     "exercises": [
       {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal", "normal"], "repRange": [8, 12]},
@@ -29,7 +29,7 @@
   },
   {
     "name": "Lower Body",
-    "programme": "Upper/Lower",
+    "program": "Upper/Lower",
     "why": "Squat, hinge, single-leg work, hip extension, calves and trunk; alternate with Upper Body four days a week.",
     "exercises": [
       {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
@@ -42,7 +42,7 @@
   },
   {
     "name": "Push",
-    "programme": "Push/Pull/Legs",
+    "program": "Push/Pull/Legs",
     "why": "Chest, shoulders and triceps, trimmed from a published push/pull/legs plan to fit a home routine.",
     "exercises": [
       {"exercise": "Dumbbell Bench Press", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},
@@ -54,7 +54,7 @@
   },
   {
     "name": "Pull",
-    "programme": "Push/Pull/Legs",
+    "program": "Push/Pull/Legs",
     "why": "Vertical and horizontal pulling, rear shoulders, traps and biceps, so the back work isn't all rows; needs a pull-up bar.",
     "exercises": [
       {"exercise": "Pull-up", "sets": ["normal", "normal", "normal"], "repRange": [5, 10]},
@@ -67,7 +67,7 @@
   },
   {
     "name": "Legs",
-    "programme": "Push/Pull/Legs",
+    "program": "Push/Pull/Legs",
     "why": "Squats, hinges and single-leg work that keep legs loaded within a home dumbbell ceiling, plus core.",
     "exercises": [
       {"exercise": "Dumbbell Goblet Squat", "sets": ["normal", "normal", "normal"], "repRange": [8, 12]},

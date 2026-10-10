@@ -19,7 +19,7 @@ struct StoreMigrationTests {
         #expect(exercises.first { $0.name == "Plank" }?.isCustom == true)
     }
 
-    @Test func routinesSurviveTheProgrammeChangeInMyRoutines() throws {
+    @Test func routinesSurviveTheProgramChangeInMyRoutines() throws {
         let fixture = try FixtureStore("before-34a")
         defer { fixture.remove() }
         let routines = try fixture.context.fetch(RoutineLibrary.routinesByName)
@@ -28,7 +28,7 @@ struct StoreMigrationTests {
         #expect(routines.allSatisfy { $0.membership == nil })
         #expect(routines.map { RoutineLibrary.orderedExercises(of: $0).count } == [1, 1, 2])
         #expect(routines.last?.workouts.count == 1)
-        #expect(try fixture.context.fetchCount(FetchDescriptor<Programme>()) == 0)
+        #expect(try fixture.context.fetchCount(FetchDescriptor<Program>()) == 0)
     }
 
     @Test func exercisesSurviveThePerSideFieldWithNoneMarkedPerSide() throws {
@@ -55,7 +55,9 @@ struct StoreMigrationTests {
         #expect(routines.allSatisfy { $0.formatRawValue == nil && $0.timeCapSeconds == nil })
         #expect(routines.allSatisfy { $0.format == .sets })
         let push = try #require(routines.last)
-        #expect(push.membership?.programme.name == "PPL")
+        // The Programme → Program rename shipped without a migration, at the user's choice: a store from before it
+        // keeps its routines, but they move to My Routines.
+        #expect(push.membership == nil)
         #expect(
             RoutineLibrary.orderedExercises(of: push).map(RoutineLibrary.summary(of:)) == [
                 "2 × 8–12"

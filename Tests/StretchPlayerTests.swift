@@ -338,8 +338,8 @@ struct StretchPlayerTests {
 
     // MARK: Stretch-format routines
 
-    /// Full-Body Quick Stretch copied into a new programme after a routine of sets, with the copy.
-    private func programmeWithCopiedStretch() throws -> (Programme, Routine) {
+    /// Full-Body Quick Stretch copied into a new program after a routine of sets, with the copy.
+    private func programWithCopiedStretch() throws -> (Program, Routine) {
         let quick = try #require(
             StarterRoutine.stretching(in: try StarterRoutine.load()).first {
                 $0.name == "Full-Body Quick Stretch"
@@ -349,14 +349,14 @@ struct StretchPlayerTests {
         var push = RoutineDraft()
         push.name = "Push"
         push.addExercise(try exercise("Push-up"))
-        let programmes = ProgrammeLibrary(context: context)
-        let programme = try #require(try programmes.create(named: "Daily", holding: [push]))
-        let copy = try #require(try programmes.add(draft, to: programme))
-        return (programme, copy)
+        let programs = ProgramLibrary(context: context)
+        let program = try #require(try programs.create(named: "Daily", holding: [push]))
+        let copy = try #require(try programs.add(draft, to: program))
+        return (program, copy)
     }
 
     @Test func aCopiedStretchRoutineKeepsItsFormatAndPlaysItsStretches() throws {
-        let (_, copy) = try programmeWithCopiedStretch()
+        let (_, copy) = try programWithCopiedStretch()
         #expect(copy.format == .stretch)
         #expect(copy.name == "Full-Body Quick Stretch")
         // My Routines takes a copy too.
@@ -375,7 +375,7 @@ struct StretchPlayerTests {
     }
 
     @Test func anEditedStretchRoutinePlaysAsEdited() throws {
-        let (_, copy) = try programmeWithCopiedStretch()
+        let (_, copy) = try programWithCopiedStretch()
         var draft = RoutineDraft(routine: copy)
         draft.exercises = [draft.exercises[1]]
         draft.exercises[0].targetDurationSeconds = 45
@@ -389,8 +389,8 @@ struct StretchPlayerTests {
     }
 
     @Test func aRoutineThatIsntAPlayableStretchRoutineDoesntStart() throws {
-        let (programme, copy) = try programmeWithCopiedStretch()
-        let push = try #require(ProgrammeLibrary.orderedRoutines(of: programme).first)
+        let (program, copy) = try programWithCopiedStretch()
+        let push = try #require(ProgramLibrary.orderedRoutines(of: program).first)
         #expect(StretchPlayer.start(push, rounds: 1, in: context) == nil)
         // A rep exercise slipped into a Stretch routine.
         let pushUp = RoutineExercise(
@@ -402,9 +402,9 @@ struct StretchPlayerTests {
     }
 
     @Test func aStretchRoutineWorkoutLinksToItMovesUpNextAndAsksNoUpdate() throws {
-        let (programme, copy) = try programmeWithCopiedStretch()
-        let push = try #require(ProgrammeLibrary.orderedRoutines(of: programme).first)
-        #expect(ProgrammeLibrary.upNext(in: programme) === push)
+        let (program, copy) = try programWithCopiedStretch()
+        let push = try #require(ProgramLibrary.orderedRoutines(of: program).first)
+        #expect(ProgramLibrary.upNext(in: program) === push)
         // Push is done, so the stretch routine is up next.
         let pushWorkout = try #require(
             try RoutineStart(context: context).startWorkout(from: push, at: clock.date)?.workout)
@@ -413,7 +413,7 @@ struct StretchPlayerTests {
         let log = WorkoutLog(context: context)
         try log.toggleCompleted(set)
         _ = try log.finish(pushWorkout, title: "Push", at: clock.date)
-        #expect(ProgrammeLibrary.upNext(in: programme) === copy)
+        #expect(ProgramLibrary.upNext(in: program) === copy)
         clock.advance(60)
 
         // Two rounds log two sets per stretch against one planned set: a structural change for a routine of sets.
@@ -424,10 +424,10 @@ struct StretchPlayerTests {
         #expect(workout.routine === copy)
         #expect(workout.title == "Full-Body Quick Stretch")
         #expect(workout.exercises.allSatisfy { $0.sets.count == 2 })
-        #expect(ProgrammeLibrary.upNext(in: programme) === push)
+        #expect(ProgramLibrary.upNext(in: program) === push)
         #expect(
-            ProgrammeLibrary.nextInProgramme(after: workout)
-                .map { [$0.programme, $0.routine] } == ["Daily", "Push"])
+            ProgramLibrary.nextInProgram(after: workout)
+                .map { [$0.program, $0.routine] } == ["Daily", "Push"])
         #expect(!RoutineDifference.isStructural(workout))
     }
 

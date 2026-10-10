@@ -12,14 +12,14 @@ struct WorkoutTab: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
-    @Query(ProgrammeLibrary.myRoutines) private var routines: [Routine]
-    @Query(ProgrammeLibrary.programmesByName) private var programmes: [Programme]
+    @Query(ProgramLibrary.myRoutines) private var routines: [Routine]
+    @Query(ProgramLibrary.programsByName) private var programs: [Program]
     @State private var saveFailed = false
     @State private var isCreatingRoutine = false
-    @State private var isCreatingProgramme = false
-    @State private var newProgrammeName = ""
+    @State private var isCreatingProgram = false
+    @State private var newProgramName = ""
     @State private var routineToDelete: Routine?
-    @State private var programmeToDelete: Programme?
+    @State private var programToDelete: Program?
     @State private var isShowingStarterRoutines = false
     /// A workout started from the Starter Routines sheet, shown once the sheet has closed.
     @State private var startedFromStarterRoutines: RoutineStart.Started?
@@ -52,39 +52,39 @@ struct WorkoutTab: View {
                     .disabled(!inProgressWorkouts.isEmpty)
                     .accessibilityIdentifier("workoutTab.startEmpty")
                 }
-                Section("Programmes") {
-                    ForEach(programmes.enumerated(), id: \.element.id) { index, programme in
-                        ProgrammeRow(programme: programme, index: index, present: presentStarted)
+                Section("Programs") {
+                    ForEach(programs.enumerated(), id: \.element.id) { index, program in
+                        ProgramRow(program: program, index: index, present: presentStarted)
                             .swipeActions(edge: .trailing) {
                                 // No destructive role: with it the list removes the row before the user confirms.
                                 Button("Delete", systemImage: "trash") {
-                                    programmeToDelete = programme
+                                    programToDelete = program
                                 }
                                 .tint(.red)
-                                .accessibilityIdentifier("workoutTab.programme.\(index).delete")
+                                .accessibilityIdentifier("workoutTab.program.\(index).delete")
                             }
                             // On the row, so the dialog appears by it rather than at the top of the list.
                             .confirmationDialog(
-                                "Delete this programme?",
+                                "Delete this program?",
                                 isPresented: Binding(
-                                    get: { programmeToDelete === programme },
-                                    set: { if !$0 { programmeToDelete = nil } }),
+                                    get: { programToDelete === program },
+                                    set: { if !$0 { programToDelete = nil } }),
                                 titleVisibility: .visible
                             ) {
-                                Button("Delete Programme", role: .destructive) { delete(programme) }
-                                    .accessibilityIdentifier("workoutTab.deleteProgrammeConfirm")
+                                Button("Delete Program", role: .destructive) { delete(program) }
+                                    .accessibilityIdentifier("workoutTab.deleteProgramConfirm")
                             } message: {
                                 Text("Its routines move to My Routines.")
                             }
                     }
-                    Button("New Programme", systemImage: "plus") {
-                        newProgrammeName = ""
-                        isCreatingProgramme = true
+                    Button("New Program", systemImage: "plus") {
+                        newProgramName = ""
+                        isCreatingProgram = true
                     }
-                    .accessibilityIdentifier("workoutTab.newProgramme")
+                    .accessibilityIdentifier("workoutTab.newProgram")
                 }
                 Section {
-                    if routines.isEmpty && programmes.isEmpty {
+                    if routines.isEmpty && programs.isEmpty {
                         ForEach(StarterRoutine.suggestions(in: StarterRoutine.bundled)) {
                             starterRoutine in
                             StarterRoutineLink(
@@ -127,14 +127,14 @@ struct WorkoutTab: View {
                 } header: {
                     Text("My Routines")
                 } footer: {
-                    if routines.isEmpty && programmes.isEmpty {
+                    if routines.isEmpty && programs.isEmpty {
                         Text("No routines yet. Try a starter routine, or make your own.")
                     }
                 }
             }
             .navigationTitle("Workout")
-            .navigationDestination(for: Programme.self) { programme in
-                ProgrammeDetail(programme: programme, present: presentStarted)
+            .navigationDestination(for: Program.self) { program in
+                ProgramDetail(program: program, present: presentStarted)
             }
             .navigationDestination(for: Routine.self) { routine in
                 RoutineDetail(routine: routine, present: presentStarted)
@@ -151,13 +151,13 @@ struct WorkoutTab: View {
                     isShowingStarterRoutines = false
                 }
             }
-            .alert("New Programme", isPresented: $isCreatingProgramme) {
-                TextField("Name", text: $newProgrammeName)
-                    .accessibilityIdentifier("workoutTab.newProgrammeName")
+            .alert("New Program", isPresented: $isCreatingProgram) {
+                TextField("Name", text: $newProgramName)
+                    .accessibilityIdentifier("workoutTab.newProgramName")
                 Button("Cancel", role: .cancel) {}
-                    .accessibilityIdentifier("workoutTab.newProgrammeCancel")
-                Button("Create") { createProgramme() }
-                    .accessibilityIdentifier("workoutTab.newProgrammeCreate")
+                    .accessibilityIdentifier("workoutTab.newProgramCancel")
+                Button("Create") { createProgram() }
+                    .accessibilityIdentifier("workoutTab.newProgramCreate")
             }
             .saveFailedAlert(isPresented: $saveFailed)
         }
@@ -171,18 +171,18 @@ extension WorkoutTab {
         presentStarted(started)
     }
 
-    private func createProgramme() {
+    private func createProgram() {
         do {
-            try ProgrammeLibrary(context: modelContext).create(named: newProgrammeName)
+            try ProgramLibrary(context: modelContext).create(named: newProgramName)
         } catch {
             saveFailed = true
         }
     }
 
-    private func delete(_ programme: Programme) {
+    private func delete(_ program: Program) {
         withAnimation(reduceMotion ? nil : .default) {
             do {
-                try ProgrammeLibrary(context: modelContext).delete(programme)
+                try ProgramLibrary(context: modelContext).delete(program)
             } catch {
                 saveFailed = true
             }
@@ -224,29 +224,29 @@ private struct ResumeRow: View {
     }
 }
 
-/// A programme's name and "Up next: <routine>", with a Start button for that routine. A tap opens the programme.
-private struct ProgrammeRow: View {
-    let programme: Programme
+/// A program's name and "Up next: <routine>", with a Start button for that routine. A tap opens the program.
+private struct ProgramRow: View {
+    let program: Program
     let index: Int
     let present: (RoutineStart.Started) -> Void
 
     var body: some View {
-        let upNext = ProgrammeLibrary.upNext(in: programme)
+        let upNext = ProgramLibrary.upNext(in: program)
         // Start sits beside the link, not inside it, so it stays its own accessibility element.
         HStack {
-            NavigationLink(value: programme) {
+            NavigationLink(value: program) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(programme.name)
+                    Text(program.name)
                     Text(upNext.map { "Up next: \($0.name)" } ?? "No routines yet")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("workoutTab.programme.\(index).upNext")
+                        .accessibilityIdentifier("workoutTab.program.\(index).upNext")
                 }
             }
-            .accessibilityIdentifier("workoutTab.programme.\(index)")
+            .accessibilityIdentifier("workoutTab.program.\(index)")
             if let upNext {
                 StartRoutineButton(routine: upNext, present: present)
-                    .accessibilityIdentifier("workoutTab.programme.\(index).start")
+                    .accessibilityIdentifier("workoutTab.program.\(index).start")
             }
         }
     }

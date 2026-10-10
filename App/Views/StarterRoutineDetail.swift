@@ -3,7 +3,7 @@ import SwiftUI
 
 /// A starter routine's exercises with their plans, such as "3 × 8–12", why it is built that way, its format unless it
 /// is Sets, and Start Workout (Start, opening the AMRAP player, for a Timed AMRAP), Add to My Routines and, for a
-/// programme of several routines, Add Programme.
+/// program of several routines, Add Program.
 struct StarterRoutineDetail: View {
     let starterRoutine: StarterRoutine
     /// Shows the started workout in the full-screen workout screen.
@@ -13,12 +13,12 @@ struct StarterRoutineDetail: View {
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
     // Presented with sheet(item:): a sheet(isPresented:) closure read a stale, empty draft.
     @State private var draft: RoutineDraft?
-    @State private var programmeAdded = false
+    @State private var programAdded = false
     @State private var saveFailed = false
     @State private var amrapPlayer: AMRAPPlayer?
 
-    private var programme: StarterProgramme? {
-        StarterRoutine.programme(of: starterRoutine, in: StarterRoutine.bundled)
+    private var program: StarterProgram? {
+        StarterRoutine.program(of: starterRoutine, in: StarterRoutine.bundled)
     }
 
     var body: some View {
@@ -72,16 +72,16 @@ struct StarterRoutineDetail: View {
                     Text("Finish or discard the workout in progress first.")
                 }
             }
-            if let programme {
+            if let program {
                 Section {
-                    Button(programmeAdded ? "Programme Added" : "Add Programme") {
-                        add(programme)
+                    Button(programAdded ? "Program Added" : "Add Program") {
+                        add(program)
                     }
-                    .disabled(programmeAdded)
-                    .accessibilityIdentifier("starterRoutineDetail.addProgramme")
+                    .disabled(programAdded)
+                    .accessibilityIdentifier("starterRoutineDetail.addProgram")
                 } footer: {
                     Text(
-                        "Adds \(programme.routines.map(\.name).formatted(.list(type: .and))) as routines."
+                        "Adds \(program.routines.map(\.name).formatted(.list(type: .and))) as routines."
                     )
                 }
             }
@@ -118,10 +118,10 @@ struct StarterRoutineDetail: View {
         }
     }
 
-    private func add(_ programme: StarterProgramme) {
+    private func add(_ program: StarterProgram) {
         do {
-            try StarterLibrary(context: modelContext).addProgramme(programme)
-            programmeAdded = true
+            try StarterLibrary(context: modelContext).addProgram(program)
+            programAdded = true
         } catch {
             saveFailed = true
         }

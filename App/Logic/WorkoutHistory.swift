@@ -11,11 +11,11 @@ enum WorkoutHistory {
             sortBy: [SortDescriptor(\.startDate, order: .reverse)])
     }
 
-    /// The title, followed by " · " and the programme's name when the workout's routine belongs to one:
+    /// The title, followed by " · " and the program's name when the workout's routine belongs to one:
     /// "Push · PPL".
     static func rowTitle(of workout: Workout) -> String {
-        guard let programme = workout.routine?.membership?.programme else { return workout.title }
-        return "\(workout.title) · \(programme.name)"
+        guard let program = workout.routine?.membership?.program else { return workout.title }
+        return "\(workout.title) · \(program.name)"
     }
 
     /// The start date as "Tue, Oct 7".

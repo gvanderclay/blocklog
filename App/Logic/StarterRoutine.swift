@@ -1,6 +1,6 @@
 import Foundation
 
-/// A bundled routine from `starter-routines.json`, read-only: one of a starter programme's routines, a
+/// A bundled routine from `starter-routines.json`, read-only: one of a starter program's routines, a
 /// standalone one, or a stretch routine. It starts a workout, plays in the guided player or seeds a routine through
 /// `StarterLibrary`, by its format.
 @MainActor
@@ -71,8 +71,8 @@ struct StarterRoutine: @MainActor Decodable, Identifiable {
     }
 
     let name: String
-    /// The starter programme the routine belongs to, such as "Upper/Lower"; nil for a standalone routine.
-    let programme: String?
+    /// The starter program the routine belongs to, such as "Upper/Lower"; nil for a standalone routine.
+    let program: String?
     /// Why the starter routine is built the way it is, in one line.
     let why: String
     /// The file writes it as a routine stores it: `format` ("timedAMRAP" or "stretch", nothing for Sets) and, for
@@ -81,13 +81,13 @@ struct StarterRoutine: @MainActor Decodable, Identifiable {
     let exercises: [Entry]
 
     private enum CodingKeys: String, CodingKey {
-        case name, programme, why, format, timeCapSeconds, exercises
+        case name, program, why, format, timeCapSeconds, exercises
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         name = try container.decode(String.self, forKey: .name)
-        programme = try container.decodeIfPresent(String.self, forKey: .programme)
+        program = try container.decodeIfPresent(String.self, forKey: .program)
         why = try container.decode(String.self, forKey: .why)
         guard
             let format = RoutineFormat(
@@ -118,20 +118,20 @@ struct StarterRoutine: @MainActor Decodable, Identifiable {
         return try JSONDecoder().decode([StarterRoutine].self, from: Data(contentsOf: url))
     }
 
-    /// The programmes, in the order their first routine appears.
-    static func programmes(in starterRoutines: [StarterRoutine]) -> [StarterProgramme] {
+    /// The programs, in the order their first routine appears.
+    static func programs(in starterRoutines: [StarterRoutine]) -> [StarterProgram] {
         var names: [String] = []
-        for case let name? in starterRoutines.map(\.programme) where !names.contains(name) {
+        for case let name? in starterRoutines.map(\.program) where !names.contains(name) {
             names.append(name)
         }
         return names.map { name in
-            StarterProgramme(name: name, routines: starterRoutines.filter { $0.programme == name })
+            StarterProgram(name: name, routines: starterRoutines.filter { $0.program == name })
         }
     }
 
     /// The standalone routines that aren't stretch routines, such as Golden Six and Cindy, in file order.
     static func standalone(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
-        starterRoutines.filter { $0.programme == nil && $0.format != .stretch }
+        starterRoutines.filter { $0.program == nil && $0.format != .stretch }
     }
 
     /// The stretch routines, in file order.
@@ -139,16 +139,16 @@ struct StarterRoutine: @MainActor Decodable, Identifiable {
         starterRoutines.filter { $0.format == .stretch }
     }
 
-    /// What an empty routine list suggests: the first routine of the first two programmes.
+    /// What an empty routine list suggests: the first routine of the first two programs.
     static func suggestions(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
-        programmes(in: starterRoutines).prefix(2).compactMap(\.routines.first)
+        programs(in: starterRoutines).prefix(2).compactMap(\.routines.first)
     }
 
-    /// The programme the starter routine belongs to, or nil for a standalone one.
-    static func programme(of starterRoutine: StarterRoutine, in starterRoutines: [StarterRoutine])
-        -> StarterProgramme?
+    /// The program the starter routine belongs to, or nil for a standalone one.
+    static func program(of starterRoutine: StarterRoutine, in starterRoutines: [StarterRoutine])
+        -> StarterProgram?
     {
-        programmes(in: starterRoutines).first { $0.name == starterRoutine.programme }
+        programs(in: starterRoutines).first { $0.name == starterRoutine.program }
     }
 
     var setCount: Int { exercises.reduce(0) { $0 + $1.sets.count } }
@@ -185,9 +185,9 @@ struct StarterRoutine: @MainActor Decodable, Identifiable {
     }
 }
 
-/// The routines of one starter programme, in file order.
+/// The routines of one starter program, in file order.
 @MainActor
-struct StarterProgramme: Identifiable {
+struct StarterProgram: Identifiable {
     let name: String
     let routines: [StarterRoutine]
 

@@ -133,12 +133,12 @@ struct RoutineLibrary {
     }
 
     /// Deletes the routine with its routine exercises. Workouts started from it are kept, with their link cleared.
-    /// The rest of its programme, if any, is renumbered.
+    /// The rest of its program, if any, is renumbered.
     func delete(_ routine: Routine) throws {
-        if let programme = routine.membership?.programme {
-            ProgrammeLibrary.place(
-                ProgrammeLibrary.orderedRoutines(of: programme).filter { $0 !== routine },
-                in: programme)
+        if let program = routine.membership?.program {
+            ProgramLibrary.place(
+                ProgramLibrary.orderedRoutines(of: program).filter { $0 !== routine },
+                in: program)
         }
         context.delete(routine)
         try context.saveOrRollBack()

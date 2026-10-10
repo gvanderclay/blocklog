@@ -3,13 +3,13 @@ import SwiftData
 
 /// An ordered list of routines you rotate through, such as Push → Pull → Legs. It owns its routines.
 @Model
-final class Programme {
+final class Program {
     var id: UUID
     var name: String
     var creationDate: Date
 
-    /// Unordered: order by `Routine.membership`. Deleting the programme keeps its routines and clears their link.
-    @Relationship(deleteRule: .nullify, inverse: \Routine.programme)
+    /// Unordered: order by `Routine.membership`. Deleting the program keeps its routines and clears their link.
+    @Relationship(deleteRule: .nullify, inverse: \Routine.program)
     var routines: [Routine] = []
 
     init(id: UUID = UUID(), name: String, creationDate: Date) {

@@ -7,11 +7,11 @@ final class Routine {
     var id: UUID
     var name: String
     var creationDate: Date
-    /// The programme the routine belongs to, set together with `programmePosition`; read both through
+    /// The program the routine belongs to, set together with `programPosition`; read both through
     /// `membership`. Nil for a routine in My Routines.
-    var programme: Programme?
-    /// The routine's place in its programme, from 0.
-    var programmePosition: Int?
+    var program: Program?
+    /// The routine's place in its program, from 0.
+    var programPosition: Int?
     /// How the routine plays, with `timeCapSeconds`; read both through `format`. Nil is Sets.
     var formatRawValue: String?
     /// A Timed AMRAP routine's length; nil for any other format.
