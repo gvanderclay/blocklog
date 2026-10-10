@@ -33,6 +33,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Confirmations use SF Symbol effects, played once: `.symbolEffect(.bounce, value:)` on the checkmark when a set is checked off (not when unchecked), on the progression arrow when the workout opens, and on the finish summary's checkmark.
 - Reduce Motion: read `@Environment(\.accessibilityReduceMotion)`. When it is on, rows in lists are inserted, removed and filtered without animation (SwiftUI `List` gives no supported cross-fade for its rows; [Apple's guidance](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion) allows removing the animation): pass `reduceMotion ? nil : .default` to `withAnimation` and `.animation`. Every other transition is `.opacity`, so sliding and scaling (sheets, the timer bar, the diagram's pin and adders) become cross-fades, and symbol bounces don't play. Numeric-text transitions stay; the system already tones them down.
 - No looping, pulsing or attention-seeking animation. The rest ring drains continuously, which is information, not decoration.
+- The stretch player (ticket 32b): the countdown rolls with `.numericText(countsDown: true)`, and when the lead-in or hold changes, the stretch's name, status, cue and up next cross-fade (`.contentTransition(.opacity)` with the default animation), which Reduce Motion keeps because it is already a cross-fade. Nothing else in the player moves.
 
 ## Haptics
 
@@ -46,6 +47,10 @@ Haptics go through SwiftUI's `.sensoryFeedback(_:trigger:)`, which follows the s
 | Set or exercise deleted | medium impact | `.impact(weight: .medium)` |
 | Rest timer at 3, 2 and 1 seconds left (app in foreground) | light impact | `.impact(weight: .light)` |
 | Rest timer reaches zero (app in foreground) | warning | `.warning` |
+| Stretch player: each of a hold's last 5 seconds | light impact | `.impact(weight: .light)` |
+| Stretch player: a hold reaches zero | warning | `.warning` |
+| Stretch player: +15 | selection | `.selection` |
+| Stretch routine logged (at its end, or Save on quit) | success | `.success` |
 | Workout finished (summary appears) | success | `.success` |
 | Import completed | success | `.success` |
 
@@ -53,10 +58,11 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 
 ## Sound
 
-- One sound only: `App/Resources/rest-chime.caf`, a soft two-tone chime (A5 then E6) of 0.6 seconds. `scripts/make-chime.swift` synthesizes it, and `just chime` regenerates it; never replace it with a downloaded file.
-- When the rest timer reaches zero with the app in the foreground, the app plays the chime with `AVAudioPlayer` through an `AVAudioSession` in the `.ambient` category. That category mixes with the user's music (never pausing or ducking it) and is silenced by the ring/silent switch.
+- Two sounds: `App/Resources/rest-chime.caf`, a soft two-tone chime (A5 then E6) of 0.6 seconds, and `App/Resources/timer-tick.caf`, a short, quiet click (E6, 0.05 seconds, 6 dB below the chime). `scripts/make-chime.swift` synthesizes both, and `just chime` regenerates them; never replace them with downloaded files.
+- The guided players tick once a second through a hold's last 5 seconds, and play the chime when the hold reaches zero; lead-ins are silent. They play in the foreground only: leaving the app pauses the stretch player, and it schedules no notification.
+- When the rest timer reaches zero with the app in the foreground, the app plays the chime with `AVAudioPlayer` through an `AVAudioSession` in the `.ambient` category (`TimerSounds`, which the guided players share). That category mixes with the user's music (never pausing or ducking it) and is silenced by the ring/silent switch.
 - The rest notification uses the same file: `UNNotificationSound(named: UNNotificationSoundName("rest-chime.caf"))`.
-- Settings has a "Timer Sounds" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime and a notification with no sound; the haptics still play.
+- Settings has a "Timer Sounds" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime or tick and a notification with no sound; the haptics still play.
 
 ## Small touches
 
@@ -70,6 +76,7 @@ Each touch is specified in its feature ticket; this is the rule that ticket impl
 - Finishing a workout shows a short summary (ticket 06); after a programme workout it adds a secondary line, "Next in <programme>: <routine>", which starts nothing.
 - Tapping a Previous value copies it into an unchecked set (ticket 09).
 - The setup diagram animates between setups (ticket 14).
+- The stretch player keeps the screen awake while it shows (ticket 32b). Quitting after at least one finished hold asks "Save what you did?" (Save, Discard, Keep Going); quitting with none closes at once.
 
 ## SF Symbols
 
@@ -91,7 +98,9 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Starter Routines | `rectangle.stack` |
 | Rest time | `timer` |
 | Progression note | `arrow.up.circle.fill` |
-| Finish summary | `checkmark.seal.fill` |
+| Finish summary, stretch routine done | `checkmark.seal.fill` |
+| Stretch player Back / Skip | `backward.fill` / `forward.fill` |
+| Pause / resume a guided player | `pause.fill` / `play.fill` |
 | More actions menu | `ellipsis.circle` |
 | Filter the exercise list | `line.3.horizontal.decrease.circle` |
 | Export data / import data | `square.and.arrow.up` / `square.and.arrow.down` |
@@ -158,6 +167,15 @@ Phase 4 (tickets 23–24):
 - [ ] An empty history shows the empty state.
 - [ ] Delete a past workout: it confirms first.
 - [ ] Edit a past workout: swipe-deleting a set gives a medium thump with no confirmation.
+
+Phase 6 (tickets 32a–32b):
+
+- [ ] Start a stretch routine: the screen stays awake through a whole hold.
+- [ ] A hold's last 5 seconds: a tick and a light tap each, then the chime and a warning buzz at zero; lead-ins are silent.
+- [ ] With Timer Sounds off or the silent switch on: no ticks or chime, the taps still play.
+- [ ] +15: a selection tick, and the countdown rolls to the new time.
+- [ ] Pause, Skip and Back: the countdown and the stretch change at once, the text cross-fading.
+- [ ] Quit after a hold: "Save what you did?" asks first; Save shows the workout in History.
 
 ## App icon
 

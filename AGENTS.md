@@ -21,7 +21,7 @@ Local checks: before review and commit, `just test-unit` must pass. Acceptance o
 - `just run`: install and launch on the simulator and save `build/run.png`, for a manual check.
 - `just device`: build, sign and install on the connected iPhone; checkpoints use it.
 - `just fmt`: format the Swift sources; run it before every commit that changes Swift files.
-- `just chime` / `just icon`: regenerate `App/Resources/rest-chime.caf` and the app icons from `scripts/`; change the scripts, never the generated files.
+- `just chime` / `just icon`: regenerate the timer sounds (`App/Resources/rest-chime.caf`, `timer-tick.caf`) and the app icons from `scripts/`; change the scripts, never the generated files.
 - `just skills`: export Apple's SwiftUI skills into the gitignored `.agents/skills/apple/`; run it when that folder is missing.
 
 When a build or test fails, read the full log in `build/logs/`; the terminal shows a shortened version.

@@ -65,10 +65,12 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Timer Sounds**: the Settings switch for every timer sound: the rest chime, in the foreground and on the rest notification, and the guided players' ticks and chimes. The haptics play either way.
 - **Backup document**: the versioned JSON file Export writes and Import reads, holding the training data: every exercise, routine and finished workout (and programme, from phase 4), not the settings. Import validates the whole document, then replaces all training data; it never merges.
 
-## Guided routines *(planned, phases 6 and 7)*
+## Guided routines *(stretching built in phase 6; timed AMRAP planned, phase 7)*
 
 - **Round**: one pass through a guided routine's exercises in order. A stretch routine plays 1 to 3 rounds; a timed AMRAP repeats rounds until the time cap.
-- **Guided player**: the full-screen player that runs a stretch routine or a timed AMRAP on a clock, instead of the workout screen's sets.
+- **Guided player**: the full-screen player that runs a stretch routine or a timed AMRAP on a clock, instead of the workout screen's sets. The stretch player (`StretchPlayer`) offers Pause, Skip (leave the current hold uncounted for the next hold's lead-in), Back (to the previous hold's lead-in) and +15 (add 15 seconds to the current lead-in or hold), with the rounds chosen before Start. Starting is refused while a workout is in progress.
+- **Countdown phase** (`PhasedCountdown.Phase`): one timed part of a guided player's countdown, such as a lead-in or a hold, run in order on the injected clock. A **signalled** countdown phase ticks through its last 5 seconds and chimes at its end; a **completed** phase ran to its end.
+- **Stretch log**: a stretch routine played in the stretch player is logged as a finished workout titled with the routine's name, with no routine link, holding one completed duration set per stretch per round whose hold (either side) was completed, its seconds the hold's length with +15s, the longer side's for a per-side stretch. Finishing logs it; quitting after a completed hold asks "Save what you did?", where Save logs it and Discard drops it. Nothing is stored until then, so if the app is closed mid-routine (the player pauses in the background), the holds done so far are lost.
 - **Stretch**: a starter exercise of type duration in the picker's "Stretching" group (`MuscleGroup.stretching`).
 - **Per side** (`isPerSide`): an exercise done on each side in turn. The stretch player plays it as two holds, one per side; the workout logs one set per round holding the per-side seconds.
 - **Hold**: one timed stretch on one side (or both, if not per side), its length the routine exercise's target duration.

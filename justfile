@@ -26,7 +26,7 @@ generate:
 fmt:
     xcrun swift format --in-place --recursive App Tests scripts
 
-# Synthesize the rest-end chime into App/Resources/rest-chime.caf.
+# Synthesize the timer sounds into App/Resources/rest-chime.caf and timer-tick.caf.
 chime:
     xcrun swift scripts/make-chime.swift
 

@@ -276,7 +276,7 @@ AGENTS.md rule 6: no Swift package is needed, since AVFoundation plays the clips
 
 - **Form quality is the real cost.** The tooling is proven; correct movement isn't. The trial exists to catch a poor result before 63 more clips.
 - **Alpha on the device is unverified.** If the layer shows black, the first lever to try is the player layer's `pixelBufferAttributes` set to 32-bit BGRA (to verify). Then the opaque fallback.
-- **Playing a video may interrupt the user's music.** Clips carry no audio track and the player is muted. If music still stops, set the `.ambient` category before playing, as `RestChime` does.
+- **Playing a video may interrupt the user's music.** Clips carry no audio track and the player is muted. If music still stops, set the `.ambient` category before playing, as `TimerSounds` does.
 - **Rigify control names and the Blender API drift between versions.** The recipe pins 5.2 and fails on anything else.
 - **Rendering 86 clips takes hours on the M1 with 8 GB.** Run renders in the background, not alongside an Xcode build.
 - **The hardware encoder may not be deterministic,** which bloats git on re-renders. Re-render only changed slugs.

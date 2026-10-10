@@ -13,7 +13,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("timerSoundEnabled") private var timerSoundEnabled = true
     /// Owned here with the timer, so the end of a rest is announced whichever screen is showing.
-    @State private var chime = RestChime()
+    @State private var sounds = TimerSounds()
     @State private var endCount = 0
     /// The running rest, kept so a relaunch mid-rest shows the time left. Zero means none.
     @AppStorage("restEndDate") private var storedRestEnd = 0.0
@@ -75,7 +75,7 @@ extension RootView {
     private func announceEnd(appActive: Bool) {
         guard restTimer.signalEndIfDue(appActive: appActive) else { return }
         endCount += 1
-        if timerSoundEnabled { chime.play() }
+        if timerSoundEnabled { sounds.play(.chime) }
     }
 
     private func storeRest() {

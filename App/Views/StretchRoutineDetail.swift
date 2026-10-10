@@ -1,9 +1,15 @@
+import SwiftData
 import SwiftUI
 
-/// A starter stretch routine's stretches with their holds, such as "30 s per side", why it is built that way, and its
-/// estimated time for one round.
+/// A starter stretch routine's stretches with their holds, such as "30 s per side", why it is built that way, its
+/// estimated time for one round, and the rounds and Start that open the guided player.
 struct StretchRoutineDetail: View {
     let starterRoutine: StarterRoutine
+
+    @Environment(\.modelContext) private var modelContext
+    @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
+    @State private var rounds = StretchPlayer.roundChoices.lowerBound
+    @State private var player: StretchPlayer?
 
     var body: some View {
         List {
@@ -34,7 +40,23 @@ struct StretchRoutineDetail: View {
                 )
                 .accessibilityIdentifier("stretchRoutineDetail.estimate")
             }
+            Section {
+                Picker("Rounds", selection: $rounds) {
+                    ForEach(StretchPlayer.roundChoices, id: \.self) { Text("\($0)").tag($0) }
+                }
+                .accessibilityIdentifier("stretch.rounds")
+                Button("Start") {
+                    player = StretchPlayer.start(starterRoutine, rounds: rounds, in: modelContext)
+                }
+                .disabled(!inProgressWorkouts.isEmpty)
+                .accessibilityIdentifier("stretch.start")
+            } footer: {
+                if !inProgressWorkouts.isEmpty {
+                    Text("Finish or discard the workout in progress first.")
+                }
+            }
         }
         .navigationTitle(starterRoutine.name)
+        .fullScreenCover(item: $player) { StretchPlayerScreen(player: $0) }
     }
 }
