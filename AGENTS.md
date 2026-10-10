@@ -22,6 +22,8 @@ Local checks: before review and commit, `just test-unit` must pass. Acceptance o
 - `just device`: build, sign and install on the connected iPhone; checkpoints use it.
 - `just fmt`: format the Swift sources; run it before every commit that changes Swift files.
 - `just chime` / `just icon`: regenerate `App/Resources/rest-chime.caf` and the app icons from `scripts/`; change the scripts, never the generated files.
+- `just animation-sheets <slug>…`: run an exercise animation's pose checks and write its contact sheets, `build/animations/<slug>/sheet-clip.png` and `sheet-side.png`; the authoring loop. A path to a scratch `.json` copy works in place of a slug.
+- `just animate <slug>…`: the checks, then render and encode `App/Resources/Animations/<slug>.mov` and `.png` and regenerate `exercise-animations.json`; view `build/animations/<slug>/decoded.png` after. Re-render only the slugs whose pose file changed, and never alongside an Xcode build. Both need Blender 5.2 and MPFB (`README.md`).
 - `just skills`: export Apple's SwiftUI skills into the gitignored `.agents/skills/apple/`; run it when that folder is missing.
 
 When a build or test fails, read the full log in `build/logs/`; the terminal shows a shortened version.
@@ -37,6 +39,7 @@ When a build or test fails, read the full log in `build/logs/`; the terminal sho
 - `App/Resources`: the starter exercises, the asset catalog and sounds.
 - `Tests/`: Swift Testing unit tests, hosted in the app. Tests that need a store use an in-memory `ModelContainer`.
 - `scripts/`: generators for committed assets, run through `just`.
+- `scripts/animations/`: the exercise animation pipeline (`docs/exercise-animations.md`): one pose file per exercise in `exercises/`, the hand library in `hands.json`, and the Blender scripts. The clips, stills and manifest it writes are generated files.
 - `docs/`: design and research documents.
 
 ## Architecture rules

@@ -34,6 +34,27 @@ chime:
 icon:
     xcrun swift scripts/render-icon.swift
 
+# Check, render and encode exercise animations from scripts/animations/exercises/<slug>.json into
+# App/Resources/Animations, then regenerate the manifest. With no slug it re-renders every one; only do that for
+# a house-style change, since each re-render adds every clip to git history again.
+animate *slugs: _blender
+    blender --background --factory-startup --python-exit-code 1 --python scripts/animations/render.py -- {{slugs}} 2>&1 | grep -E '^(FORM|SHEETS|CHECK|RENDERED|Error|Traceback|  File|[A-Za-z]+Error)'
+    python3 scripts/animations/manifest.py
+
+# Run the pose checks and write the contact sheets to build/animations/<slug>/, without rendering the clip.
+animation-sheets *slugs: _blender
+    blender --background --factory-startup --python-exit-code 1 --python scripts/animations/render.py -- --sheets-only {{slugs}} 2>&1 | grep -E '^(FORM|SHEETS|CHECK|Error|Traceback|  File|[A-Za-z]+Error)'
+
+# Require the pinned Blender 5.2 and build the gitignored figure when missing or older than its script.
+_blender:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    blender --version | head -1 | grep -q '^Blender 5\.2\.' || { echo "Blender 5.2 is required; see README.md." >&2; exit 1; }
+    figure=build/animations/figure.blend
+    if [[ ! -f $figure || scripts/animations/figure.py -nt $figure ]]; then
+        blender --background --factory-startup --python-exit-code 1 --python scripts/animations/figure.py 2>&1 | grep -E '^(FIGURE|Error|Traceback|  File|[A-Za-z]+Error)'
+    fi
+
 # Export Apple's SwiftUI Specialist and What's New in SwiftUI skills from Xcode into the gitignored .agents/skills/apple/.
 skills:
     #!/usr/bin/env bash

@@ -1,0 +1,230 @@
+{
+  "exercise": "Plank",
+  "description": "Rest on your forearms with your elbows under your shoulders, lift your knees so your body forms a straight line from head to heels, hold, then lower your knees.",
+  "variant": "ACE front plank on the forearms: elbows under the shoulders, forearms and palms flat and facing forward, toes tucked, a straight line from head to heels, neck neutral. The setup is the same position with the knees down; the clip eases into the hold and back, without bouncing.",
+  "references": [
+    "https://www.acefitness.org/resources/everyone/exercise-library/32/front-plank/",
+    "https://www.nasm.org/resource-center/exercise-library/plank"
+  ],
+  "view": {
+    "azimuth": -55,
+    "elevation": 12
+  },
+  "props": {},
+  "frames": 150,
+  "still": 1,
+  "rig": {
+    "torso.head_follow": 1.0,
+    "torso.neck_follow": 1.0
+  },
+  "poses": {
+    "plank": {
+      "torso": {
+        "at": [
+          0.0,
+          0.0,
+          0.285
+        ],
+        "turn": [
+          83.44,
+          0.0,
+          0.0
+        ],
+        "pivot": [
+          0.0,
+          -0.0193,
+          1.3201
+        ]
+      },
+      "foot_ik.L": {
+        "at": [
+          0.115,
+          1.291,
+          0.024
+        ],
+        "turn": [
+          83.44,
+          0.0,
+          0.0
+        ],
+        "pivot": [
+          0.1864,
+          -0.1393,
+          0.0089
+        ]
+      },
+      "toe_ik.L": {
+        "turn": [
+          85.0,
+          0,
+          0
+        ]
+      },
+      "thigh_ik_target.L": {
+        "at": [
+          0.11,
+          0.85,
+          -0.6
+        ]
+      },
+      "upper_arm_ik_target.L": {
+        "at": [
+          0.3,
+          0.35,
+          -0.25
+        ]
+      },
+      "hand_ik.L": {
+        "at": [
+          0.15,
+          -0.235,
+          0.0251
+        ],
+        "palm": [
+          -0.1219,
+          0.0,
+          -0.9925
+        ],
+        "fingers": [
+          0.0,
+          -1.0,
+          0.0
+        ]
+      },
+      "fingers.L": "flat"
+    },
+    "kneel": {
+      "torso": {
+        "at": [
+          0.0,
+          0.0,
+          0.285
+        ],
+        "turn": [
+          73.0,
+          0,
+          0
+        ],
+        "pivot": [
+          0.0,
+          -0.0193,
+          1.3201
+        ]
+      },
+      "foot_ik.L": {
+        "at": [
+          0.115,
+          1.291,
+          0.024
+        ],
+        "turn": [
+          97.0,
+          0,
+          0
+        ],
+        "pivot": [
+          0.1864,
+          -0.1393,
+          0.0089
+        ]
+      },
+      "toe_ik.L": {
+        "turn": [
+          71.5,
+          0,
+          0
+        ]
+      },
+      "thigh_ik_target.L": {
+        "at": [
+          0.11,
+          0.85,
+          -0.6
+        ]
+      },
+      "upper_arm_ik_target.L": {
+        "at": [
+          0.3,
+          0.35,
+          -0.25
+        ]
+      },
+      "hand_ik.L": {
+        "at": [
+          0.15,
+          -0.235,
+          0.0251
+        ],
+        "palm": [
+          -0.1219,
+          0.0,
+          -0.9925
+        ],
+        "fingers": [
+          0.0,
+          -1.0,
+          0.0
+        ]
+      },
+      "fingers.L": "flat"
+    }
+  },
+  "keys": [
+    {
+      "frame": 1,
+      "pose": "plank"
+    },
+    {
+      "frame": 46,
+      "pose": "plank"
+    },
+    {
+      "frame": 76,
+      "pose": "kneel"
+    },
+    {
+      "frame": 91,
+      "pose": "kneel"
+    },
+    {
+      "frame": 121,
+      "pose": "plank"
+    },
+    {
+      "frame": 151,
+      "pose": "plank"
+    }
+  ],
+  "planted": [
+    "forearm.L",
+    "forearm.R",
+    "ball.L",
+    "ball.R"
+  ],
+  "jointRanges": {
+    "kneeFlex.L": [
+      0,
+      120
+    ]
+  },
+  "form": {
+    "plank": {
+      "bodyLine": [
+        -3,
+        3
+      ],
+      "headLine": [
+        -4,
+        4
+      ],
+      "elbowUnderShoulder.L": [
+        0,
+        5
+      ],
+      "kneeFlex.L": [
+        0,
+        10
+      ]
+    }
+  }
+}

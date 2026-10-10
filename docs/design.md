@@ -33,6 +33,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Confirmations use SF Symbol effects, played once: `.symbolEffect(.bounce, value:)` on the checkmark when a set is checked off (not when unchecked), on the progression arrow when the workout opens, and on the finish summary's checkmark.
 - Reduce Motion: read `@Environment(\.accessibilityReduceMotion)`. When it is on, rows in lists are inserted, removed and filtered without animation (SwiftUI `List` gives no supported cross-fade for its rows; [Apple's guidance](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion) allows removing the animation): pass `reduceMotion ? nil : .default` to `withAnimation` and `.animation`. Every other transition is `.opacity`, so sliding and scaling (sheets, the timer bar, the diagram's pin and adders) become cross-fades, and symbol bounces don't play. Numeric-text transitions stay; the system already tones them down.
 - No looping, pulsing or attention-seeking animation. The rest ring drains continuously, which is information, not decoration.
+- One exception: exercise animations on the exercise info screen are instructional media and may loop. They are muted, a tap pauses and plays them, and under Reduce Motion the still shows and nothing plays until the user taps it. Nothing else loops.
 
 ## Haptics
 
@@ -95,6 +96,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | More actions menu | `ellipsis.circle` |
 | Filter the exercise list | `line.3.horizontal.decrease.circle` |
 | Export data / import data | `square.and.arrow.up` / `square.and.arrow.down` |
+| Exercise info | `info.circle` |
 
 ## Accessibility
 
@@ -158,6 +160,14 @@ Phase 4 (tickets 23–24):
 - [ ] An empty history shows the empty state.
 - [ ] Delete a past workout: it confirms first.
 - [ ] Edit a past workout: swipe-deleting a set gives a medium thump with no confirmation.
+
+Animations (tickets 29–31):
+
+- [ ] Open Exercise Info from the picker's info button and from a workout's exercise menu: the clip loops with no jump at the seam, transparent on the cell in light and dark mode, with no halo.
+- [ ] Tap the clip: it pauses on the current frame; tap again: it plays. No haptic, no sound.
+- [ ] Play music, then open a clip: the music keeps playing at its volume.
+- [ ] With Reduce Motion on, the still shows and nothing plays until tapped; the first tap starts the clip without a jump.
+- [ ] With VoiceOver on, the clip reads its description and "Playing" or "Paused".
 
 ## App icon
 

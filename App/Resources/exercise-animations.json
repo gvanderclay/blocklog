@@ -1,0 +1,17 @@
+[
+  {
+    "exercise": "Dumbbell Bench Press",
+    "file": "dumbbell-bench-press",
+    "description": "Lie on a flat bench with a dumbbell in each hand at the sides of your chest, press them up until your arms are straight, then lower them back to your chest."
+  },
+  {
+    "exercise": "Dumbbell Goblet Squat",
+    "file": "dumbbell-goblet-squat",
+    "description": "Hold one dumbbell upright against your chest, sit your hips down until your thighs are about level with the floor, then stand back up."
+  },
+  {
+    "exercise": "Plank",
+    "file": "plank",
+    "description": "Rest on your forearms with your elbows under your shoulders, lift your knees so your body forms a straight line from head to heels, hold, then lower your knees."
+  }
+]

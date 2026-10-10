@@ -11,9 +11,9 @@ Out of scope: animations in the guided players or set rows, voice narration, fil
 ## 1. Pipeline at a glance
 
 1. **Pose file.** `scripts/animations/exercises/<slug>.json` holds the data an author edits (section 4).
-2. **Scene build.** `just animate <slug>` runs Blender 5.2 headless. It opens the figure, adds the props and the house style, keys the poses and loops them.
-3. **Checks.** The pose checks run (section 8). Any failure stops the run before rendering.
-4. **Contact sheets.** Front and side sheets, for the render-and-look loop.
+2. **Scene build.** `just animate <slug>` runs Blender 5.2 headless. It opens the figure, adds the props and the house style, and poses every frame from the pose file's key poses.
+3. **Checks.** The pose checks run on every frame (section 8). Any failure stops the run before the clip renders.
+4. **Contact sheets.** Sheets from the clip's camera and from the side, for the render-and-look loop. They are written even when a check fails, to show the failure.
 5. **Frames.** EEVEE renders transparent PNG frames 1…N into `build/animations/<slug>/` (gitignored).
 6. **Encode.** ffmpeg's `hevc_videotoolbox` writes `App/Resources/Animations/<slug>.mov` (HEVC with alpha), and the still frame is copied to `<slug>.png`.
 7. **Manifest.** `scripts/animations/manifest.py` regenerates `App/Resources/exercise-animations.json` from every pose file.
@@ -46,17 +46,19 @@ No free source has dumbbell motion, so every clip is keyframed by us. CMU mocap 
 
 | File | Job |
 |---|---|
-| `scripts/animations/figure.py` | Builds `build/animations/figure.blend` with MPFB, or the fallback mannequin. |
-| `scripts/animations/scene.py` | Shared code: props, house style (orthographic camera per named view, one key and one fill light, materials, render settings), and applying a pose file (keys on IK controls, spine and pelvis; a Cycles F-curve modifier on every channel through the 5.x layered-action channelbag helper). |
-| `scripts/animations/checks.py` | The pose checks in section 8, as pure functions on evaluated pose data. Each failure prints the check, frame and value. |
-| `scripts/animations/render.py` | Entry point, run as `blender --background --factory-startup --python-exit-code 1 --python scripts/animations/render.py -- [--sheets-only] <slug>…`. |
+| `scripts/animations/figure.py` | Builds `build/animations/figure.blend` with MPFB. The recipes run it when the file is missing or older than the script. |
+| `scripts/animations/assets/male_casualsuit04/` | The one CC0 clothing asset the figure wears, committed from MakeHuman's system asset pack (its texture lines removed, since the clothes are recoloured flat). |
+| `scripts/animations/scene.py` | Shared code: the figure, props, house style (an orthographic camera aimed by the pose file's view, one key and one fill light, materials, render settings), the hand library's code, and applying a pose file: every frame is interpolated from the key poses in Python and set on the Rigify controls. |
+| `scripts/animations/hands.json` | The hand library: finger shapes on the Rigify finger controls (relaxed, and the fitted goblet, grip and flat) and holds, each a shape plus the hand control's matrix in the held prop's space. |
+| `scripts/animations/checks.py` | The pose checks in section 8 and the form metrics, as pure functions on sampled frames. Each failure prints the check, the worst frame and the value. |
+| `scripts/animations/render.py` | Entry point, run as `blender --background --factory-startup --python-exit-code 1 --python scripts/animations/render.py -- [--sheets-only] <slug or path>…`. |
 | `scripts/animations/manifest.py` | System `python3`: reads every pose file and writes the manifest. |
 | `scripts/animations/exercises/<slug>.json` | One pose file per exercise. |
 
 Recipes, added to `justfile` and to the Commands list in `AGENTS.md`:
 
 - `just animate *slugs`: checks, contact sheets, render, encode, still, manifest, and a decoded check image (section 8). With no slug it re-renders everything. Do that only for a house-style change, because each re-render adds every clip to git history again.
-- `just animation-sheets *slugs`: the checks and contact sheets only, which is fast. This is the authoring loop.
+- `just animation-sheets *slugs`: the checks and contact sheets only, about 25 s. This is the authoring loop. A path to a scratch copy of a pose file works in place of a slug.
 
 Both recipes:
 
@@ -69,45 +71,67 @@ Gotchas from the research:
 - The EEVEE engine id is `BLENDER_EEVEE`, not `BLENDER_EEVEE_NEXT`.
 - `Action.fcurves` no longer exists. Use the channelbag.
 - Enable add-ons with `default_set=True`.
+- Keying actions turned out unnecessary: the scripts pose each frame directly, so `Action.fcurves` and F-curve modifiers aren't used. Set controls parents first and call `view_layer.update()` between levels, or a child set through `pose_bone.matrix` lands relative to its parent's stale pose.
 - Prefer the data API to `bpy.ops`.
 - Call `view_layer.update()` before reading matrices.
 
 ## 4. Pose files
 
-One JSON file per exercise. The author, usually an agent, edits data, not scene code. Ticket 29 fixes the exact control names after the spike and updates this example.
+One JSON file per exercise. The author, usually an agent, edits data, not scene code. Coordinates are the world: metres, Z up, the figure standing at the origin facing −Y with its left side at +X. Angles are degrees. Abridged from `exercises/dumbbell-goblet-squat.json`:
 
     {
       "exercise": "Dumbbell Goblet Squat",
       "description": "Hold one dumbbell upright against your chest, sit your hips down until your thighs are about level with the floor, then stand back up.",
-      "variant": "Goblet squat to about parallel, feet shoulder-width, elbows close to the body.",
-      "references": ["https://www.acefitness.org/resources/everyone/exercise-library/362/goblet-squat/"],
-      "view": "frontThreeQuarter",
-      "props": { "dumbbells": "goblet", "bench": null },
+      "variant": "ACE goblet squat to about parallel: …",
+      "references": ["https://www.acefitness.org/resources/everyone/exercise-library/362/goblet-squat/", "…"],
+      "view": {"azimuth": -35, "elevation": 8},
+      "props": {"dumbbells": 1},
       "frames": 72,
-      "still": 36,
-      "poses": { "stand": { "torso": [0, 0, 0], "foot_ik.L": [0.12, 0, 0] }, "bottom": { } },
-      "keys": [ { "frame": 1, "pose": "stand" }, { "frame": 36, "pose": "bottom" }, { "frame": 73, "pose": "stand" } ],
-      "planted": ["foot_ik.L", "foot_ik.R"],
-      "grips": { "hand_ik.L": "dumbbell.handle", "hand_ik.R": "dumbbell.handle" },
-      "allowedContacts": [["forearm.L", "dumbbell"]],
-      "jointRanges": { "knee": [0, 125], "hip": [0, 110] }
+      "still": 1,
+      "rig": {"torso.head_follow": 0.0, "torso.neck_follow": 1.0},
+      "poses": {
+        "bottom": {
+          "torso": {"at": [0.0, 0.1241, 0.3756], "turn": [32.0, 0.0, 0.0]},
+          "chest": {"turn": [-8.0, 0, 0]},
+          "head": {"turn": [-20.0, 0, 0]},
+          "foot_ik.L": {"at": [0.2, -0.0224, 0.0692], "turn": [0.0, 0.0, 20.0]},
+          "thigh_ik_target.L": {"at": [0.6278, -0.8682, 0.5192]},
+          "upper_arm_ik_target.L": {"at": [0.3, 0.1915, 0.2741]},
+          "dumbbell": {"parent": "chest", "at": [0.0, -0.2338, 1.2475], "turn": [12.0, 0.0, 180.0]},
+          "hand_ik.L": {"hold": "goblet", "on": "dumbbell"}
+        },
+        "mid": { }, "stand": { }
+      },
+      "keys": [ {"frame": 1, "pose": "bottom"}, {"frame": 7, "pose": "bottom"}, {"frame": 19, "pose": "mid", "via": true},
+                {"frame": 31, "pose": "stand"}, {"frame": 37, "pose": "stand"}, {"frame": 55, "pose": "mid", "via": true},
+                {"frame": 73, "pose": "bottom"} ],
+      "planted": ["foot.L", "foot.R"],
+      "allowedContacts": {},
+      "jointRanges": {"kneeFlex.L": [0, 135], "hipFlex.L": [0, 125]},
+      "form": {"bottom": {"hipOverKnee.L": [-8, 0], "trunkMinusShin": [-15, 0], "kneeOverFoot.L": [-3, 3], "elbowInsideKnee.L": [0, 30]}}
     }
 
 Each field's job:
 
-- **`exercise`** keys the clip to its exercise.
+- **`exercise`** keys the clip to its exercise. The file name is its slug: lowercase, with runs of non-letters replaced by `-`; the run checks it.
 - **`description`** is the VoiceOver sentence.
 - **`variant` and `references`** record what the pose was checked against.
-- **`view`** is one camera per exercise.
-- **`frames`** is the loop length at 30 fps; key frame N+1 equals frame 1.
+- **`view`** is the clip's one camera: azimuth 0 in front of the figure, 90 on its left, −90 on its right, and the elevation above the horizon. The camera fits every frame so the figure's larger side fills 92% of the frame.
+- **`props`**: `dumbbells` is 0, 1 (named `dumbbell`) or 2 (`dumbbell.L` and `dumbbell.R`); `bench` is `"flat"` or absent. The bench's pad top is 0.44 m, centred on the origin along Y.
+- **`frames`** is the loop length at 30 fps; the last key is frame N+1 and must repeat frame 1.
 - **`still`** is the frame used for Reduce Motion.
-- **`planted`, `grips`, `allowedContacts` and `jointRanges`** feed the checks.
-- The slug is the file name: lowercase, with non-letters replaced by `-`.
+- **`rig`** sets Rigify properties, such as `torso.head_follow`.
+- **`poses`** are named key poses. Each entry names a Rigify control (`torso`, `hips`, `chest`, `neck`, `head`, `foot_ik.L`, `toe_ik.L`, `thigh_ik_target.L` for the knee's direction, `upper_arm_ik_target.L` for the elbow's, `hand_ik.L`), a prop, or `fingers.L` (a hand shape name). A `.L` entry without its `.R` twin is mirrored to the right side. Every pose gives the same entries.
+  - `{"at", "turn", "pivot"}`: the control's rest pose turned by `turn` (XYZ, world axes) about `pivot` (its rest head by default), then moved so the pivot lands on `at`. A planted foot that rolls uses the ball of the foot as its pivot, so the ball stays put.
+  - `{"turn"}` alone: turned about its current head, on top of what its parents give it (the chest, the head, the toes).
+  - A hand: `{"at", "palm", "fingers"}` aims the palm's outward normal and the wrist-to-knuckles direction with the wrist at `at`. With `"hold": "handle"` the hand takes the hold's shape and a prop `{"in": "hand.L"}` follows it. Or `{"hold": "goblet", "on": "dumbbell"}` puts the hand on a prop placed by `{"parent", "at", "turn"}` (`at` is where it sits with the figure at rest; it then moves with the parent bone).
+- **`keys`** time the poses. Each key eases in and out; a key with `"via": true` is passed through without stopping.
+- **`planted`, `allowedContacts`, `jointRanges` and `form`** feed the checks (section 8). `planted` names `foot`, `ball`, `forearm` or `hand` with a side. `allowedContacts` gives a prop a deeper allowed contact in metres, such as `{"bench": 0.02}` for the back on the pad. `form` checks metrics at the frames keyed with that pose; `checks.py` documents each metric and its axes.
 
 Motion rules:
 
-- **Rep exercises:** one rep per loop, 2–3 s: lower about 1.2 s, a brief pause, rise about 1 s, a brief pause. Ease in and out; nothing jerks at the seam. The still is the end-range position.
-- **Holds** (Plank, Side Plank, Wall Sit, Dead Hang and every stretch): from the setup, ease into the hold (about 1 s), hold (2–3 s), then ease out (about 1 s). The clip shows how to get into position, never a bouncing stretch. The still is the hold.
+- **Rep exercises:** one rep per loop, 2–3 s: lower about 1.2 s, a brief pause, rise about 1 s, a brief pause. Ease in and out; nothing jerks at the seam. The still is the end-range position, and the loop starts there (frame 1), so the still matches the clip's first frame: the still never jumps to the first frame when the clip starts, under Reduce Motion or while the first frame loads.
+- **Holds** (Plank, Side Plank, Wall Sit, Dead Hang and every stretch): from the setup, ease into the hold (about 1 s), hold (2–3 s), then ease out (about 1 s). The clip shows how to get into position, never a bouncing stretch. The still is the hold, and the loop starts in the hold, for the same reason.
 - **Per-side and one-arm exercises** show one side. Their description says "then switch sides".
 - **Alternating exercises** show both sides in one loop.
 - **Views:** front three-quarter by default, side where depth or back angle is the point (hinges, rows), and three-quarter from above the feet for bench work, so both forearms and dumbbell paths show.
@@ -120,7 +144,7 @@ Motion rules:
 
       ffmpeg -y -framerate 30 -i build/animations/<slug>/frames/%04d.png -pix_fmt bgra \
         -c:v hevc_videotoolbox -q:v 70 -alpha_quality 0.9 -allow_sw 0 -tag:v hvc1 -an \
-        -movflags +faststart App/Resources/Animations/<slug>.mov
+        -movflags +faststart -fflags +bitexact App/Resources/Animations/<slug>.mov
 
   The spike set `-q:v` to 70. `alpha_quality` defaults to 0, which is unsafe for edges.
 - **Still:** the `still` frame as a PNG with alpha, same size, `App/Resources/Animations/<slug>.png`.
@@ -138,6 +162,16 @@ Measured *(spike, one test render: goblet squat, real figure and dumbbell)*:
 | AVFoundation `ContainsAlphaChannel` | 1 (codec `hvc1`, 72 frames decoded through `AVAssetReader`). Decoded frames composited on white and `#1C1C1E` show clean edges, no halo, at `-q:v 50` to 80. |
 | Two encodes byte-identical | No: the two files differ in 2 of 314,037 bytes (offsets 1343 and 5242). The renders are pixel-identical between runs. |
 | EEVEE shadow catcher keeps alpha | No. `Object.is_shadow_catcher` gives an opaque lit floor (alpha 255). A ShaderToRGB floor material gives noisy partial alpha and a visible floor edge. Decision: no shadow. |
+
+Measured at the trial *(ticket 29, 540 px, `-q:v 70`)*:
+
+| Exercise | Frames | Clip bytes | Still bytes |
+|---|---|---|---|
+| Dumbbell Goblet Squat | 72 | 286,935 | 126,342 |
+| Dumbbell Bench Press | 72 | 283,522 | 171,966 |
+| Plank | 150 | 281,836 | 110,107 |
+
+The three average 420,236 bytes per exercise, which × 86 is 36.1 MB. `just animate` of one slug takes about 1 to 1.5 minutes. Re-rendering a slug gives pixel-identical frames, the same still and the same decoded frames; the `.mov` still differs in 4 bytes between encodes, with `-fflags +bitexact`.
 
 Budget check: (314,037 + 118,272) bytes × 86 = 37.2 MB, under the 40 MB soft target. At 720 px and `-q:v 70` it would be (375,633 + 201,006) × 86 = 49.6 MB.
 
@@ -177,10 +211,10 @@ Budget check: (314,037 + 118,272) bytes × 86 = 37.2 MB, under the 40 MB soft ta
 **Automated pose checks** (`checks.py`, every run, any failure stops the render):
 
 - **Loop seam:** keyed channels at frame N+1 equal frame 1, and the step from frame N to frame 1 is close to its neighbours.
-- **Foot slide:** a planted IK control moves at most 1 cm in world space.
-- **Grip:** each held hand stays within 1 cm of its handle.
-- **Floor:** no evaluated vertex is below −0.5 cm.
-- **Interpenetration:** a `BVHTree` overlap test of the body against the props, except `allowedContacts`.
+- **Foot slide:** each planted joint (the ankle and ball for `foot`, the elbow and wrist for `forearm`) moves at most 1 cm in world space.
+- **Grip:** each held hand ends within 1 cm of its hold (the IK reach error, since IK stretch is off).
+- **Floor:** no evaluated body or clothes vertex is below −0.5 cm.
+- **Interpenetration:** no body or clothes vertex is more than 2 mm inside a prop (3 mm for a hand, the fitted grips' contact), or deeper than the prop's `allowedContacts` depth, by a `BVHTree` nearest-surface test.
 - **Joint ranges:** the per-frame angle stays inside the pose file's `jointRanges`, which cite its reference. Axis conventions are fixed in `checks.py`.
 - **Framing:** the figure's bounding box stays inside the camera with a margin, so nothing crops.
 
@@ -189,7 +223,7 @@ The tolerances are engineering thresholds, not medical limits.
 **Render-and-look loop** (the author):
 
 1. Choose the variant and reference and write them in the pose file. Use ACE, ExRx, or free-exercise-db photos as references. Those photos are downloaded only into `build/` for viewing, never committed or bundled, because their provenance is unverified.
-2. `just animation-sheets <slug>` writes `build/animations/<slug>/sheet-front.png` and `sheet-side.png`: 12 even frames, Workbench engine, frame numbers stamped. The checks print joint angles per key frame.
+2. `just animation-sheets <slug>` writes `build/animations/<slug>/sheet-clip.png` (the clip's camera) and `sheet-side.png` (from the figure's left, with a floor line): 12 even frames, EEVEE at half size, frame numbers stamped. The checks print the form metrics per key frame, the deepest contact with each prop and the lowest vertex.
 3. View the sheets at phone scale beside the reference; fix pose rows; repeat.
 4. `just animate <slug>`, then view `build/animations/<slug>/decoded.png`: six frames decoded from the delivered `.mov`, composited on white and `#1C1C1E`. Check edges for halos, hands on the handle, and the dumbbell's path.
 5. The user judges the clips on the phone: the trial in ticket 29, all of them in ticket 31. An agent's visual judgement is a first pass. The user is the form reviewer, and no trainer review is planned (D6).
@@ -198,7 +232,13 @@ Trial variants:
 
 - **Goblet squat:** ACE, about parallel, dumbbell upright at the chest, elbows close, and a note that depth varies.
 - **Dumbbell bench press:** ExRx. Dumbbells at the sides of the chest, pressed with a slight inward arc, bench and feet visible.
-- **Plank:** forearm plank, elbows under the shoulders, a straight line from head to heels. Reference chosen and recorded in ticket 29.
+- **Plank:** ACE front plank on the forearms, elbows under the shoulders, a straight line from head to heels. The setup is the same position with the knees down.
+
+Trial results *(ticket 29)*. All checks pass for the three.
+
+- **Goblet squat:** the spike's approved poses, keyed with the hips travelling back early through a `via` mid pose. Bottom: hip 3.0 cm below the knee, trunk lean 27.7° against shin lean 32.9°, knee 0.5 cm inside the foot line, elbow 9.4 cm inside the knee.
+- **Dumbbell bench press:** elbows flexed 98° at the bottom with the forearm within 3.4 cm of vertical, 19° at the top. The grip hold puts the block about 26° off the forearm, because the wrist sits between the rails and the handle in the palm; the hands are extended 22° at the wrist so the block stands upright from the side. The camera is at azimuth −40, elevation 25: the plan's "from above the feet" view hid the near arm behind the head and foreshortened the press.
+- **Plank:** hips 1.2 cm above the shoulder–ankle line, head top 1.6 cm below it, elbows 2.5 cm from under the shoulders. Knees down, the knee joints are 7.7 cm off the floor, where the trousers just reach it (the clothes sit outside the skin).
 - **Hip Flexor Stretch** (ticket 30): ACE kneeling variant, entry then hold, no bouncing.
 
 ## 9. App size

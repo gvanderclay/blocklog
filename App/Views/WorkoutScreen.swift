@@ -228,6 +228,7 @@ struct ExerciseSection: View {
     @State private var saveFailed = false
     /// Flips once when the section first appears, so the progression arrow bounces once.
     @State private var arrowBounce = false
+    @State private var isShowingInfo = false
 
     var body: some View {
         Section {
@@ -291,6 +292,8 @@ struct ExerciseSection: View {
             Spacer()
             Menu {
                 if let exercise = workoutExercise.exercise {
+                    Button("Exercise Info", systemImage: "info.circle") { isShowingInfo = true }
+                        .accessibilityIdentifier("workout.exercise.\(exerciseIndex).info")
                     // A submenu, so the 19 choices don't push Remove Exercise off the menu.
                     Menu("Rest Time…", systemImage: "timer") {
                         Picker("Rest Time", selection: restOverride(of: exercise)) {
@@ -314,6 +317,13 @@ struct ExerciseSection: View {
                     .contentShape(.rect)
             }
             .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
+        }
+        .sheet(isPresented: $isShowingInfo) {
+            if let exercise = workoutExercise.exercise {
+                NavigationStack {
+                    ExerciseInfoScreen(exercise: exercise, showsDone: true)
+                }
+            }
         }
     }
 

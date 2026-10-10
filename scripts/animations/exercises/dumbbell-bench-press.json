@@ -1,0 +1,232 @@
+{
+  "exercise": "Dumbbell Bench Press",
+  "description": "Lie on a flat bench with a dumbbell in each hand at the sides of your chest, press them up until your arms are straight, then lower them back to your chest.",
+  "variant": "ExRx dumbbell bench press on a flat bench: feet flat on the floor, dumbbells at the sides of the chest with the forearms under them, pressed up with a slight inward arc until the arms are extended, palms facing the feet.",
+  "references": [
+    "https://exrx.net/WeightExercises/PectoralSternal/DBBenchPress",
+    "https://www.acefitness.org/resources/everyone/exercise-library/48/dumbbell-chest-press/"
+  ],
+  "view": {
+    "azimuth": -40,
+    "elevation": 25
+  },
+  "props": {
+    "dumbbells": 2,
+    "bench": "flat"
+  },
+  "frames": 72,
+  "still": 1,
+  "poses": {
+    "bottom": {
+      "torso": {
+        "at": [
+          0.0,
+          -0.32,
+          0.53
+        ],
+        "turn": [
+          -90.0,
+          0.0,
+          0.0
+        ]
+      },
+      "head": {
+        "turn": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "foot_ik.L": {
+        "at": [
+          0.33,
+          -0.62,
+          0.0692
+        ],
+        "turn": [
+          0.0,
+          0.0,
+          15.0
+        ]
+      },
+      "thigh_ik_target.L": {
+        "at": [
+          0.5,
+          -0.75,
+          0.9
+        ]
+      },
+      "upper_arm_ik_target.L": {
+        "at": [
+          0.8,
+          0.0,
+          0.3
+        ]
+      },
+      "hand_ik.L": {
+        "at": [
+          0.37,
+          0.07,
+          0.76
+        ],
+        "palm": [
+          0,
+          -0.927,
+          0.375
+        ],
+        "fingers": [
+          0,
+          0.375,
+          0.927
+        ],
+        "hold": "handle"
+      },
+      "dumbbell.L": {
+        "in": "hand.L"
+      },
+      "chest": {
+        "turn": [
+          -8.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "top": {
+      "torso": {
+        "at": [
+          0.0,
+          -0.32,
+          0.53
+        ],
+        "turn": [
+          -90.0,
+          0.0,
+          0.0
+        ]
+      },
+      "head": {
+        "turn": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "foot_ik.L": {
+        "at": [
+          0.33,
+          -0.62,
+          0.0692
+        ],
+        "turn": [
+          0.0,
+          0.0,
+          15.0
+        ]
+      },
+      "thigh_ik_target.L": {
+        "at": [
+          0.5,
+          -0.75,
+          0.9
+        ]
+      },
+      "upper_arm_ik_target.L": {
+        "at": [
+          0.7,
+          0.05,
+          0.6
+        ]
+      },
+      "hand_ik.L": {
+        "at": [
+          0.21,
+          0.13,
+          1.005
+        ],
+        "palm": [
+          0,
+          -0.927,
+          0.375
+        ],
+        "fingers": [
+          0,
+          0.375,
+          0.927
+        ],
+        "hold": "handle"
+      },
+      "dumbbell.L": {
+        "in": "hand.L"
+      },
+      "chest": {
+        "turn": [
+          -8.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  },
+  "keys": [
+    {
+      "frame": 1,
+      "pose": "bottom"
+    },
+    {
+      "frame": 5,
+      "pose": "bottom"
+    },
+    {
+      "frame": 35,
+      "pose": "top"
+    },
+    {
+      "frame": 39,
+      "pose": "top"
+    },
+    {
+      "frame": 73,
+      "pose": "bottom"
+    }
+  ],
+  "planted": [
+    "foot.L",
+    "foot.R"
+  ],
+  "allowedContacts": {
+    "bench": 0.02
+  },
+  "jointRanges": {
+    "elbowFlex.L": [
+      0,
+      120
+    ],
+    "kneeFlex.L": [
+      50,
+      120
+    ]
+  },
+  "form": {
+    "bottom": {
+      "elbowFlex.L": [
+        70,
+        110
+      ],
+      "wristOverElbow.L": [
+        0,
+        6
+      ],
+      "armToTrunk.L": [
+        40,
+        80
+      ]
+    },
+    "top": {
+      "elbowFlex.L": [
+        0,
+        25
+      ]
+    }
+  }
+}

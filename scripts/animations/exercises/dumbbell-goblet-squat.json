@@ -1,0 +1,35 @@
+{
+  "exercise": "Dumbbell Goblet Squat",
+  "description": "Hold one dumbbell upright against your chest, sit your hips down until your thighs are about level with the floor, then stand back up.",
+  "variant": "ACE goblet squat to about parallel: feet about shoulder-width with the toes turned out slightly, the dumbbell upright at the chest with the palms under its top block, elbows close and inside the knees, chest up, heels down. Depth varies by person.",
+  "references": [
+    "https://www.acefitness.org/resources/everyone/exercise-library/362/goblet-squat/",
+    "https://www.nasm.org/resource-center/exercise-library/goblet-squat",
+    "https://exrx.net/WeightExercises/Quadriceps/DBGobletSquat"
+  ],
+  "view": {"azimuth": -35, "elevation": 8},
+  "props": {"dumbbells": 1},
+  "frames": 72,
+  "still": 1,
+  "rig": {"torso.head_follow": 0.0, "torso.neck_follow": 1.0},
+  "poses": {
+    "stand": {"torso": {"at": [0.0, 0.0087, 0.8569], "turn": [0.0, 0.0, 0.0]}, "foot_ik.L": {"at": [0.2, -0.0224, 0.0692], "turn": [0.0, 0.0, 20.0]}, "chest": {"turn": [0.0, 0, 0]}, "head": {"turn": [0.0, 0, 0]}, "thigh_ik_target.L": {"at": [0.6278, -0.8682, 0.5192]}, "upper_arm_ik_target.L": {"at": [0.3, 0.05, 0.738]}, "dumbbell": {"parent": "chest", "at": [0.0, -0.2338, 1.2475], "turn": [0.0, 0.0, 180.0]}, "hand_ik.L": {"hold": "goblet", "on": "dumbbell"}},
+    "mid": {"torso": {"at": [0.0, 0.0854, 0.6173], "turn": [19.7, 0.0, 0.0]}, "foot_ik.L": {"at": [0.2, -0.0224, 0.0692], "turn": [0.0, 0.0, 20.0]}, "chest": {"turn": [-4.0, 0, 0]}, "head": {"turn": [-10.0, 0, 0]}, "thigh_ik_target.L": {"at": [0.6278, -0.8682, 0.5192]}, "upper_arm_ik_target.L": {"at": [0.3, 0.1473, 0.5109]}, "dumbbell": {"parent": "chest", "at": [0.0, -0.2338, 1.2475], "turn": [7.85, 0.0, 180.0]}, "hand_ik.L": {"hold": "goblet", "on": "dumbbell"}},
+    "bottom": {"torso": {"at": [0.0, 0.1241, 0.3756], "turn": [32.0, 0.0, 0.0]}, "foot_ik.L": {"at": [0.2, -0.0224, 0.0692], "turn": [0.0, 0.0, 20.0]}, "chest": {"turn": [-8.0, 0, 0]}, "head": {"turn": [-20.0, 0, 0]}, "thigh_ik_target.L": {"at": [0.6278, -0.8682, 0.5192]}, "upper_arm_ik_target.L": {"at": [0.3, 0.1915, 0.2741]}, "dumbbell": {"parent": "chest", "at": [0.0, -0.2338, 1.2475], "turn": [12.0, 0.0, 180.0]}, "hand_ik.L": {"hold": "goblet", "on": "dumbbell"}}
+  },
+  "keys": [
+    {"frame": 1, "pose": "bottom"},
+    {"frame": 7, "pose": "bottom"},
+    {"frame": 19, "pose": "mid", "via": true},
+    {"frame": 31, "pose": "stand"},
+    {"frame": 37, "pose": "stand"},
+    {"frame": 55, "pose": "mid", "via": true},
+    {"frame": 73, "pose": "bottom"}
+  ],
+  "planted": ["foot.L", "foot.R"],
+  "jointRanges": {"kneeFlex.L": [0, 135], "hipFlex.L": [0, 125]},
+  "form": {
+    "bottom": {"hipOverKnee.L": [-8, 0], "trunkMinusShin": [-15, 0], "kneeOverFoot.L": [-3, 3], "elbowInsideKnee.L": [0, 30]},
+    "stand": {"kneeFlex.L": [0, 15], "trunkLean": [0, 5]}
+  }
+}

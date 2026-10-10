@@ -12,6 +12,7 @@ struct ExercisePicker: View {
     @State private var query = ""
     @State private var equipment: Equipment?
     @State private var isCreating = false
+    @State private var infoExercise: Exercise?
 
     private var sections: [ExerciseCatalog.Section] {
         ExerciseCatalog.sections(from: exercises, matching: query, equipment: equipment)
@@ -23,12 +24,26 @@ struct ExercisePicker: View {
                 ForEach(sections) { section in
                     Section(section.muscleGroup.title) {
                         ForEach(section.exercises) { exercise in
-                            Button(exercise.name) {
-                                onPick(exercise)
-                                dismiss()
+                            HStack {
+                                Button(exercise.name) {
+                                    onPick(exercise)
+                                    dismiss()
+                                }
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("exercisePicker.row.\(exercise.name)")
+                                // Borderless, so only the symbol opens the info and the rest of the row still adds.
+                                Button {
+                                    infoExercise = exercise
+                                } label: {
+                                    Label("Exercise Info", systemImage: "info.circle")
+                                        .labelStyle(.iconOnly)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(.rect)
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityIdentifier("exercisePicker.row.\(exercise.name).info")
                             }
-                            .foregroundStyle(.primary)
-                            .accessibilityIdentifier("exercisePicker.row.\(exercise.name)")
                         }
                     }
                 }
@@ -43,6 +58,9 @@ struct ExercisePicker: View {
             .searchable(text: $query, prompt: "Search exercises")
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(item: $infoExercise) { exercise in
+                ExerciseInfoScreen(exercise: exercise)
+            }
             .navigationDestination(isPresented: $isCreating) {
                 NewExerciseForm { exercise in
                     onPick(exercise)

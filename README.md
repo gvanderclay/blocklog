@@ -37,10 +37,27 @@ Run these commands from the repository root:
 | `just skills` | Export Apple's SwiftUI agent skills into `.agents/skills/apple/`. |
 | `just chime` | Regenerate the rest-end chime, `App/Resources/rest-chime.caf`. |
 | `just icon` | Regenerate the light, dark and tinted app icons. |
+| `just animation-sheets <slug>…` | Check exercise animation pose files and write their contact sheets to `build/animations/<slug>/`. |
+| `just animate <slug>…` | Check, render and encode exercise animations into `App/Resources/Animations/`, and regenerate the manifest. |
 
 Build and test logs go in `build/logs/`, and result bundles go in `build/results/`. Set `SIM_NAME` to choose a simulator (default: **iPhone 17** on iOS 27), or set `DEVICE` to choose the phone for `just device`.
 
 `Blocklog.xcodeproj` is generated and gitignored. Edit `project.yml`, not the generated project.
+
+## Rendering exercise animations
+
+Only `just animate` and `just animation-sheets` need this; building and testing the app don't. The recipes require Blender 5.2 and the MPFB 2.0.17 add-on:
+
+1. Install Blender 5.2: `brew install --cask blender` (the recipes stop unless `blender --version` reports 5.2).
+2. Download MPFB 2.0.17 from [extensions.blender.org](https://extensions.blender.org/add-ons/mpfb/) as `mpfb.zip` (SHA-256 `4f0a879d64a39bf646fbf5f53601ac678855da329d650617dca5737548239a87`), then install it into your Blender user extensions:
+
+   ```sh
+   blender --background --factory-startup --command extension install-file -r user_default --enable mpfb.zip
+   ```
+
+   To remove it later: `blender --command extension remove mpfb`.
+
+The first run builds the figure into the gitignored `build/animations/figure.blend`. The one clothing asset it uses, from MakeHuman's CC0 system asset pack, is committed in `scripts/animations/assets/`. `docs/exercise-animations.md` explains the pose files and the checks.
 
 ## Free-account signing
 

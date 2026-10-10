@@ -1,0 +1,217 @@
+{
+ "about": [
+  "Hand shapes on the Rigify finger controls, and holds: a shape plus the left hand control's matrix in the held prop's space (the right hand mirrors it).",
+  "Per finger, degrees: mcp = knuckle flexion (+ toward the palm); curl = middle and end joint flexion; dip = end joint flexion in total; spread = toward the thumb side.",
+  "Thumb: rx across the palm, rz out of the palm plane, ry twist, curl its outer joints. palm: the palm control's (x, z) rotation, which cups the palm.",
+  "Fitted once to contact by the ticket 28 spike (fingers closed until they touch, never refitted per exercise): goblet, grip, flat. relaxed is set by hand.",
+  "Hand bone axes: X palm normal, Y wrist to knuckles, Z thumb side; the knuckle line is 14.7 degrees oblique, so handles lie along it."
+ ],
+ "shapes": {
+  "relaxed": {
+   "index": {
+    "mcp": 12,
+    "curl": 18,
+    "dip": 10,
+    "spread": 2
+   },
+   "middle": {
+    "mcp": 15,
+    "curl": 22,
+    "dip": 12,
+    "spread": 0
+   },
+   "ring": {
+    "mcp": 18,
+    "curl": 26,
+    "dip": 14,
+    "spread": -2
+   },
+   "pinky": {
+    "mcp": 22,
+    "curl": 30,
+    "dip": 16,
+    "spread": -5
+   },
+   "thumb": {
+    "rx": 10,
+    "rz": 12,
+    "ry": 0,
+    "curl": 12
+   },
+   "palm": [
+    0,
+    4
+   ]
+  },
+  "goblet": {
+   "index": {
+    "mcp": 28.164,
+    "curl": 22.129,
+    "dip": 22.333,
+    "spread": 2
+   },
+   "middle": {
+    "mcp": 30.762,
+    "curl": 24.318,
+    "dip": 31.298,
+    "spread": 0
+   },
+   "ring": {
+    "mcp": 26.113,
+    "curl": 20.518,
+    "dip": 16.266,
+    "spread": -2
+   },
+   "pinky": {
+    "mcp": 13.398,
+    "curl": 10.527,
+    "dip": 6.803,
+    "spread": -4
+   },
+   "thumb": {
+    "rx": 35.0,
+    "rz": -30.82,
+    "ry": 0,
+    "curl": 2.188
+   },
+   "palm": [
+    0,
+    8
+   ]
+  },
+  "grip": {
+   "index": {
+    "mcp": 42.5,
+    "curl": 14.18,
+    "dip": 63.928,
+    "spread": 2
+   },
+   "middle": {
+    "mcp": 52.5,
+    "curl": 24.062,
+    "dip": 64.039,
+    "spread": 0
+   },
+   "ring": {
+    "mcp": 55.0,
+    "curl": 14.395,
+    "dip": 55.968,
+    "spread": -2
+   },
+   "pinky": {
+    "mcp": 45.0,
+    "curl": 3.867,
+    "dip": 33.736,
+    "spread": -4
+   },
+   "thumb": {
+    "rx": 20.0,
+    "rz": 40.0,
+    "ry": 0.0,
+    "curl": 20.781
+   },
+   "palm": [
+    0,
+    0
+   ]
+  },
+  "flat": {
+   "index": {
+    "mcp": -15.508,
+    "curl": 5.226,
+    "dip": 3.055,
+    "spread": 1
+   },
+   "middle": {
+    "mcp": -15.42,
+    "curl": 5.191,
+    "dip": 3.031,
+    "spread": 0
+   },
+   "ring": {
+    "mcp": -14.805,
+    "curl": 5.558,
+    "dip": 3.272,
+    "spread": -1
+   },
+   "pinky": {
+    "mcp": -19.111,
+    "curl": 3.275,
+    "dip": 1.97,
+    "spread": -3
+   },
+   "thumb": {
+    "rx": 12.0,
+    "rz": -50,
+    "ry": 0,
+    "curl": 0
+   },
+   "palm": [
+    0,
+    0
+   ]
+  }
+ },
+ "holds": {
+  "goblet": {
+   "shape": "goblet",
+   "about": "Palms under the top block, fingers up its sides onto the top, one hand per side, never around the handle.",
+   "hand": [
+    [
+     0.99027,
+     -0.13917,
+     0.0,
+     -0.09904
+    ],
+    [
+     0.0,
+     0.0,
+     -1.0,
+     -0.025
+    ],
+    [
+     0.13917,
+     0.99027,
+     0.0,
+     0.03181
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ]
+  },
+  "handle": {
+   "shape": "grip",
+   "about": "A power grip around the handle, along the knuckle line, the rails either side of the wrist.",
+   "hand": [
+    [
+     -0.89997,
+     0.43024,
+     -0.07034,
+     0.0
+    ],
+    [
+     -0.43402,
+     -0.86909,
+     0.23729,
+     0.08774
+    ],
+    [
+     0.04096,
+     0.24409,
+     0.96889,
+     -0.02206
+    ],
+    [
+     0,
+     0,
+     0,
+     1
+    ]
+   ]
+  }
+ }
+}
