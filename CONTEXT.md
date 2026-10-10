@@ -7,7 +7,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 ## Workouts
 
 - **Exercise** (`Exercise`): a movement or held position the user can log, a starter exercise or a custom one. It has a muscle group, equipment, an exercise type and an optional rest override.
-- **Starter exercise**: an exercise bundled in `starter-exercises.json` and seeded into the store.
+- **Starter exercise**: an exercise bundled in `starter-exercises.json` and seeded into the store. Seeding adds each starter exercise whose name, ignoring case, the store lacks, and changes nothing else.
 - **Custom exercise**: an exercise the user creates from the exercise picker (`isCustom`). It is listed and logged like a starter exercise.
 - **Exercise picker** (`ExercisePicker`): the Add Exercise sheet. It lists exercises by muscle group, searches and filters them by equipment, and creates custom exercises.
 - **Workout** (`Workout`): the record of one training day you did or are doing: a title, a start date, an end date once finished, and its ordered workout exercises. Starting a routine or a starter routine creates one; a workout is never a plan. Finished workouts are the history that previous numbers and progression read.
@@ -35,11 +35,12 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Structural change**: a difference between a finished workout and the routine it started from that makes Finish ask to update the routine: an exercise added, removed, swapped or reordered, or a set added or removed. Weight, reps, duration and set-type edits are not structural.
 - **Starter routine** (`StarterRoutine`): a read-only routine bundled with the app, such as Push or Golden Six, listed in the starter library. Starting one gives a workout titled with its name, pre-filled like a routine start but with no routine link. "Add to My Routines" opens the routine editor on a routine draft of it.
 - **Starter programme** (`StarterProgramme`): starter routines meant to rotate as one programme, such as Push/Pull/Legs. "Add Programme" creates a programme holding copies of them, in order.
-- **Starter library**: the sheet listing the starter programmes and the starter routines that belong to none.
-- **Estimated time**: a starter routine's rough length, every set taking the default rest plus 40 seconds.
+- **Starter library**: the sheet listing the starter programmes, the starter routines that belong to none, and, under "Stretching", the stretch routines.
+- **Stretch routine**: a starter routine whose format is stretch (`StarterRoutine.Format.stretch`), such as Full-Body Quick Stretch: one timed set of a stretch per entry, its target duration the hold. It plays in the guided player; until phase 7 it can't be copied into My Routines or a programme.
+- **Estimated time**: a starter routine's rough length, every set taking the default rest plus 40 seconds. A stretch routine's is one round: each hold, twice for a per-side stretch, plus a 5-second lead-in before each, without pauses between sides.
 - **Programme** (`Programme`) *(planned, phase 4)*: an ordered list of routines you rotate through, such as PPL: Push → Pull → Legs. It owns its routines: adding a routine copies it in, and a routine that leaves the programme, or whose programme is deleted, moves to My Routines. A routine's **programme membership** (`ProgrammeMembership`) is its programme and its position in it, from 0, held together.
 - **Up next** *(planned, phase 4)*: a programme's next routine: the one after the routine of the programme's newest finished workout, wrapping round, or the first with none. It is worked out, never stored; workouts of other routines never move it.
-- **Routine format** *(planned, phase 7)*: how a routine plays: Sets (the default), Timed AMRAP or Stretch.
+- **Routine format** *(phase 7; starter routines carry it from phase 6)*: how a routine plays: Sets (the default), Timed AMRAP or Stretch. The bundled starter routines mark stretch routines with `"format": "stretch"` (`StarterRoutine.Format`).
 
 ## PowerBlock
 
@@ -72,7 +73,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Per side** (`isPerSide`): an exercise done on each side in turn. The stretch player plays it as two holds, one per side; the workout logs one set per round holding the per-side seconds.
 - **Hold**: one timed stretch on one side (or both, if not per side), its length the routine exercise's target duration.
 - **Lead-in**: the 5 seconds before a hold to get into position; between the sides of a per-side stretch it reads "Switch sides".
-- **Cue** and **variation**: a stretch's one-line instruction, and its Easier and Harder alternatives, from the bundled stretch JSON, keyed by exercise name. Not stored.
+- **Cue** and **variation** (`StretchCue`): a stretch's one-line instruction, and its Easier and Harder alternatives, from the bundled `stretch-cues.json`, keyed by exercise name. Not stored.
 - **Timed AMRAP**: a routine format: as many rounds as possible of its exercises, each at a fixed rep count, before the time cap. Cindy is the starter one.
 - **Time cap**: a timed AMRAP's length, such as 20 minutes.
 - **Extra reps**: the reps done in the unfinished round when the time cap ends, counted in exercise order.

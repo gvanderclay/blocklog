@@ -16,6 +16,9 @@ final class Exercise {
     /// The exercise's own rest length, replacing the default rest. Nil uses the default rest.
     var restOverrideSeconds: Int?
     var isCustom: Bool
+    /// True for an exercise done on each side in turn, such as a per-side stretch. Nil, like false, means not per
+    /// side; stores written before the field read as nil.
+    var isPerSide: Bool?
 
     @Relationship(deleteRule: .nullify, inverse: \WorkoutExercise.exercise)
     var workoutExercises: [WorkoutExercise] = []
@@ -24,7 +27,8 @@ final class Exercise {
 
     init(
         id: UUID = UUID(), name: String, muscleGroup: MuscleGroup, equipment: Equipment,
-        type: ExerciseType, restOverrideSeconds: Int? = nil, isCustom: Bool = false
+        type: ExerciseType, restOverrideSeconds: Int? = nil, isCustom: Bool = false,
+        isPerSide: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -33,6 +37,7 @@ final class Exercise {
         self.typeRawValue = type.rawValue
         self.restOverrideSeconds = restOverrideSeconds
         self.isCustom = isCustom
+        self.isPerSide = isPerSide
     }
 
     // Typed views of the stored raw values; an unknown raw value reads as the first case.
@@ -55,7 +60,7 @@ final class Exercise {
 /// The muscle group an exercise trains, in display order.
 enum MuscleGroup: String, CaseIterable, Codable, Sendable {
     case chest, back, shoulders, biceps, triceps, forearms, core, quads, hamstrings, glutes,
-        calves, fullBody
+        calves, fullBody, stretching
 }
 
 /// What the exercise is done with.

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// The bundled home exercises in `starter-exercises.json`, seeded into an empty store.
+/// The bundled home exercises and stretches in `starter-exercises.json`, seeded into the store.
 @MainActor
 enum StarterExercises {
     /// One entry of the JSON file.
@@ -10,9 +10,13 @@ enum StarterExercises {
         let muscleGroup: MuscleGroup
         let equipment: Equipment
         let type: ExerciseType
+        /// Written only for a per-side exercise.
+        let isPerSide: Bool?
 
         func makeExercise() -> Exercise {
-            Exercise(name: name, muscleGroup: muscleGroup, equipment: equipment, type: type)
+            Exercise(
+                name: name, muscleGroup: muscleGroup, equipment: equipment, type: type,
+                isPerSide: isPerSide)
         }
     }
 
@@ -24,10 +28,23 @@ enum StarterExercises {
         return try JSONDecoder().decode([Entry].self, from: Data(contentsOf: url))
     }
 
-    /// Inserts every starter exercise and saves, only when the store has no exercises.
-    static func seedIfEmpty(_ context: ModelContext) throws {
-        guard try context.fetchCount(FetchDescriptor<Exercise>()) == 0 else { return }
-        for entry in try entries() {
+    /// The names of the starter exercises done on each side, or none when the file can't be read (a unit test
+    /// checks that it can).
+    static let perSideNames: Set<String> = Set(
+        ((try? entries()) ?? []).filter { $0.isPerSide == true }.map(\.name))
+
+    /// Inserts each starter exercise whose name, ignoring case, no stored exercise has, and saves. Stored
+    /// exercises are left as they are, so a store seeded before new starters were added gains only those.
+    static func seedMissing(_ context: ModelContext) throws {
+        let stored = Set(
+            try context.fetch(FetchDescriptor<Exercise>()).map {
+                ExerciseCatalog.normalized($0.name).key
+            })
+        let missing = try entries().filter {
+            !stored.contains(ExerciseCatalog.normalized($0.name).key)
+        }
+        guard !missing.isEmpty else { return }
+        for entry in missing {
             context.insert(entry.makeExercise())
         }
         try context.saveOrRollBack()

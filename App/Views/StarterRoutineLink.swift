@@ -9,7 +9,11 @@ struct StarterRoutineLink: View {
 
     var body: some View {
         NavigationLink {
-            StarterRoutineDetail(starterRoutine: starterRoutine, present: present)
+            if starterRoutine.format == .stretch {
+                StretchRoutineDetail(starterRoutine: starterRoutine)
+            } else {
+                StarterRoutineDetail(starterRoutine: starterRoutine, present: present)
+            }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(starterRoutine.name)

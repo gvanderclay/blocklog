@@ -48,6 +48,8 @@ struct BackupDocument: Codable, Equatable {
         var type: String
         var restOverrideSeconds: Int?
         var isCustom: Bool
+        /// Absent from files written before per-side exercises, and for an exercise that isn't per side.
+        var isPerSide: Bool? = nil
     }
 
     @MainActor

@@ -222,6 +222,41 @@ struct BackupTests {
         #expect(read.routines.count == 3)
     }
 
+    @Test func importKeepsWhichExercisesArePerSide() throws {
+        let document = try exported(makeSource())
+        let records = Dictionary(uniqueKeysWithValues: document.exercises.map { ($0.name, $0) })
+        #expect(records["Hip Flexor Stretch"]?.isPerSide == true)
+        #expect(records["Elephant Walks"]?.isPerSide == nil)
+        let target = try emptyContainer()
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(document.encoded()))
+
+        #expect(try exercise("Hip Flexor Stretch", in: target.mainContext).isPerSide == true)
+        #expect(try exercise("Elephant Walks", in: target.mainContext).isPerSide == nil)
+        #expect(try exported(target) == document)
+    }
+
+    @Test func aBackupWithoutPerSideFromBeforeItStillImports() throws {
+        let document = try exported(makeSource())
+        var json = try #require(
+            try JSONSerialization.jsonObject(with: document.encoded()) as? [String: Any])
+        let exercises = try #require(json["exercises"] as? [[String: Any]])
+        #expect(exercises.contains { $0["isPerSide"] != nil })
+        json["exercises"] = exercises.map { record in
+            var record = record
+            record["isPerSide"] = nil
+            return record
+        }
+        let target = try emptyContainer()
+
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(JSONSerialization.data(withJSONObject: json)))
+
+        let stored = try target.mainContext.fetch(FetchDescriptor<Exercise>())
+        #expect(stored.count == document.exercises.count)
+        #expect(stored.allSatisfy { $0.isPerSide == nil })
+    }
+
     @Test func fileIsIso8601JsonWithRawStringEnums() throws {
         let source = try makeSource()
         let text = String(decoding: try exported(source).encoded(), as: UTF8.self)
@@ -322,7 +357,7 @@ struct BackupTests {
     /// A store whose saves fail, standing in for a full disk, holding what `populate` adds.
     @Test func aFailedSaveRestoresTheStore() throws {
         let store = try ReadOnlyStore { context in
-            try StarterExercises.seedIfEmpty(context)
+            try StarterExercises.seedMissing(context)
             try populate(context)
         }
         defer { store.remove() }
@@ -410,7 +445,7 @@ struct BackupTests {
         }
         #expect(try exported(target) == before)
         #expect(try Backup(context: target.mainContext).storedCounts() == storedBefore)
-        try StarterExercises.seedIfEmpty(target.mainContext)
+        try StarterExercises.seedMissing(target.mainContext)
         #expect(try exported(target) == before)
         #expect(try Backup(context: target.mainContext).storedCounts() == storedBefore)
     }

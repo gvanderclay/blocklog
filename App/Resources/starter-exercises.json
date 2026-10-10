@@ -394,5 +394,134 @@
     "muscleGroup": "fullBody",
     "equipment": "bodyweight",
     "type": "bodyweightReps"
+  },
+  {
+    "name": "Hip Flexor Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Elephant Walks",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Pancake Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Figure-Four Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Lat Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Seated Side Bend",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Standing Active Twist",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Marching in Place",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Heel Digs",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Knee Lifts",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Shoulder Rolls",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Knee Bends",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Supine Hamstring Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Knee-to-Chest Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Cat-Cow",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Knee Rolls",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Doorway Chest Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration"
+  },
+  {
+    "name": "Cross-Body Shoulder Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Overhead Triceps Stretch",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
+  },
+  {
+    "name": "Neck Side Bend",
+    "muscleGroup": "stretching",
+    "equipment": "bodyweight",
+    "type": "duration",
+    "isPerSide": true
   }
 ]

@@ -89,5 +89,57 @@
       {"exercise": "Dumbbell Curl", "sets": ["normal", "normal"], "repRange": [10, 15]},
       {"exercise": "Crunch", "sets": ["normal", "normal"], "repRange": [12, 20]}
     ]
+  },
+  {
+    "name": "Full-Body Quick Stretch",
+    "format": "stretch",
+    "why": "Seven stretches from hips to shoulders, mostly 30-second holds; do it after lifting or in a separate warmed-up session.",
+    "exercises": [
+      {"exercise": "Hip Flexor Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Elephant Walks", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Pancake Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Figure-Four Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Lat Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Seated Side Bend", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Standing Active Twist", "sets": ["normal"], "targetDurationSeconds": 5}
+    ]
+  },
+  {
+    "name": "Dynamic Lifting Warm-Up",
+    "format": "stretch",
+    "why": "Five standing, unloaded movements to warm up before lifting; follow it with light sets of your first exercise.",
+    "exercises": [
+      {"exercise": "Marching in Place", "sets": ["normal"], "targetDurationSeconds": 180},
+      {"exercise": "Heel Digs", "sets": ["normal"], "targetDurationSeconds": 60},
+      {"exercise": "Knee Lifts", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Shoulder Rolls", "sets": ["normal"], "targetDurationSeconds": 45},
+      {"exercise": "Knee Bends", "sets": ["normal"], "targetDurationSeconds": 45}
+    ]
+  },
+  {
+    "name": "Hips and Lower Back",
+    "format": "stretch",
+    "why": "Four hip and hamstring holds and two slow movements; do it after lifting or in a separate warmed-up session.",
+    "exercises": [
+      {"exercise": "Hip Flexor Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Figure-Four Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Supine Hamstring Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Knee-to-Chest Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Cat-Cow", "sets": ["normal"], "targetDurationSeconds": 60},
+      {"exercise": "Knee Rolls", "sets": ["normal"], "targetDurationSeconds": 60}
+    ]
+  },
+  {
+    "name": "Upper Body Reset",
+    "format": "stretch",
+    "why": "Chest, shoulder, arm and neck stretches to pair with pressing and rowing; do it after lifting or as a warmed-up break.",
+    "exercises": [
+      {"exercise": "Doorway Chest Stretch", "sets": ["normal"], "targetDurationSeconds": 60},
+      {"exercise": "Cross-Body Shoulder Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Overhead Triceps Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Lat Stretch", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Seated Side Bend", "sets": ["normal"], "targetDurationSeconds": 30},
+      {"exercise": "Neck Side Bend", "sets": ["normal"], "targetDurationSeconds": 15}
+    ]
   }
 ]

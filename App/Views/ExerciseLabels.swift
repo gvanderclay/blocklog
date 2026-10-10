@@ -14,6 +14,7 @@ extension MuscleGroup {
         case .glutes: "Glutes"
         case .calves: "Calves"
         case .fullBody: "Full Body"
+        case .stretching: "Stretching"
         }
     }
 }

@@ -85,7 +85,8 @@ struct Backup {
                 .init(
                     id: exercise.id, name: exercise.name, muscleGroup: exercise.muscleGroupRawValue,
                     equipment: exercise.equipmentRawValue, type: exercise.typeRawValue,
-                    restOverrideSeconds: exercise.restOverrideSeconds, isCustom: exercise.isCustom)
+                    restOverrideSeconds: exercise.restOverrideSeconds, isCustom: exercise.isCustom,
+                    isPerSide: exercise.isPerSide)
             },
             programmes: programmes.map { programme in
                 .init(
@@ -171,7 +172,8 @@ struct Backup {
                 id: record.id, name: record.name,
                 muscleGroup: try Self.parse(record.muscleGroup),
                 equipment: try Self.parse(record.equipment), type: try Self.parse(record.type),
-                restOverrideSeconds: record.restOverrideSeconds, isCustom: record.isCustom)
+                restOverrideSeconds: record.restOverrideSeconds, isCustom: record.isCustom,
+                isPerSide: record.isPerSide)
             context.insert(exercise)
             exercises[record.id] = exercise
         }

@@ -29,7 +29,7 @@ struct StarterRoutineTests {
 
     @Test func theFileLoadsAndNamesOnlyStarterExercisesOfTheRightType() throws {
         let starterRoutines = try StarterRoutine.load()
-        #expect(starterRoutines.count == 7)
+        #expect(starterRoutines.count == 11)
         #expect(Set(starterRoutines.map(\.name)).count == starterRoutines.count)
         let starters = try container.mainContext.fetch(FetchDescriptor<Exercise>())
         let types = Dictionary(uniqueKeysWithValues: starters.map { ($0.name, $0.type) })
@@ -84,6 +84,13 @@ struct StarterRoutineTests {
             ])
         #expect(StarterRoutine.standalone(in: starterRoutines).map(\.name) == ["Golden Six"])
         #expect(
+            StarterRoutine.stretching(in: starterRoutines).map(\.name) == [
+                "Full-Body Quick Stretch", "Dynamic Lifting Warm-Up", "Hips and Lower Back",
+                "Upper Body Reset",
+            ])
+        #expect(StarterRoutine.copyable(in: starterRoutines).count == 7)
+        #expect(!StarterRoutine.copyable(in: starterRoutines).contains { $0.format == .stretch })
+        #expect(
             StarterRoutine.suggestions(in: starterRoutines).map(\.name) == [
                 "Full Body", "Upper Body",
             ])
@@ -104,6 +111,38 @@ struct StarterRoutineTests {
         // 18 × (60 + 40) s = 30 min.
         #expect(fullBody.estimatedMinutes(restSeconds: 60) == 30)
         #expect(fullBody.summary(restSeconds: 90) == "7 exercises · about 39 min")
+    }
+
+    @Test func stretchRoutinesHoldOneTimedSetOfAStretchPerEntryAndNoProgramme() throws {
+        let stretchRoutines = StarterRoutine.stretching(in: try StarterRoutine.load())
+        let stretches = Dictionary(
+            uniqueKeysWithValues: try container.mainContext.fetch(FetchDescriptor<Exercise>())
+                .filter { $0.muscleGroup == .stretching }.map { ($0.name, $0) })
+        for routine in stretchRoutines {
+            #expect(routine.programme == nil)
+            for entry in routine.exercises {
+                #expect(stretches[entry.exercise] != nil, "\(entry.exercise) isn't a stretch")
+                #expect(entry.sets == [.normal])
+                #expect(entry.target?.seconds != nil)
+                #expect(entry.isPerSide == (stretches[entry.exercise]?.isPerSide == true))
+            }
+        }
+    }
+
+    /// The research's timer contract: each hold, twice for a per-side stretch, plus a 5 s lead-in before each.
+    @Test func estimatesAStretchRoutineAsOneRoundOfHoldsAndLeadIns() throws {
+        let quick = try starterRoutine("Full-Body Quick Stretch")
+        // 4:40 of holds over 11 timed windows, plus 11 × 5 s of lead-ins = 5:35.
+        #expect(quick.stretchRoundSeconds == 335)
+        #expect(quick.estimatedMinutes(restSeconds: 90) == 6)
+        #expect(quick.summary(restSeconds: 90) == "7 stretches · about 6 min")
+        #expect(try starterRoutine("Dynamic Lifting Warm-Up").stretchRoundSeconds == 385)
+        #expect(try starterRoutine("Hips and Lower Back").stretchRoundSeconds == 410)
+        #expect(try starterRoutine("Upper Body Reset").stretchRoundSeconds == 350)
+        let twist = try #require(quick.exercises.last)
+        #expect(twist.holdSummary == "5 s per side")
+        #expect(twist.spokenHoldSummary == "5 seconds per side")
+        #expect(quick.exercises[1].holdSummary == "30 s")
     }
 
     @Test func startingAStandaloneGivesAnUnlinkedWorkoutInOrderPrefilledFromHistory() throws {

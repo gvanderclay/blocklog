@@ -1,11 +1,20 @@
 import Foundation
 
-/// A bundled routine from `starter-routines.json`, read-only: one of a starter programme's routines or a
-/// standalone one. It starts a workout or seeds a routine through `StarterLibrary`.
+/// A bundled routine from `starter-routines.json`, read-only: one of a starter programme's routines, a
+/// standalone one, or a stretch routine. A routine of sets starts a workout or seeds a routine through
+/// `StarterLibrary`; a stretch routine plays in the guided player.
 @MainActor
 struct StarterRoutine: Decodable, Identifiable {
     /// The time a set takes besides its rest, for the estimate.
     static let secondsPerSet = 40
+    /// The lead-in before each hold of a stretch routine, for the estimate.
+    static let leadInSeconds = 5
+
+    /// How the starter routine plays. The file writes "stretch" for a stretch routine and nothing for a routine of
+    /// sets.
+    enum Format: String, Decodable {
+        case stretch
+    }
 
     /// One exercise of the starter routine, named as in `starter-exercises.json`, with a target: a rep range or a
     /// target duration.
@@ -52,6 +61,19 @@ struct StarterRoutine: Decodable, Identifiable {
                     debugDescription: "An entry has a rep range or a target duration, not both.")
             }
         }
+
+        /// Whether the starter exercise is done on each side, as a stretch held on each side is.
+        var isPerSide: Bool { StarterExercises.perSideNames.contains(exercise) }
+
+        /// A stretch's hold: "30 s", or "30 s per side" for a per-side stretch.
+        var holdSummary: String {
+            "\(target?.seconds ?? 0) s\(isPerSide ? " per side" : "")"
+        }
+
+        /// The hold read aloud: "30 seconds", or "30 seconds per side".
+        var spokenHoldSummary: String {
+            "\(target?.seconds ?? 0) seconds\(isPerSide ? " per side" : "")"
+        }
     }
 
     let name: String
@@ -59,6 +81,8 @@ struct StarterRoutine: Decodable, Identifiable {
     let programme: String?
     /// Why the starter routine is built the way it is, in one line.
     let why: String
+    /// Nil for a routine of sets.
+    let format: Format?
     let exercises: [Entry]
 
     nonisolated var id: String { name }
@@ -86,9 +110,20 @@ struct StarterRoutine: Decodable, Identifiable {
         }
     }
 
-    /// The standalone routines, in file order.
+    /// The standalone routines of sets, in file order.
     static func standalone(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
-        starterRoutines.filter { $0.programme == nil }
+        starterRoutines.filter { $0.programme == nil && $0.format == nil }
+    }
+
+    /// The stretch routines, in file order.
+    static func stretching(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
+        starterRoutines.filter { $0.format == .stretch }
+    }
+
+    /// The routines of sets, which can be copied into My Routines or a programme, in file order. Stretch routines
+    /// can't be copied yet.
+    static func copyable(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
+        starterRoutines.filter { $0.format == nil }
     }
 
     /// What an empty routine list suggests: the first routine of the first two programmes.
@@ -105,14 +140,27 @@ struct StarterRoutine: Decodable, Identifiable {
 
     var setCount: Int { exercises.reduce(0) { $0 + $1.sets.count } }
 
-    /// Every set takes its rest plus `secondsPerSet`, rounded to the nearest minute.
-    func estimatedMinutes(restSeconds: Int) -> Int {
-        Int((Double(setCount * (restSeconds + Self.secondsPerSet)) / 60).rounded())
+    /// One round of a stretch routine: each hold, twice for a per-side stretch, with a lead-in before each. Pauses
+    /// between sides aren't counted.
+    var stretchRoundSeconds: Int {
+        exercises.reduce(0) { total, entry in
+            total + (entry.isPerSide ? 2 : 1) * ((entry.target?.seconds ?? 0) + Self.leadInSeconds)
+        }
     }
 
-    /// "7 exercises · about 39 min".
+    /// Rounded to the nearest minute: one round of a stretch routine, which takes no rest; otherwise every set
+    /// takes its rest plus `secondsPerSet`.
+    func estimatedMinutes(restSeconds: Int) -> Int {
+        let seconds =
+            format == .stretch
+            ? stretchRoundSeconds : setCount * (restSeconds + Self.secondsPerSet)
+        return Int((Double(seconds) / 60).rounded())
+    }
+
+    /// "7 exercises · about 39 min", or "7 stretches · about 6 min" for a stretch routine.
     func summary(restSeconds: Int) -> String {
-        let count = exercises.count == 1 ? "1 exercise" : "\(exercises.count) exercises"
+        let (one, many) = format == .stretch ? ("stretch", "stretches") : ("exercise", "exercises")
+        let count = exercises.count == 1 ? "1 \(one)" : "\(exercises.count) \(many)"
         return "\(count) · about \(estimatedMinutes(restSeconds: restSeconds)) min"
     }
 }

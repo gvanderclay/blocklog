@@ -30,4 +30,19 @@ struct StoreMigrationTests {
         #expect(routines.last?.workouts.count == 1)
         #expect(try fixture.context.fetchCount(FetchDescriptor<Programme>()) == 0)
     }
+
+    @Test func exercisesSurviveThePerSideFieldWithNoneMarkedPerSide() throws {
+        let fixture = try FixtureStore("before-32a")
+        defer { fixture.remove() }
+        let exercises = try fixture.context.fetch(FetchDescriptor<Exercise>())
+
+        #expect(exercises.count == 67)
+        #expect(exercises.allSatisfy { $0.isPerSide == nil })
+        #expect(!exercises.contains { $0.muscleGroup == .stretching })
+        let bench = try #require(exercises.first { $0.name == "Dumbbell Bench Press" })
+        #expect(bench.restOverrideSeconds == 120)
+        #expect(bench.workoutExercises.count == 1)
+        #expect(bench.routineExercises.count == 1)
+        #expect(exercises.first { $0.name == "cat-cow" }?.isCustom == true)
+    }
 }

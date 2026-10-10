@@ -26,13 +26,13 @@ struct BlocklogApp: App {
         RoutineExercise.self, Programme.self,
     ])
 
-    /// The store with every model, seeded with the starter exercises when it has none.
+    /// The store with every model, seeded with any starter exercise it lacks.
     /// In memory for unit tests; on disk otherwise.
 
     static func makeContainer(inMemory: Bool) throws -> ModelContainer {
         let container = try ModelContainer(
             for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: inMemory))
-        try StarterExercises.seedIfEmpty(container.mainContext)
+        try StarterExercises.seedMissing(container.mainContext)
         return container
     }
 }
