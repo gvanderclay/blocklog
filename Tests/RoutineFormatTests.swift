@@ -106,14 +106,14 @@ struct RoutineFormatTests {
 
     // MARK: Workout format
 
-    @Test func workoutFieldsReadAsTheFormatAndWriteBack() {
+    @Test func workoutFieldsReadAsTheFormatAndWriteBack() throws {
+        let score = try #require(AMRAPScore(storedRounds: 14, extraReps: 7))
         #expect(WorkoutFormat(rawValue: nil, rounds: nil, extraReps: nil) == .sets)
         #expect(
-            WorkoutFormat(rawValue: "timedAMRAP", rounds: 14, extraReps: 7)
-                == .timedAMRAP(rounds: 14, extraReps: 7))
+            WorkoutFormat(rawValue: "timedAMRAP", rounds: 14, extraReps: 7) == .timedAMRAP(score))
         #expect(
-            WorkoutFormat(rawValue: "timedAMRAP", rounds: 0, extraReps: 0)
-                == .timedAMRAP(rounds: 0, extraReps: 0))
+            WorkoutFormat(rawValue: "timedAMRAP", rounds: 0, extraReps: 0)?.score
+                == AMRAPScore(storedRounds: 0, extraReps: 0))
         for (raw, rounds, extraReps) in [
             (String?.none, Int?.some(3), Int?.some(2)), ("timedAMRAP", nil, 2),
             ("timedAMRAP", 3, nil),
@@ -123,14 +123,16 @@ struct RoutineFormatTests {
         }
 
         let workout = Workout(title: "Cindy", startDate: .now)
-        workout.format = .timedAMRAP(rounds: 14, extraReps: 7)
+        workout.format = .timedAMRAP(score)
         #expect(workout.formatRawValue == "timedAMRAP")
         #expect(workout.amrapRounds == 14)
         #expect(workout.amrapExtraReps == 7)
+        #expect(workout.format == .timedAMRAP(score))
         workout.format = .sets
         #expect(workout.formatRawValue == nil)
         #expect(workout.amrapRounds == nil)
         #expect(workout.amrapExtraReps == nil)
+        #expect(workout.format.score == nil)
     }
 
     // MARK: AMRAP round

@@ -50,18 +50,30 @@ struct HistoryTab: View {
     }
 
     private func row(_ workout: Workout) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let details = [
+            WorkoutHistory.dateText(of: workout), WorkoutHistory.durationText(of: workout),
+            WorkoutHistory.exerciseCountText(of: workout),
+        ].compactMap { $0 }.joined(separator: " · ")
+        let score = workout.format.score
+        return VStack(alignment: .leading, spacing: 4) {
             Text(WorkoutHistory.rowTitle(of: workout)).font(.headline)
-            Text(
-                [
-                    WorkoutHistory.dateText(of: workout), WorkoutHistory.durationText(of: workout),
-                    WorkoutHistory.exerciseCountText(of: workout),
-                ].compactMap { $0 }.joined(separator: " · ")
-            )
-            .font(.subheadline)
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
+            Text(details)
+                .font(.subheadline)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            if let score {
+                Text(score.text)
+                    .font(.subheadline)
+                    .fontDesign(.rounded)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
         }
-        .accessibilityElement(children: .combine)
+        // .ignore with an explicit label and value: .combine reads the row twice.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(WorkoutHistory.rowTitle(of: workout))
+        .accessibilityValue(
+            [details, score.map { "score \($0.spokenText)" }].compactMap { $0 }.joined(
+                separator: ", "))
     }
 }

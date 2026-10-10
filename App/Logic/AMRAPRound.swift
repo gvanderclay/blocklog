@@ -39,6 +39,28 @@ struct AMRAPRound {
         entries = zip(ordered, reps).map { Entry(exercise: $0.exercise, reps: $1) }
     }
 
+    /// The round of a routine draft's exercises, such as a starter routine's, in order. Nil unless they keep the
+    /// rules of `fixedReps(of:)`.
+    init?(draft: RoutineDraft) {
+        let rows = draft.exercises.map {
+            Row(type: $0.exercise.type, plannedSetCount: $0.sets.count, target: $0.target)
+        }
+        guard let reps = Self.fixedReps(of: rows) else { return nil }
+        entries = zip(draft.exercises, reps).map { Entry(exercise: $0.exercise, reps: $1) }
+    }
+
+    /// Each exercise's total reps for the score, in order: the score's rounds times its reps, plus the extra reps
+    /// given out in round order, each exercise taking at most its reps. Cindy (5, 10, 15) at 14 rounds + 7 reps
+    /// gives 75, 142 and 210.
+    func totalReps(for score: AMRAPScore) -> [Int] {
+        var extraLeft = score.extraReps
+        return entries.map { entry in
+            let extra = min(extraLeft, entry.reps)
+            extraLeft -= extra
+            return score.rounds * entry.reps + extra
+        }
+    }
+
     /// Each row's fixed rep count, in order; nil unless there is at least one row and every row is a rep
     /// exercise (weight × reps or bodyweight reps) with exactly one planned set and a rep range whose low end is
     /// its high end. Import checks a stored routine's records with it.

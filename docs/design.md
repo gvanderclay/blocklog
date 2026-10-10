@@ -21,7 +21,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 ## Typography
 
 - System text styles only (`.body`, `.headline`, `.title2` …), never fixed point sizes, so Dynamic Type works everywhere.
-- Numbers the user watches or edits (weights, reps, durations, elapsed time, the rest countdown, summary stats) use `.fontDesign(.rounded)` with `.monospacedDigit()`, so they don't jitter. In set rows they keep the row's text style; the rest countdown uses `.title2.weight(.semibold)`; the finish summary's stats use `.title`.
+- Numbers the user watches or edits (weights, reps, durations, elapsed time, the rest countdown, summary stats) use `.fontDesign(.rounded)` with `.monospacedDigit()`, so they don't jitter. In set rows they keep the row's text style; the rest countdown uses `.title2.weight(.semibold)`; the finish summary's stats use `.title`. The AMRAP player's countdown, read from across the room, is the one size beyond `.largeTitle`: 72 points scaled with Dynamic Type (`@ScaledMetric(relativeTo: .largeTitle)`), semibold.
 - A changing number animates with `.contentTransition(.numericText(value:))` inside an animation; the rest countdown uses `.numericText(countsDown: true)`.
 - Secondary information (Previous, setup line, progression note, footnotes) uses `.subheadline` or `.footnote` with `.secondary`.
 
@@ -34,6 +34,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Reduce Motion: read `@Environment(\.accessibilityReduceMotion)`. When it is on, rows in lists are inserted, removed and filtered without animation (SwiftUI `List` gives no supported cross-fade for its rows; [Apple's guidance](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion) allows removing the animation): pass `reduceMotion ? nil : .default` to `withAnimation` and `.animation`. Every other transition is `.opacity`, so sliding and scaling (sheets, the timer bar, the diagram's pin and adders) become cross-fades, and symbol bounces don't play. Numeric-text transitions stay; the system already tones them down.
 - No looping, pulsing or attention-seeking animation. The rest ring drains continuously, which is information, not decoration.
 - The stretch player (ticket 32b): the countdown rolls with `.numericText(countsDown: true)`, and when the lead-in or hold changes, the stretch's name, status, cue and up next cross-fade (`.contentTransition(.opacity)` with the default animation), which Reduce Motion keeps because it is already a cross-fade. Nothing else in the player moves.
+- The AMRAP player (ticket 33b): the countdown rolls with `.numericText(countsDown: true)`, the round number rolls with `.numericText(value:)` on Round done, and "Get ready" and "Paused" cross-fade. The extra reps roll as they step. The finish summary's checkmark bounces once (not with Reduce Motion). Nothing else moves.
 
 ## Haptics
 
@@ -51,6 +52,11 @@ Haptics go through SwiftUI's `.sensoryFeedback(_:trigger:)`, which follows the s
 | Stretch player: a hold reaches zero | warning | `.warning` |
 | Stretch player: +15 | selection | `.selection` |
 | Stretch routine logged (at its end, or Save on quit) | success | `.success` |
+| AMRAP player: each of the time cap's last 5 seconds | light impact | `.impact(weight: .light)` |
+| AMRAP player: time up | warning | `.warning` |
+| AMRAP player: Round done | success | `.success` |
+| AMRAP player: extra reps step | selection | `.selection` |
+| AMRAP logged (Save at time up, or Save on quit) | success | `.success` |
 | Workout finished (summary appears) | success | `.success` |
 | Import completed | success | `.success` |
 
@@ -59,7 +65,7 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 ## Sound
 
 - Two sounds: `App/Resources/rest-chime.caf`, a soft two-tone chime (A5 then E6) of 0.6 seconds, and `App/Resources/timer-tick.caf`, a short, quiet click (E6, 0.05 seconds, 6 dB below the chime). `scripts/make-chime.swift` synthesizes both, and `just chime` regenerates them; never replace them with downloaded files.
-- The guided players tick once a second through a hold's last 5 seconds, and play the chime when the hold reaches zero; lead-ins are silent. They play in the foreground only: leaving the app pauses the stretch player, and it schedules no notification.
+- The guided players tick once a second through a hold's last 5 seconds (the time cap's, in the AMRAP player), and play the chime when it reaches zero; lead-ins and the AMRAP's get ready are silent. They play in the foreground only: leaving the app pauses the player, and it schedules no notification.
 - When the rest timer reaches zero with the app in the foreground, the app plays the chime with `AVAudioPlayer` through an `AVAudioSession` in the `.ambient` category (`TimerSounds`, which the guided players share). That category mixes with the user's music (never pausing or ducking it) and is silenced by the ring/silent switch.
 - The rest notification uses the same file: `UNNotificationSound(named: UNNotificationSoundName("rest-chime.caf"))`.
 - Settings has a "Timer Sounds" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime or tick and a notification with no sound; the haptics still play.
@@ -77,6 +83,7 @@ Each touch is specified in its feature ticket; this is the rule that ticket impl
 - Tapping a Previous value copies it into an unchecked set (ticket 09).
 - The setup diagram animates between setups (ticket 14).
 - The stretch player keeps the screen awake while it shows (ticket 32b). Quitting after at least one finished hold asks "Save what you did?" (Save, Discard, Keep Going); quitting with none closes at once.
+- The AMRAP player (ticket 33b) is a `fullScreenCover` with Quit at the top left. Before Start it is a list: the dumbbell weights with − and + (or the weight menu), the round's exercises with their reps, last time's score, and Start. During the AMRAP it shows "Round N", "Get ready" or "Paused", the big countdown, and the round's exercises with reps and weight; a bottom bar holds Pause (icon only) and a prominent Round done, enabled only while the clock runs. At time up it is a form: "Time's up", an Extra reps stepper (0 to one fewer than a round's reps), the score, and Save at the top right; then the summary shows today's and last time's score with Done. It keeps the screen awake. Quitting after a round, or at time up, asks "Save what you did?" (Save, Discard, Keep Going); quitting with no round done closes at once.
 
 ## SF Symbols
 
@@ -98,7 +105,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Starter Routines | `rectangle.stack` |
 | Rest time | `timer` |
 | Progression note | `arrow.up.circle.fill` |
-| Finish summary, stretch routine done | `checkmark.seal.fill` |
+| Finish summary, stretch routine done, AMRAP summary | `checkmark.seal.fill` |
 | Stretch player Back / Skip | `backward.fill` / `forward.fill` |
 | Pause / resume a guided player | `pause.fill` / `play.fill` |
 | More actions menu | `ellipsis.circle` |
@@ -176,6 +183,13 @@ Phase 6 (tickets 32a–32b):
 - [ ] +15: a selection tick, and the countdown rolls to the new time.
 - [ ] Pause, Skip and Back: the countdown and the stretch change at once, the text cross-fading.
 - [ ] Quit after a hold: "Save what you did?" asks first; Save shows the workout in History.
+
+Phase 7 (tickets 33a–33b):
+
+- [ ] Start Cindy: the 10-second get ready, then the big countdown, readable from the floor; the screen stays awake.
+- [ ] Round done: a success tap, and the round number rolls.
+- [ ] The time cap's last 5 seconds: a tick and a light tap each, then the chime and a warning buzz at zero.
+- [ ] At time up, step the extra reps: a selection tick each; Save shows "14 rounds + 7 reps" and last time's score, and History shows the score.
 
 ## App icon
 

@@ -2,8 +2,8 @@ import SwiftData
 import SwiftUI
 
 /// A starter routine's exercises with their plans, such as "3 × 8–12", why it is built that way, its format unless it
-/// is Sets, and Start Workout, Add to My Routines and, for a programme of several routines, Add Programme. A Timed
-/// AMRAP offers no Start Workout until its player exists.
+/// is Sets, and Start Workout (Start, opening the AMRAP player, for a Timed AMRAP), Add to My Routines and, for a
+/// programme of several routines, Add Programme.
 struct StarterRoutineDetail: View {
     let starterRoutine: StarterRoutine
     /// Shows the started workout in the full-screen workout screen.
@@ -15,6 +15,7 @@ struct StarterRoutineDetail: View {
     @State private var draft: RoutineDraft?
     @State private var programmeAdded = false
     @State private var saveFailed = false
+    @State private var amrapPlayer: AMRAPPlayer?
 
     private var programme: StarterProgramme? {
         StarterRoutine.programme(of: starterRoutine, in: StarterRoutine.bundled)
@@ -61,15 +62,13 @@ struct StarterRoutineDetail: View {
                 }
             }
             Section {
-                if starterRoutine.format == .sets {
-                    Button("Start Workout") { start() }
-                        .disabled(!inProgressWorkouts.isEmpty)
-                        .accessibilityIdentifier("starterRoutineDetail.start")
-                }
+                Button(starterRoutine.format == .sets ? "Start Workout" : "Start") { start() }
+                    .disabled(!inProgressWorkouts.isEmpty)
+                    .accessibilityIdentifier("starterRoutineDetail.start")
                 Button("Add to My Routines") { addToRoutines() }
                     .accessibilityIdentifier("starterRoutineDetail.addToRoutines")
             } footer: {
-                if starterRoutine.format == .sets, !inProgressWorkouts.isEmpty {
+                if !inProgressWorkouts.isEmpty {
                     Text("Finish or discard the workout in progress first.")
                 }
             }
@@ -92,10 +91,15 @@ struct StarterRoutineDetail: View {
             RoutineEditor(newFrom: draft)
         }
         .saveFailedAlert(isPresented: $saveFailed)
+        .fullScreenCover(item: $amrapPlayer) { AMRAPPlayerScreen(player: $0) }
     }
 
     private func start() {
         do {
+            if case .timedAMRAP = starterRoutine.format {
+                amrapPlayer = try AMRAPPlayer.start(starterRoutine, in: modelContext)
+                return
+            }
             if let started = try StarterLibrary(context: modelContext).startWorkout(
                 from: starterRoutine)
             {

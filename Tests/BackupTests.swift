@@ -711,7 +711,9 @@ struct BackupTests {
             context, title: "Cindy", start: Self.start.addingTimeInterval(200_000), finished: true,
             routine: routines[0]
         ) { workout in
-            workout.format = .timedAMRAP(rounds: 14, extraReps: 7)
+            if let score = AMRAPScore(storedRounds: 14, extraReps: 7) {
+                workout.format = .timedAMRAP(score)
+            }
             addExercise(
                 (try? exercise("Push-up", in: context))!, to: workout, in: context, position: 0,
                 sets: [WorkoutSet(position: 0, reps: 147, isCompleted: true)])
@@ -747,7 +749,8 @@ struct BackupTests {
         #expect(routines.first { $0.name == "Push Day" }?.format == .sets)
         let workouts = try target.mainContext.fetch(FetchDescriptor<Workout>())
         #expect(
-            workouts.first { $0.title == "Cindy" }?.format == .timedAMRAP(rounds: 14, extraReps: 7))
+            workouts.first { $0.title == "Cindy" }?.format.score
+                == AMRAPScore(storedRounds: 14, extraReps: 7))
         #expect(workouts.first { $0.title == "Carries" }?.format == .sets)
     }
 

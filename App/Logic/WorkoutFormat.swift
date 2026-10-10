@@ -1,22 +1,25 @@
 import Foundation
 
-/// How a workout was played: Sets, or a Timed AMRAP holding its score, completed rounds plus extra reps. Read once
-/// from a workout's stored fields (`Workout.format`) and written back through the same property, so the score
-/// fields exist exactly when the format is Timed AMRAP.
+/// How a workout was played: Sets, or a Timed AMRAP holding its score. Read once from a workout's stored fields
+/// (`Workout.format`) and written back through the same property, so a score exists exactly when the format is
+/// Timed AMRAP.
 @MainActor
 enum WorkoutFormat: Equatable {
     case sets
-    case timedAMRAP(rounds: Int, extraReps: Int)
+    case timedAMRAP(AMRAPScore)
 
     /// Reads the stored fields; nil for an unknown raw value (the workout stores only Timed AMRAP's), score fields
-    /// on a Sets workout, or a Timed AMRAP without both score fields, each 0 or more. Import checks a stored workout
-    /// with it.
+    /// on a Sets workout, or a Timed AMRAP whose fields don't read as an `AMRAPScore`. Import checks a stored
+    /// workout with it.
     init?(rawValue: String?, rounds: Int?, extraReps: Int?) {
         switch (rawValue, rounds, extraReps) {
         case (nil, nil, nil): self = .sets
         case (let raw?, let rounds?, let extraReps?)
-        where raw == RoutineFormat.Kind.timedAMRAP.rawValue && rounds >= 0 && extraReps >= 0:
-            self = .timedAMRAP(rounds: rounds, extraReps: extraReps)
+        where raw == RoutineFormat.Kind.timedAMRAP.rawValue:
+            guard let score = AMRAPScore(storedRounds: rounds, extraReps: extraReps) else {
+                return nil
+            }
+            self = .timedAMRAP(score)
         default: return nil
         }
     }
@@ -24,6 +27,11 @@ enum WorkoutFormat: Equatable {
     /// The raw value the workout stores: nil for Sets.
     var rawValue: String? {
         if case .timedAMRAP = self { RoutineFormat.Kind.timedAMRAP.rawValue } else { nil }
+    }
+
+    /// The Timed AMRAP's score; nil for Sets.
+    var score: AMRAPScore? {
+        if case .timedAMRAP(let score) = self { score } else { nil }
     }
 }
 
@@ -39,14 +47,8 @@ extension Workout {
         }
         set {
             formatRawValue = newValue.rawValue
-            switch newValue {
-            case .sets:
-                amrapRounds = nil
-                amrapExtraReps = nil
-            case .timedAMRAP(let rounds, let extraReps):
-                amrapRounds = rounds
-                amrapExtraReps = extraReps
-            }
+            amrapRounds = newValue.score?.rounds
+            amrapExtraReps = newValue.score?.extraReps
         }
     }
 }

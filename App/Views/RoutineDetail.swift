@@ -2,8 +2,8 @@ import SwiftData
 import SwiftUI
 
 /// A routine's format, unless it is Sets, and its exercises with their plans, such as "3 × 8–12", plus Edit and a
-/// start by format: Start Workout for Sets, or the rounds and Start that open the stretch player for Stretch. A
-/// Timed AMRAP routine offers no start until its player exists.
+/// start by format: Start Workout for Sets, the rounds and Start that open the stretch player for Stretch, or Start
+/// that opens the AMRAP player for a Timed AMRAP.
 struct RoutineDetail: View {
     let routine: Routine
     /// Shows the started workout, with its progressions, in the full-screen workout screen.
@@ -15,6 +15,7 @@ struct RoutineDetail: View {
     @State private var saveFailed = false
     @State private var rounds = StretchPlayer.roundChoices.lowerBound
     @State private var player: StretchPlayer?
+    @State private var amrapPlayer: AMRAPPlayer?
 
     var body: some View {
         let format = routine.format
@@ -47,23 +48,21 @@ struct RoutineDetail: View {
                     .accessibilityIdentifier("routineDetail.exercise.\(index)")
                 }
             }
-            if format.kind != .timedAMRAP {
-                Section {
-                    if format == .stretch {
-                        Picker("Rounds", selection: $rounds) {
-                            ForEach(StretchPlayer.roundChoices, id: \.self) {
-                                Text("\($0)").tag($0)
-                            }
+            Section {
+                if format == .stretch {
+                    Picker("Rounds", selection: $rounds) {
+                        ForEach(StretchPlayer.roundChoices, id: \.self) {
+                            Text("\($0)").tag($0)
                         }
-                        .accessibilityIdentifier("routineDetail.rounds")
                     }
-                    Button(format == .stretch ? "Start" : "Start Workout") { start() }
-                        .disabled(!inProgressWorkouts.isEmpty)
-                        .accessibilityIdentifier("routineDetail.start")
-                } footer: {
-                    if !inProgressWorkouts.isEmpty {
-                        Text("Finish or discard the workout in progress first.")
-                    }
+                    .accessibilityIdentifier("routineDetail.rounds")
+                }
+                Button(format == .sets ? "Start Workout" : "Start") { start() }
+                    .disabled(!inProgressWorkouts.isEmpty)
+                    .accessibilityIdentifier("routineDetail.start")
+            } footer: {
+                if !inProgressWorkouts.isEmpty {
+                    Text("Finish or discard the workout in progress first.")
                 }
             }
         }
@@ -79,12 +78,18 @@ struct RoutineDetail: View {
         }
         .saveFailedAlert(isPresented: $saveFailed)
         .fullScreenCover(item: $player) { StretchPlayerScreen(player: $0) }
+        .fullScreenCover(item: $amrapPlayer) { AMRAPPlayerScreen(player: $0) }
     }
 
     private func start() {
-        if routine.format == .stretch {
+        switch routine.format {
+        case .stretch:
             player = StretchPlayer.start(routine, rounds: rounds, in: modelContext)
             return
+        case .timedAMRAP:
+            amrapPlayer = AMRAPPlayer.start(routine, in: modelContext)
+            return
+        case .sets: break
         }
         do {
             if let started = try RoutineStart(context: modelContext).startWorkout(from: routine) {

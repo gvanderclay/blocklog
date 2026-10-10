@@ -27,7 +27,8 @@ struct Progression {
     /// The suggestion for a workout exercise of a routine workout that has a rep range, or nil when it has
     /// none: a freeform or timed exercise, no progression sets last time, a progression set short of the top of the
     /// range, or a last weight of 90 lb with no next setting. "Last time" is the workout the previous-set
-    /// lookup uses.
+    /// lookup uses, except that Timed AMRAP workouts are passed over: each of their sets holds an AMRAP's total
+    /// reps, which would otherwise suggest a heavier weight.
     func suggestion(for workoutExercise: WorkoutExercise) -> Suggestion? {
         guard let range = RoutineLibrary.repRange(for: workoutExercise) else { return nil }
         let progressionSets = PreviousSetLookup(context: context).lastProgressionSets(

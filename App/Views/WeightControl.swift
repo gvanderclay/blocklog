@@ -10,6 +10,10 @@ struct WeightControl: View {
     var isHighlighted = false
     /// `workout.exercise.<e>.set.<s>`.
     let identifierPrefix: String
+    /// True for the identifiers `<prefix>.decrease`, `.value`, `.option.<i>` and `.increase`, as the AMRAP
+    /// player's weights use; otherwise `<prefix>.weightMinus`, `.weightValue`, `.weightOption.<i>` and
+    /// `.weightPlus` (`addedWeight…` for an added weight).
+    var usesStepIdentifiers = false
     let onChange: (Double?) -> Void
 
     var body: some View {
@@ -18,6 +22,13 @@ struct WeightControl: View {
         let next = isAdded ? AddedWeight.next(after: weight) : PowerBlockTable.stepUp(from: weight)
         let canDecrease = isAdded ? AddedWeight.canDecrease(from: weight) : previous != nil
         let name = isAdded ? "addedWeight" : "weight"
+        let ids =
+            usesStepIdentifiers
+            ? (minus: "decrease", value: "value", option: "option.", plus: "increase")
+            : (
+                minus: "\(name)Minus", value: "\(name)Value", option: "\(name)Option.",
+                plus: "\(name)Plus"
+            )
         let options: [Double?] = isAdded ? AddedWeight.options : PowerBlockTable.weights.map { $0 }
         HStack(spacing: 0) {
             Button("Decrease weight", systemImage: "minus") {
@@ -27,7 +38,7 @@ struct WeightControl: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
             .disabled(!canDecrease)
-            .accessibilityIdentifier("\(identifierPrefix).\(name)Minus")
+            .accessibilityIdentifier("\(identifierPrefix).\(ids.minus)")
 
             Menu {
                 ForEach(options.enumerated(), id: \.offset) { index, option in
@@ -40,7 +51,7 @@ struct WeightControl: View {
                             Text(text(for: option))
                         }
                     }
-                    .accessibilityIdentifier("\(identifierPrefix).\(name)Option.\(index)")
+                    .accessibilityIdentifier("\(identifierPrefix).\(ids.option)\(index)")
                 }
             } label: {
                 Text(text(for: weight))
@@ -56,7 +67,7 @@ struct WeightControl: View {
             .accessibilityValue(
                 weight.map { "\($0.formatted()) pounds" } ?? "bodyweight"
             )
-            .accessibilityIdentifier("\(identifierPrefix).\(name)Value")
+            .accessibilityIdentifier("\(identifierPrefix).\(ids.value)")
 
             Button("Increase weight", systemImage: "plus") {
                 if let next { onChange(next) }
@@ -65,7 +76,7 @@ struct WeightControl: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
             .disabled(next == nil)
-            .accessibilityIdentifier("\(identifierPrefix).\(name)Plus")
+            .accessibilityIdentifier("\(identifierPrefix).\(ids.plus)")
         }
         .buttonStyle(.borderless)
         .sensoryFeedback(.selection, trigger: weight)

@@ -22,7 +22,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Set values** (`SetValues`): the weight, reps and seconds a set records, as one choice per exercise type holding only that type's values: weight × reps has a weight and reps, bodyweight reps has an optional added weight and reps, duration has seconds. Reps and seconds stay empty until the user fills them in.
 - **Set type** (`SetType`): normal, warm-up, drop or to failure (taken until another rep isn't possible). The set label shows a number for a normal set and "W", "D" or "F" for the others.
 - **Counted set**: any set except a warm-up. Counted sets get an ordinal 1, 2, 3… in order, used to pair sets with previous numbers; only a normal set shows its ordinal as its label.
-- **Progression set**: a normal or to-failure set. Progression looks only at progression sets; warm-up and drop sets never count towards it.
+- **Progression set**: a normal or to-failure set. Progression looks only at progression sets; warm-up and drop sets never count towards it. It passes over Timed AMRAP workouts, whose sets hold an AMRAP's total reps; previous numbers still show them.
 
 ## Routines
 
@@ -66,10 +66,10 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Timer Sounds**: the Settings switch for every timer sound: the rest chime, in the foreground and on the rest notification, and the guided players' ticks and chimes. The haptics play either way.
 - **Backup document**: the versioned JSON file Export writes and Import reads, holding the training data: every exercise, routine and finished workout (and programme, from phase 4), not the settings. Import validates the whole document, then replaces all training data; it never merges.
 
-## Guided routines *(stretching built in phase 6; timed AMRAP's format in phase 7, its player planned)*
+## Guided routines *(stretching built in phase 6; timed AMRAP in phase 7)*
 
 - **Round**: one pass through a guided routine's exercises in order. A stretch routine plays 1 to 3 rounds; a timed AMRAP repeats rounds until the time cap. A **stretch round** (`StretchRound`) is a Stretch routine's stretches, each with its hold; an **AMRAP round** (`AMRAPRound`) is a Timed AMRAP's exercises, each with its fixed rep count, and its reps per round. Each is built only from exercises that keep its format's rules.
-- **Guided player**: the full-screen player that runs a stretch routine or a timed AMRAP on a clock, instead of the workout screen's sets. The stretch player (`StretchPlayer`) offers Pause, Skip (leave the current hold uncounted for the next hold's lead-in), Back (to the previous hold's lead-in) and +15 (add 15 seconds to the current lead-in or hold), with the rounds chosen before Start. Starting is refused while a workout is in progress.
+- **Guided player**: the full-screen player that runs a stretch routine or a timed AMRAP on a clock, instead of the workout screen's sets. The stretch player (`StretchPlayer`) offers Pause, Skip (leave the current hold uncounted for the next hold's lead-in), Back (to the previous hold's lead-in) and +15 (add 15 seconds to the current lead-in or hold), with the rounds chosen before Start. The AMRAP player (`AMRAPPlayer`) offers Round done and Pause, with the weights set before Start. Starting either is refused while a workout is in progress.
 - **Countdown phase** (`PhasedCountdown.Phase`): one timed part of a guided player's countdown, such as a lead-in or a hold, run in order on the injected clock. A **signalled** countdown phase ticks through its last 5 seconds and chimes at its end; a **completed** phase ran to its end.
 - **Stretch log**: a stretch routine played in the stretch player is logged as a finished workout titled with the routine's name, linked to the routine when it is one of the user's (so up next moves) and with no link for a starter one, holding one completed duration set per stretch per round whose hold (either side) was completed, its seconds the hold's length with +15s, the longer side's for a per-side stretch. Finishing logs it; quitting after a completed hold asks "Save what you did?", where Save logs it and Discard drops it. Nothing is stored until then, so if the app is closed mid-routine (the player pauses in the background), the holds done so far are lost.
 - **Stretch**: a starter exercise of type duration in the picker's "Stretching" group (`MuscleGroup.stretching`).
@@ -77,10 +77,12 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Hold**: one timed stretch on one side (or both, if not per side), its length the routine exercise's target duration.
 - **Lead-in**: the 10 seconds before a hold to get into position; between the sides of a per-side stretch it reads "Switch sides".
 - **Cue** and **variation** (`StretchCue`): a stretch's one-line instruction, and its Easier and Harder alternatives, from the bundled `stretch-cues.json`, keyed by exercise name. Not stored.
-- **Timed AMRAP**: a routine format: as many rounds as possible of its exercises, each at a fixed rep count (its rep range with low = high, one planned set), before the time cap. Cindy is the starter one. Its player is planned (phase 7, ticket 33b); until then it isn't offered a Start.
+- **Timed AMRAP**: a routine format: as many rounds as possible of its exercises, each at a fixed rep count (its rep range with low = high, one planned set), before the time cap. Cindy is the starter one. It plays in the AMRAP player: before Start, each dumbbell exercise's weight (pre-filled from its previous numbers, fixed for the AMRAP; bodyweight exercises log no added weight) and last time's score; then a 10-second **get ready**, the time cap counting down with the round number and the round's exercises, a **Round done** tap after each round, and at **time up** the extra reps.
 - **Time cap**: a timed AMRAP's length in whole minutes, 1 to 60, such as 20 minutes.
 - **Extra reps**: the reps done in the unfinished round when the time cap ends, counted in exercise order.
-- **AMRAP score**: completed rounds plus extra reps, shown as "14 rounds + 7 reps" and stored on the workout.
+- **AMRAP score** (`AMRAPScore`): completed rounds plus extra reps, shown as "14 rounds + 7 reps" (always both parts) and stored on the workout. The player builds it from its round, so the extra reps stay below one round's reps; a stored score is read with rounds and extra reps 0 or more only, since the routine may have changed since.
+- **Last time's score**: the score of the newest finished Timed AMRAP workout of the same routine, or, for a starter routine, of an unlinked one with the same title. Shown before Start and on the finish summary.
+- **AMRAP log**: a Timed AMRAP played in the AMRAP player is logged as a finished workout of the Timed AMRAP format with its score, titled with the routine's name, linked to the routine when it is one of the user's and with no link for a starter one, holding one completed set per exercise with its **total reps** (rounds × its reps, plus the extra reps given out in round order) and its weight; an exercise with no reps is left out. Save at time up logs it; quitting after a round asks "Save what you did?", where Save logs the rounds done with 0 extra reps and Discard drops them. It never asks to update the routine.
 
 ## Process
 

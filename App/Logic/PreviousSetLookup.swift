@@ -29,13 +29,26 @@ struct PreviousSetLookup {
     }
 
     /// The values of every progression set (normal and failure) in last time's workout exercise for
-    /// `workoutExercise`, in order; empty when there is no last time. Skips the exercise's own workout.
+    /// `workoutExercise`, in order; empty when there is no last time. Skips the exercise's own workout and Timed
+    /// AMRAP workouts, whose sets each hold an AMRAP's total reps rather than one set's.
     func lastProgressionSets(for workoutExercise: WorkoutExercise) -> [SetValues] {
-        guard let match = lastTime(of: workoutExercise) else { return [] }
+        guard let exercise = workoutExercise.exercise,
+            let match = lastTime(
+                of: exercise, skipping: workoutExercise.workout, includingAMRAP: false)
+        else { return [] }
         return WorkoutLog.orderedSets(of: match).filter {
             SetNumbering.isProgressionSet($0.setType) && $0.values.canCheckOff
         }.map(
             \.values)
+    }
+
+    /// The values of the first counted set the last time the exercise was done, for a start with no set yet, such
+    /// as the AMRAP player's weights; nil when there is none.
+    func previousFirstSet(of exercise: Exercise) -> SetValues? {
+        guard let match = lastTime(of: exercise, skipping: nil) else { return nil }
+        return WorkoutLog.orderedSets(of: match).first {
+            SetNumbering.isCounted($0.setType) && $0.values.canCheckOff
+        }?.values
     }
 
     /// The set at `index` among the sets whose type matches, in the set's exercise's first occurrence in
@@ -43,7 +56,8 @@ struct PreviousSetLookup {
     private func lastTime(
         for set: WorkoutSet, index: Int, matching include: (SetType) -> Bool
     ) -> SetValues? {
-        guard let workoutExercise = set.workoutExercise, let match = lastTime(of: workoutExercise)
+        guard let workoutExercise = set.workoutExercise, let exercise = workoutExercise.exercise,
+            let match = lastTime(of: exercise, skipping: workoutExercise.workout)
         else { return nil }
         let previousSets = WorkoutLog.orderedSets(of: match).filter {
             include($0.setType) && $0.values.canCheckOff
@@ -52,11 +66,11 @@ struct PreviousSetLookup {
         return previousSets[index].values
     }
 
-    /// The first occurrence of the exercise in the most recent finished workout, other than the exercise's
-    /// own, that contains it.
-    private func lastTime(of workoutExercise: WorkoutExercise) -> WorkoutExercise? {
-        guard let exercise = workoutExercise.exercise else { return nil }
-        let editing = workoutExercise.workout
+    /// The first occurrence of the exercise in the most recent finished workout, other than `editing`, that
+    /// contains it, leaving out Timed AMRAP workouts unless `includingAMRAP`.
+    private func lastTime(
+        of exercise: Exercise, skipping editing: Workout?, includingAMRAP: Bool = true
+    ) -> WorkoutExercise? {
         // ponytail: fetches every finished workout for each set; fetch by exercise once history is long.
         let descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate { $0.endDate != nil },
@@ -64,7 +78,8 @@ struct PreviousSetLookup {
         let workouts = (try? context.fetch(descriptor)) ?? []
         guard
             let source = workouts.first(where: { workout in
-                workout !== editing && workout.exercises.contains { $0.exercise === exercise }
+                workout !== editing && (includingAMRAP || workout.format == .sets)
+                    && workout.exercises.contains { $0.exercise === exercise }
             })
         else { return nil }
         return WorkoutLog.orderedExercises(of: source).first { $0.exercise === exercise }

@@ -1,6 +1,5 @@
 import SwiftData
 import SwiftUI
-import UIKit
 
 /// The full-screen guided player for a stretch routine, a starter one or a Stretch-format routine: the stretch's
 /// name, its cue, the countdown, Easier and Harder chips, up next, and Back, Pause, Skip and +15. The last seconds
@@ -12,11 +11,6 @@ struct StretchPlayerScreen: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("timerSoundEnabled") private var timerSoundEnabled = true
-    @State private var sounds = TimerSounds()
-    @State private var tickCount = 0
-    @State private var chimeCount = 0
     @State private var addCount = 0
     @State private var askingToSave = false
     @State private var saveFailed = false
@@ -49,28 +43,13 @@ struct StretchPlayerScreen: View {
                 }
             }
         }
-        // One sleep until the next tick or phase end, not a polling loop; every change of state restarts it.
-        .task(id: player.countdown.state) {
-            while let wake = player.countdown.nextWake {
-                do {
-                    // Zero tolerance: by default the system may wake a long sleep late in proportion to its
-                    // length (measured 0.74 s late after 25 s on an iPhone), which made the first tick late.
-                    try await Task.sleep(
-                        for: .seconds(max(wake.timeIntervalSinceNow, 0)), tolerance: .zero)
-                } catch { return }
-                play(player.countdown.advance())
-            }
-        }
+        .guidedPlayerClock(
+            player.countdown, advance: { player.countdown.advance() },
+            pause: { player.countdown.pause() }
+        )
         .onChange(of: player.countdown.isFinished) { _, finished in
             if finished { save() }
         }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .background { player.countdown.pause() }
-        }
-        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
-        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
-        .sensoryFeedback(.impact(weight: .light), trigger: tickCount)
-        .sensoryFeedback(.warning, trigger: chimeCount)
         .sensoryFeedback(.selection, trigger: addCount)
         .sensoryFeedback(trigger: player.loggedWorkout != nil) { _, logged in
             logged ? .success : nil
@@ -88,18 +67,6 @@ struct StretchPlayerScreen: View {
             Text("Save logs the holds you finished to History.")
         }
         .saveFailedAlert(isPresented: $saveFailed)
-    }
-
-    private func play(_ signal: PhasedCountdown<StretchPlayer.Step>.Signal?) {
-        switch signal {
-        case .tick:
-            tickCount += 1
-            if timerSoundEnabled { sounds.play(.tick) }
-        case .chime:
-            chimeCount += 1
-            if timerSoundEnabled { sounds.play(.chime) }
-        case nil: break
-        }
     }
 
     private func quit() {
@@ -150,7 +117,8 @@ private struct StretchStepView: View {
                         .foregroundStyle(.tint)
                         .accessibilityIdentifier("stretch.status")
                 }
-                StretchCountdown(countdown: player.countdown)
+                CountdownText(countdown: player.countdown, identifier: "stretch.countdown")
+                    .font(.largeTitle.weight(.semibold))
                 if let cue = player.cue {
                     Text(cue.cue)
                         .multilineTextAlignment(.center)
@@ -189,30 +157,6 @@ private struct StretchStepView: View {
         .toggleStyle(.button)
         .buttonStyle(.bordered)
         .accessibilityIdentifier(identifier)
-    }
-}
-
-/// The time left in the current lead-in or hold, updated every second.
-private struct StretchCountdown: View {
-    let countdown: PhasedCountdown<StretchPlayer.Step>
-
-    var body: some View {
-        TimelineView(.periodic(from: countdown.timelineAnchor, by: 1)) { context in
-            let seconds = countdown.seconds(at: context.date)
-            Text(RestTimer.clock(seconds))
-                .font(.largeTitle.weight(.semibold))
-                .fontDesign(.rounded)
-                .monospacedDigit()
-                .contentTransition(.numericText(countsDown: true))
-                .animation(.default, value: seconds)
-                .accessibilityLabel("Time left")
-                .accessibilityValue(
-                    Duration.seconds(seconds).formatted(
-                        .units(allowed: [.minutes, .seconds], width: .wide))
-                )
-                .accessibilityAddTraits(.updatesFrequently)
-                .accessibilityIdentifier("stretch.countdown")
-        }
     }
 }
 

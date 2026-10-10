@@ -1,7 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// One finished workout: its title, date and duration, then each exercise with its sets. Edit switches it to
+/// One finished workout: its title, date, duration and, for a Timed AMRAP, its score, then each exercise with its
+/// sets. Edit switches it to
 /// the workout screen's exercise sections and rows, with no rest timer, elapsed time or Finish.
 struct HistoryDetail: View {
     @Bindable var workout: Workout
@@ -107,6 +108,15 @@ struct HistoryDetail: View {
             Text(WorkoutHistory.dateTimeText(of: workout))
             if let duration = WorkoutHistory.durationText(of: workout) {
                 Text(duration).fontDesign(.rounded).monospacedDigit()
+            }
+            if let score = workout.format.score {
+                LabeledContent("Score") {
+                    Text(score.text).fontDesign(.rounded).monospacedDigit()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Score")
+                .accessibilityValue(score.spokenText)
+                .accessibilityIdentifier("historyDetail.score")
             }
         }
     }
