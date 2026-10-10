@@ -4,7 +4,8 @@ import SwiftUI
 /// The full-screen guided player for a Timed AMRAP: before Start, the dumbbell weights, the round and last time's
 /// score; then the get-ready countdown, the big countdown with the round number and the round's exercises, Round
 /// done and Pause; at time up, the extra reps and Save; then today's and last time's score. Finish before time up
-/// asks whether to save what was done, through the extra reps, or discard it. The screen stays awake while it shows, and leaving the app pauses it.
+/// asks whether to save what was done, through the extra reps, or discard it. The screen stays awake while it shows,
+/// and the clock keeps running in the background.
 struct AMRAPPlayerScreen: View {
     let player: AMRAPPlayer
 
@@ -51,9 +52,7 @@ struct AMRAPPlayerScreen: View {
                 }
             }
         }
-        .guidedPlayerClock(
-            player.countdown, advance: { player.advance() }, pause: { player.send(.pause) }
-        )
+        .guidedPlayerClock(player.countdown, advance: { player.advance() })
         // Time up with the Finish dialog open goes on as it would without it.
         .onChange(of: player.phase) { _, phase in
             if phase == .timeUp { askingToSave = false }

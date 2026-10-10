@@ -65,7 +65,7 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 ## Sound
 
 - Two sounds: `App/Resources/rest-chime.caf`, a soft two-tone chime (A5 then E6) of 0.6 seconds, and `App/Resources/timer-tick.caf`, a short, quiet click (E6, 0.05 seconds, 6 dB below the chime). `scripts/make-chime.swift` synthesizes both, and `just chime` regenerates them; never replace them with downloaded files.
-- The guided players tick once a second through a hold's last 5 seconds (the time cap's, in the AMRAP player), and play the chime when it reaches zero; lead-ins and the AMRAP's get ready are silent. They play in the foreground only: leaving the app pauses the player, and it schedules no notification.
+- The guided players tick once a second through a hold's last 5 seconds (the time cap's, in the AMRAP player), and play the chime when it reaches zero; lead-ins and the AMRAP's get ready are silent. They play in the foreground only: in the background the player's clock keeps running silently, with no notification, and on return it catches up with one signal for whatever ended meanwhile.
 - When the rest timer reaches zero with the app in the foreground, the app plays the chime with `AVAudioPlayer` through an `AVAudioSession` in the `.ambient` category (`TimerSounds`, which the guided players share). That category mixes with the user's music (never pausing or ducking it) and is silenced by the ring/silent switch.
 - The rest notification uses the same file: `UNNotificationSound(named: UNNotificationSoundName("rest-chime.caf"))`.
 - Settings has a "Timer Sounds" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime or tick and a notification with no sound; the haptics still play.

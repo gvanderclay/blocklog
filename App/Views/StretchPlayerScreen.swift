@@ -4,8 +4,8 @@ import SwiftUI
 /// The full-screen guided player for a stretch routine, a starter one or a Stretch-format routine: the stretch's
 /// name, its cue, the countdown, Easier and Harder chips, up next, and Back, Pause, Skip and +15. The last seconds
 /// of each hold tick and its end chimes.
-/// Finishing logs the routine as a workout; Finish before the end asks whether to save what was done or discard it. The screen stays
-/// awake while it shows, and leaving the app pauses it.
+/// Finishing logs the routine as a workout; Finish before the end asks whether to save what was done or discard it.
+/// The screen stays awake while it shows, and the clock keeps running in the background.
 struct StretchPlayerScreen: View {
     let player: StretchPlayer
 
@@ -43,10 +43,7 @@ struct StretchPlayerScreen: View {
                 }
             }
         }
-        .guidedPlayerClock(
-            player.countdown, advance: { player.countdown.advance() },
-            pause: { player.countdown.pause() }
-        )
+        .guidedPlayerClock(player.countdown, advance: { player.countdown.advance() })
         .onChange(of: player.countdown.isFinished) { _, finished in
             // Ending with the Finish dialog open ends as it would without it.
             if finished {
