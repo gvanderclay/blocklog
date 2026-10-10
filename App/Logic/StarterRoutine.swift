@@ -8,7 +8,7 @@ struct StarterRoutine: Decodable, Identifiable {
     /// The time a set takes besides its rest, for the estimate.
     static let secondsPerSet = 40
     /// The lead-in before each hold of a stretch routine, for the estimate.
-    static let leadInSeconds = 5
+    static let leadInSeconds = 10
 
     /// How the starter routine plays. The file writes "stretch" for a stretch routine and nothing for a routine of
     /// sets.

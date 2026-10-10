@@ -37,7 +37,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Starter programme** (`StarterProgramme`): starter routines meant to rotate as one programme, such as Push/Pull/Legs. "Add Programme" creates a programme holding copies of them, in order.
 - **Starter library**: the sheet listing the starter programmes, the starter routines that belong to none, and, under "Stretching", the stretch routines.
 - **Stretch routine**: a starter routine whose format is stretch (`StarterRoutine.Format.stretch`), such as Full-Body Quick Stretch: one timed set of a stretch per entry, its target duration the hold. It plays in the guided player; until phase 7 it can't be copied into My Routines or a programme.
-- **Estimated time**: a starter routine's rough length, every set taking the default rest plus 40 seconds. A stretch routine's is one round: each hold, twice for a per-side stretch, plus a 5-second lead-in before each, without pauses between sides.
+- **Estimated time**: a starter routine's rough length, every set taking the default rest plus 40 seconds. A stretch routine's is one round: each hold, twice for a per-side stretch, plus a 10-second lead-in before each, without pauses between sides.
 - **Programme** (`Programme`) *(planned, phase 4)*: an ordered list of routines you rotate through, such as PPL: Push → Pull → Legs. It owns its routines: adding a routine copies it in, and a routine that leaves the programme, or whose programme is deleted, moves to My Routines. A routine's **programme membership** (`ProgrammeMembership`) is its programme and its position in it, from 0, held together.
 - **Up next** *(planned, phase 4)*: a programme's next routine: the one after the routine of the programme's newest finished workout, wrapping round, or the first with none. It is worked out, never stored; workouts of other routines never move it.
 - **Routine format** *(phase 7; starter routines carry it from phase 6)*: how a routine plays: Sets (the default), Timed AMRAP or Stretch. The bundled starter routines mark stretch routines with `"format": "stretch"` (`StarterRoutine.Format`).
@@ -74,7 +74,7 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Stretch**: a starter exercise of type duration in the picker's "Stretching" group (`MuscleGroup.stretching`).
 - **Per side** (`isPerSide`): an exercise done on each side in turn. The stretch player plays it as two holds, one per side; the workout logs one set per round holding the per-side seconds.
 - **Hold**: one timed stretch on one side (or both, if not per side), its length the routine exercise's target duration.
-- **Lead-in**: the 5 seconds before a hold to get into position; between the sides of a per-side stretch it reads "Switch sides".
+- **Lead-in**: the 10 seconds before a hold to get into position; between the sides of a per-side stretch it reads "Switch sides".
 - **Cue** and **variation** (`StretchCue`): a stretch's one-line instruction, and its Easier and Harder alternatives, from the bundled `stretch-cues.json`, keyed by exercise name. Not stored.
 - **Timed AMRAP**: a routine format: as many rounds as possible of its exercises, each at a fixed rep count, before the time cap. Cindy is the starter one.
 - **Time cap**: a timed AMRAP's length, such as 20 minutes.

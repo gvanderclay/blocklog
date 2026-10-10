@@ -129,16 +129,16 @@ struct StarterRoutineTests {
         }
     }
 
-    /// The research's timer contract: each hold, twice for a per-side stretch, plus a 5 s lead-in before each.
+    /// The research's timer contract: each hold, twice for a per-side stretch, plus a 10 s lead-in before each.
     @Test func estimatesAStretchRoutineAsOneRoundOfHoldsAndLeadIns() throws {
         let quick = try starterRoutine("Full-Body Quick Stretch")
-        // 4:40 of holds over 11 timed windows, plus 11 × 5 s of lead-ins = 5:35.
-        #expect(quick.stretchRoundSeconds == 335)
-        #expect(quick.estimatedMinutes(restSeconds: 90) == 6)
-        #expect(quick.summary(restSeconds: 90) == "7 stretches · about 6 min")
-        #expect(try starterRoutine("Dynamic Lifting Warm-Up").stretchRoundSeconds == 385)
-        #expect(try starterRoutine("Hips and Lower Back").stretchRoundSeconds == 410)
-        #expect(try starterRoutine("Upper Body Reset").stretchRoundSeconds == 350)
+        // 4:40 of holds over 11 timed windows, plus 11 × 10 s of lead-ins = 6:30.
+        #expect(quick.stretchRoundSeconds == 390)
+        #expect(quick.estimatedMinutes(restSeconds: 90) == 7)
+        #expect(quick.summary(restSeconds: 90) == "7 stretches · about 7 min")
+        #expect(try starterRoutine("Dynamic Lifting Warm-Up").stretchRoundSeconds == 410)
+        #expect(try starterRoutine("Hips and Lower Back").stretchRoundSeconds == 460)
+        #expect(try starterRoutine("Upper Body Reset").stretchRoundSeconds == 400)
         let twist = try #require(quick.exercises.last)
         #expect(twist.holdSummary == "5 s per side")
         #expect(twist.spokenHoldSummary == "5 seconds per side")

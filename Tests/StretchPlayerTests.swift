@@ -91,7 +91,7 @@ struct StretchPlayerTests {
         }
         let phases = player.countdown.phases
         #expect(phases.map(\.step) == round(1) + round(2))
-        #expect(phases.map(\.seconds) == [5, 30, 5, 30, 5, 20, 5, 30, 5, 30, 5, 20])
+        #expect(phases.map(\.seconds) == [10, 30, 10, 30, 10, 20, 10, 30, 10, 30, 10, 20])
         #expect(phases.map(\.isSignalled) == phases.map { $0.step.kind == .hold })
         #expect(
             phases.prefix(6).map(\.step.status) == [
@@ -106,15 +106,15 @@ struct StretchPlayerTests {
         #expect(player.cue == StretchCue.bundled["Hip Flexor Stretch"])
         #expect(player.roundText == "Round 1 of 2")
         #expect(player.upNext == "Pancake Stretch")
-        #expect(remaining(player) == 5)
+        #expect(remaining(player) == 10)
 
-        run(player, seconds: 5)
+        run(player, seconds: 10)
         #expect(player.step == .init(kind: .hold, round: 1, entry: 0, side: 1))
         #expect(remaining(player) == 30)
-        run(player, seconds: 30 + 5 + 30 + 5)
+        run(player, seconds: 30 + 10 + 30 + 10)
         #expect(player.step == .init(kind: .hold, round: 1, entry: 1, side: nil))
         #expect(player.upNext == "Hip Flexor Stretch")
-        run(player, seconds: 20 + 5 + 30 + 5 + 30 + 5)
+        run(player, seconds: 20 + 10 + 30 + 10 + 30 + 10)
         #expect(player.step == .init(kind: .hold, round: 2, entry: 1, side: nil))
         #expect(player.roundText == "Round 2 of 2")
         #expect(player.upNext == nil)
@@ -126,26 +126,26 @@ struct StretchPlayerTests {
     @Test func aHoldTicksItsLastFiveSecondsAndChimesAtItsEnd() throws {
         let player = try start(try mixedRoutine())
         // The lead-in is silent.
-        #expect(run(player, seconds: 5).isEmpty)
+        #expect(run(player, seconds: 10).isEmpty)
         #expect(run(player, seconds: 24).isEmpty)
         #expect(run(player, seconds: 6) == [.tick, .tick, .tick, .tick, .tick, .chime])
         // The "Switch sides" lead-in is silent too.
-        #expect(run(player, seconds: 5).isEmpty)
+        #expect(run(player, seconds: 10).isEmpty)
     }
 
     @Test func passingSeveralPhasesAtOnceGivesOneChime() throws {
         let player = try start(try mixedRoutine())
-        clock.advance(5 + 30 + 5 + 30 + 2)
+        clock.advance(10 + 30 + 10 + 30 + 2)
         #expect(player.countdown.advance() == .chime)
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 1, side: nil))
-        #expect(remaining(player) == 3)
+        #expect(remaining(player) == 8)
     }
 
     @Test func nextWakeIsTheNextTickThenTheEnd() throws {
         let player = try start(try mixedRoutine())
-        let leadInEnd = clock.date + 5
+        let leadInEnd = clock.date + 10
         #expect(player.countdown.nextWake == leadInEnd)
-        run(player, seconds: 5)
+        run(player, seconds: 10)
         #expect(player.countdown.nextWake == leadInEnd + 25)
         run(player, seconds: 29)
         #expect(player.countdown.nextWake == leadInEnd + 30)
@@ -157,7 +157,7 @@ struct StretchPlayerTests {
 
     @Test func pauseFreezesTheCountdownAndResumeContinuesIt() throws {
         let player = try start(try mixedRoutine())
-        run(player, seconds: 10)
+        run(player, seconds: 15)
         player.togglePause()
         #expect(player.countdown.isPaused)
         run(player, seconds: 60)
@@ -171,10 +171,10 @@ struct StretchPlayerTests {
 
     @Test func skipLeavesTheHoldUncountedForTheNextLeadIn() throws {
         let player = try start(try mixedRoutine())
-        run(player, seconds: 10)
+        run(player, seconds: 15)
         player.skip()
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 0, side: 2))
-        #expect(remaining(player) == 5)
+        #expect(remaining(player) == 10)
         // From a lead-in, Skip passes its hold too.
         player.skip()
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 1, side: nil))
@@ -190,26 +190,26 @@ struct StretchPlayerTests {
         player.skip()
         #expect(player.countdown.isPaused)
         run(player, seconds: 10)
-        #expect(remaining(player) == 5)
+        #expect(remaining(player) == 10)
     }
 
     @Test func backGoesToThePreviousHoldsLeadIn() throws {
         let player = try start(try mixedRoutine())
-        run(player, seconds: 5 + 30 + 5 + 10)
+        run(player, seconds: 10 + 30 + 10 + 10)
         #expect(player.step == .init(kind: .hold, round: 1, entry: 0, side: 2))
         player.back()
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 0, side: 1))
-        #expect(remaining(player) == 5)
+        #expect(remaining(player) == 10)
         // From the first hold, Back starts its lead-in again.
-        run(player, seconds: 8)
+        run(player, seconds: 13)
         player.back()
         #expect(player.step == .init(kind: .leadIn, round: 1, entry: 0, side: 1))
-        #expect(remaining(player) == 5)
+        #expect(remaining(player) == 10)
     }
 
     @Test func addTimeLengthensTheCurrentHold() throws {
         let player = try start(try mixedRoutine())
-        run(player, seconds: 5 + 28)
+        run(player, seconds: 10 + 28)
         #expect(player.countdown.advance() == nil)
         player.addTime()
         #expect(remaining(player) == 17)
@@ -274,13 +274,13 @@ struct StretchPlayerTests {
     @Test func savingOnQuitLogsOnlyTheHoldsDone() throws {
         let player = try start(try mixedRoutine(), rounds: 2)
         // Round 1: side 1 of the hip flexor with +15, then side 2 skipped; the pancake held.
-        run(player, seconds: 5 + 10)
+        run(player, seconds: 10 + 10)
         player.addTime()
         run(player, seconds: 35)
         player.skip()
-        run(player, seconds: 5 + 20)
+        run(player, seconds: 10 + 20)
         // Round 2: the hip flexor's first side held, then quit mid-way through the second.
-        run(player, seconds: 5 + 30 + 5 + 10)
+        run(player, seconds: 10 + 30 + 10 + 10)
         #expect(player.hasCompletedHold)
 
         let workout = try #require(try player.log(in: context))
