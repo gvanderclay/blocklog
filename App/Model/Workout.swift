@@ -11,6 +11,12 @@ final class Workout {
     var endDate: Date?
     /// The routine the workout started from; nil for a freeform workout. Deleting the routine nullifies it.
     var routine: Routine?
+    /// How the workout was played, with the AMRAP score fields; read all three through `format`. Nil is Sets.
+    var formatRawValue: String?
+    /// A Timed AMRAP workout's completed rounds; nil for any other format.
+    var amrapRounds: Int?
+    /// A Timed AMRAP workout's reps in the unfinished round; nil for any other format.
+    var amrapExtraReps: Int?
 
     /// Unordered: sort by `position`.
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout)

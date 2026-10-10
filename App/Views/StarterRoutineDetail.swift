@@ -1,8 +1,9 @@
 import SwiftData
 import SwiftUI
 
-/// A starter routine's exercises with their plans, such as "3 × 8–12", why it is built that way, and Start Workout,
-/// Add to My Routines and, for a programme of several routines, Add Programme.
+/// A starter routine's exercises with their plans, such as "3 × 8–12", why it is built that way, its format unless it
+/// is Sets, and Start Workout, Add to My Routines and, for a programme of several routines, Add Programme. A Timed
+/// AMRAP offers no Start Workout until its player exists.
 struct StarterRoutineDetail: View {
     let starterRoutine: StarterRoutine
     /// Shows the started workout in the full-screen workout screen.
@@ -25,6 +26,13 @@ struct StarterRoutineDetail: View {
                 Text(starterRoutine.why)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                if let summary = starterRoutine.format.summary {
+                    Text(summary)
+                        .fontDesign(.rounded)
+                        .monospacedDigit()
+                        .accessibilityLabel(starterRoutine.format.spokenSummary ?? summary)
+                        .accessibilityIdentifier("starterRoutineDetail.format")
+                }
             }
             Section {
                 // The starter routine never changes, so a position is a stable identity.
@@ -32,29 +40,36 @@ struct StarterRoutineDetail: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.exercise)
                         Text(
-                            RoutineLibrary.summary(setCount: entry.sets.count, target: entry.target)
+                            RoutineLibrary.summary(
+                                setCount: entry.sets.count, target: entry.target,
+                                in: starterRoutine.format)
                         )
                         .font(.subheadline)
                         .fontDesign(.rounded)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel(
-                            RoutineLibrary.spokenSummary(
-                                setCount: entry.sets.count, target: entry.target)
-                        )
-                        .accessibilityIdentifier("starterRoutineDetail.exercise.\(index).summary")
                     }
-                    .accessibilityElement(children: .combine)
+                    // .ignore with an explicit label and value: .combine reads the row twice.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(entry.exercise)
+                    .accessibilityValue(
+                        RoutineLibrary.spokenSummary(
+                            setCount: entry.sets.count, target: entry.target,
+                            in: starterRoutine.format)
+                    )
+                    .accessibilityIdentifier("starterRoutineDetail.exercise.\(index)")
                 }
             }
             Section {
-                Button("Start Workout") { start() }
-                    .disabled(!inProgressWorkouts.isEmpty)
-                    .accessibilityIdentifier("starterRoutineDetail.start")
+                if starterRoutine.format == .sets {
+                    Button("Start Workout") { start() }
+                        .disabled(!inProgressWorkouts.isEmpty)
+                        .accessibilityIdentifier("starterRoutineDetail.start")
+                }
                 Button("Add to My Routines") { addToRoutines() }
                     .accessibilityIdentifier("starterRoutineDetail.addToRoutines")
             } footer: {
-                if !inProgressWorkouts.isEmpty {
+                if starterRoutine.format == .sets, !inProgressWorkouts.isEmpty {
                     Text("Finish or discard the workout in progress first.")
                 }
             }

@@ -309,6 +309,107 @@ struct StretchPlayerTests {
         #expect(workout.exercises.first?.exercise === hipFlexor)
     }
 
+    // MARK: Stretch-format routines
+
+    /// Full-Body Quick Stretch copied into a new programme after a routine of sets, with the copy.
+    private func programmeWithCopiedStretch() throws -> (Programme, Routine) {
+        let quick = try #require(
+            StarterRoutine.stretching(in: try StarterRoutine.load()).first {
+                $0.name == "Full-Body Quick Stretch"
+            })
+        let draft = try StarterLibrary(context: context).draft(of: quick)
+        #expect(draft.format == .stretch)
+        var push = RoutineDraft()
+        push.name = "Push"
+        push.addExercise(try exercise("Push-up"))
+        let programmes = ProgrammeLibrary(context: context)
+        let programme = try #require(try programmes.create(named: "Daily", holding: [push]))
+        let copy = try #require(try programmes.add(draft, to: programme))
+        return (programme, copy)
+    }
+
+    @Test func aCopiedStretchRoutineKeepsItsFormatAndPlaysItsStretches() throws {
+        let (_, copy) = try programmeWithCopiedStretch()
+        #expect(copy.format == .stretch)
+        #expect(copy.name == "Full-Body Quick Stretch")
+        // My Routines takes a copy too.
+        let mine = try #require(
+            try RoutineLibrary(context: context).save(RoutineDraft(routine: copy), to: nil))
+        #expect(mine.format == .stretch)
+        #expect(mine.membership == nil)
+
+        let clock = clock
+        let player = try #require(
+            StretchPlayer.start(copy, rounds: 1, in: context, now: { clock.date }))
+        #expect(player.name == "Full-Body Quick Stretch")
+        #expect(player.stretchName == "Hip Flexor Stretch")
+        // Seven stretches, four of them per side by their stored exercise: 11 holds, each with a lead-in.
+        #expect(player.countdown.phases.count == 2 * 11)
+    }
+
+    @Test func anEditedStretchRoutinePlaysAsEdited() throws {
+        let (_, copy) = try programmeWithCopiedStretch()
+        var draft = RoutineDraft(routine: copy)
+        draft.exercises = [draft.exercises[1]]
+        draft.exercises[0].targetDurationSeconds = 45
+        try RoutineLibrary(context: context).save(draft, to: copy)
+
+        let player = try #require(StretchPlayer.start(copy, rounds: 2, in: context))
+
+        #expect(player.round.stretches.map(\.name) == ["Elephant Walks"])
+        #expect(player.round.stretches.map(\.seconds) == [45])
+        #expect(player.countdown.phases.count == 4)
+    }
+
+    @Test func aRoutineThatIsntAPlayableStretchRoutineDoesntStart() throws {
+        let (programme, copy) = try programmeWithCopiedStretch()
+        let push = try #require(ProgrammeLibrary.orderedRoutines(of: programme).first)
+        #expect(StretchPlayer.start(push, rounds: 1, in: context) == nil)
+        // A rep exercise slipped into a Stretch routine.
+        let pushUp = RoutineExercise(
+            exercise: try exercise("Push-up"), position: 9, plannedSetTypes: [.normal],
+            repRangeLow: 10, repRangeHigh: 10)
+        context.insert(pushUp)
+        copy.exercises.append(pushUp)
+        #expect(StretchPlayer.start(copy, rounds: 1, in: context) == nil)
+    }
+
+    @Test func aStretchRoutineWorkoutLinksToItMovesUpNextAndAsksNoUpdate() throws {
+        let (programme, copy) = try programmeWithCopiedStretch()
+        let push = try #require(ProgrammeLibrary.orderedRoutines(of: programme).first)
+        #expect(ProgrammeLibrary.upNext(in: programme) === push)
+        // Push is done, so the stretch routine is up next.
+        let pushWorkout = try #require(
+            try RoutineStart(context: context).startWorkout(from: push, at: clock.date)?.workout)
+        let set = try #require(pushWorkout.exercises.first?.sets.first)
+        set.repsText = "10"
+        let log = WorkoutLog(context: context)
+        try log.toggleCompleted(set)
+        _ = try log.finish(pushWorkout, title: "Push", at: clock.date)
+        #expect(ProgrammeLibrary.upNext(in: programme) === copy)
+        clock.advance(60)
+
+        // Two rounds log two sets per stretch against one planned set: a structural change for a routine of sets.
+        let player = try start(copy, rounds: 2)
+        runToTheEnd(player)
+        let workout = try #require(try player.log(in: context))
+
+        #expect(workout.routine === copy)
+        #expect(workout.title == "Full-Body Quick Stretch")
+        #expect(workout.exercises.allSatisfy { $0.sets.count == 2 })
+        #expect(ProgrammeLibrary.upNext(in: programme) === push)
+        #expect(
+            ProgrammeLibrary.nextInProgramme(after: workout)
+                .map { [$0.programme, $0.routine] } == ["Daily", "Push"])
+        #expect(!RoutineDifference.isStructural(workout))
+    }
+
+    private func start(_ routine: Routine, rounds: Int) throws -> StretchPlayer {
+        let clock = clock
+        return try #require(
+            StretchPlayer.start(routine, rounds: rounds, in: context, now: { clock.date }))
+    }
+
     @Test func aFailedSaveRollsBackAndSavesNothing() throws {
         let store = try ReadOnlyStore()
         defer { store.remove() }
@@ -325,5 +426,36 @@ struct StretchPlayerTests {
         let fresh = ModelContext(store.container)
         #expect(try fresh.fetchCount(FetchDescriptor<Workout>()) == 0)
         #expect(try fresh.fetchCount(FetchDescriptor<Exercise>()) == 0)
+    }
+
+    @Test func aFailedSaveOfALinkedRoutinesLogLeavesTheRoutineReadable() throws {
+        let store = try ReadOnlyStore { context in
+            let stretch = Exercise(
+                name: "Pancake Stretch", muscleGroup: .stretching, equipment: .bodyweight,
+                type: .duration)
+            context.insert(stretch)
+            let routine = Routine(name: "Evening", creationDate: .now)
+            context.insert(routine)
+            routine.format = .stretch
+            let routineExercise = RoutineExercise(
+                exercise: stretch, position: 0, plannedSetTypes: [.normal],
+                targetDurationSeconds: 20)
+            context.insert(routineExercise)
+            routine.exercises.append(routineExercise)
+        }
+        defer { store.remove() }
+        let routine = try #require(try store.context.fetch(FetchDescriptor<Routine>()).first)
+        let clock = clock
+        let player = try #require(
+            StretchPlayer.start(routine, rounds: 1, in: store.context, now: { clock.date }))
+        runToTheEnd(player)
+
+        #expect(throws: (any Error).self) { try player.log(in: store.context) }
+
+        #expect(!store.context.hasChanges)
+        #expect(try store.context.fetch(FetchDescriptor<Workout>()).isEmpty)
+        // Reading the routine after the rollback, as its detail screen does, must not trap.
+        #expect(RoutineLibrary.orderedExercises(of: routine).count == 1)
+        #expect(routine.format == .stretch)
     }
 }

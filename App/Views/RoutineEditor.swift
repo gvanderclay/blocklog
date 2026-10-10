@@ -1,8 +1,9 @@
 import SwiftData
 import SwiftUI
 
-/// Creates or edits a routine: its name, and its exercises with their planned sets and a rep range or a
-/// target duration. Changes stay in a draft until Save; Cancel drops them.
+/// Creates or edits a routine: its name, its format (with a time cap for Timed AMRAP), and its exercises with their
+/// planned sets and a rep range or a target duration, or in a Timed AMRAP one fixed rep count. Changes stay in a
+/// draft until Save; Cancel drops them.
 struct RoutineEditor: View {
     /// The routine to edit; nil creates a new one.
     let routine: Routine?
@@ -17,6 +18,8 @@ struct RoutineEditor: View {
     @State private var isReordering = false
     @State private var deleteCount = 0
     @State private var saveFailed = false
+    /// Why the last format switch was refused, shown in an alert.
+    @State private var formatRefusal: String?
 
     init(routine: Routine?) {
         self.routine = routine
@@ -49,10 +52,13 @@ struct RoutineEditor: View {
                         Text("Add a name and at least one exercise to save.")
                     }
                 }
+                FormatSection(draft: $draft) { formatRefusal = $0 }
                 ForEach($draft.exercises) { $entry in
                     EntrySection(
                         entry: $entry,
                         index: draft.exercises.firstIndex { $0.id == entry.id } ?? 0,
+                        isFixed: draft.format.kind == .timedAMRAP,
+                        showsSets: draft.format == .sets,
                         deleteCount: $deleteCount
                     ) { remove(entry) }
                 }
@@ -82,8 +88,8 @@ struct RoutineEditor: View {
                 }
             }
             .sheet(isPresented: $isPickingExercise) {
-                ExercisePicker { exercise in
-                    withAnimation(reduceMotion ? nil : .default) { draft.addExercise(exercise) }
+                ExercisePicker(types: draft.format.allowedTypes) { exercise in
+                    withAnimation(reduceMotion ? nil : .default) { _ = draft.addExercise(exercise) }
                 }
             }
             .sheet(isPresented: $isReordering) {
@@ -91,6 +97,12 @@ struct RoutineEditor: View {
                     .interactiveDismissDisabled()
             }
             .saveFailedAlert(isPresented: $saveFailed)
+            .alert("Can’t Switch Format", item: $formatRefusal) { _ in
+                Button("OK") {}
+                    .accessibilityIdentifier("routineEditor.formatRefusedOK")
+            } message: { refusal in
+                Text(refusal)
+            }
         }
         // A swipe down would drop the draft; leaving goes through Cancel or Save.
         .interactiveDismissDisabled()
@@ -117,10 +129,54 @@ struct RoutineEditor: View {
     }
 }
 
-/// One exercise of the draft: its rep range or target duration, its planned sets and an Add Set button.
+/// The routine's format, and for a Timed AMRAP its time cap in minutes. A refused switch leaves the format as it was
+/// and passes the message on.
+private struct FormatSection: View {
+    @Binding var draft: RoutineDraft
+    let onRefusal: (String) -> Void
+
+    var body: some View {
+        Section {
+            Picker(
+                "Format",
+                selection: Binding(
+                    get: { draft.format.kind },
+                    set: { kind in
+                        if let refusal = draft.switchFormat(to: kind) { onRefusal(refusal) }
+                    })
+            ) {
+                ForEach(RoutineFormat.Kind.allCases) { Text($0.title).tag($0) }
+            }
+            .accessibilityIdentifier("routineEditor.format")
+            if let minutes = draft.format.timeCapMinutes {
+                Stepper(value: $draft.timeCapMinutes, in: RoutineFormat.timeCapMinuteBounds) {
+                    NumberLabel(title: "Time Cap", value: minutes, unit: " min")
+                }
+                .accessibilityValue("\(minutes) \(minutes == 1 ? "minute" : "minutes")")
+                .accessibilityIdentifier("routineEditor.timeCap")
+            }
+        } footer: {
+            switch draft.format {
+            case .sets: EmptyView()
+            case .timedAMRAP:
+                Text(
+                    "As many rounds as possible before the time cap, each exercise at a fixed rep count."
+                )
+            case .stretch: Text("Plays each exercise as a timed hold in the stretch player.")
+            }
+        }
+    }
+}
+
+/// One exercise of the draft: its rep range or target duration, its planned sets and an Add Set button; in a Timed
+/// AMRAP, only its fixed rep count.
 private struct EntrySection: View {
     @Binding var entry: RoutineDraft.Entry
     let index: Int
+    /// A Timed AMRAP entry: one rep count, no set list.
+    let isFixed: Bool
+    /// False in a Stretch routine, whose player holds each stretch once a round whatever its set count.
+    let showsSets: Bool
     /// Bumped on every set deletion, so the editor plays the delete haptic.
     @Binding var deleteCount: Int
     let onRemove: () -> Void
@@ -132,45 +188,14 @@ private struct EntrySection: View {
 
     var body: some View {
         Section {
-            switch entry.target {
-            case .duration(let seconds):
-                Stepper(
-                    value: $entry.targetDurationSeconds, in: RoutineTarget.durationBounds,
-                    step: RoutineTarget.durationStep
-                ) {
-                    NumberLabel(title: "Target Duration", value: seconds, unit: " s")
+            if isFixed {
+                Stepper(value: $entry.reps, in: RoutineTarget.repBounds) {
+                    NumberLabel(title: "Reps", value: entry.reps)
                 }
-                .accessibilityValue("\(seconds) seconds")
-                .accessibilityIdentifier("\(identifierPrefix).targetDuration")
-            case .repRange(let range):
-                Stepper(value: $entry.repLow, in: RoutineTarget.lowBounds(of: range)) {
-                    NumberLabel(title: "Low reps", value: range.lowerBound)
-                }
-                .accessibilityIdentifier("\(identifierPrefix).repLow")
-                Stepper(value: $entry.repHigh, in: RoutineTarget.highBounds(of: range)) {
-                    NumberLabel(title: "High reps", value: range.upperBound)
-                }
-                .accessibilityIdentifier("\(identifierPrefix).repHigh")
+                .accessibilityIdentifier("\(identifierPrefix).reps")
+            } else {
+                plan
             }
-            let labels = SetNumbering.labels(for: entry.sets.map(\.type))
-            // Bindings from the collection, not by index, so a row being deleted never reads past the end.
-            ForEach($entry.sets) { $plannedSet in
-                let setIndex = entry.sets.firstIndex { $0.id == plannedSet.id } ?? 0
-                PlannedSetRow(
-                    type: $plannedSet.type, label: labels[setIndex],
-                    identifierPrefix: "\(identifierPrefix).set.\(setIndex)"
-                ) { typeChangeCount += 1 }
-            }
-            .onDelete { offsets in
-                withAnimation(reduceMotion ? nil : .default) {
-                    entry.sets.remove(atOffsets: offsets)
-                }
-                deleteCount += 1
-            }
-            Button("Add Set", systemImage: "plus") {
-                withAnimation(reduceMotion ? nil : .default) { entry.addSet() }
-            }
-            .accessibilityIdentifier("\(identifierPrefix).addSet")
         } header: {
             HStack {
                 Text(entry.exercise.name)
@@ -194,6 +219,54 @@ private struct EntrySection: View {
         }
         .headerProminence(.increased)
         .sensoryFeedback(.selection, trigger: typeChangeCount)
+    }
+
+    /// The rep range or target duration, the planned sets and Add Set.
+    @ViewBuilder private var plan: some View {
+        switch entry.target {
+        case .duration(let seconds):
+            Stepper(
+                value: $entry.targetDurationSeconds, in: RoutineTarget.durationBounds,
+                step: RoutineTarget.durationStep
+            ) {
+                NumberLabel(title: "Target Duration", value: seconds, unit: " s")
+            }
+            .accessibilityValue("\(seconds) seconds")
+            .accessibilityIdentifier("\(identifierPrefix).targetDuration")
+        case .repRange(let range):
+            Stepper(value: $entry.repLow, in: RoutineTarget.lowBounds(of: range)) {
+                NumberLabel(title: "Low reps", value: range.lowerBound)
+            }
+            .accessibilityIdentifier("\(identifierPrefix).repLow")
+            Stepper(value: $entry.repHigh, in: RoutineTarget.highBounds(of: range)) {
+                NumberLabel(title: "High reps", value: range.upperBound)
+            }
+            .accessibilityIdentifier("\(identifierPrefix).repHigh")
+        }
+        if showsSets { sets }
+    }
+
+    /// The planned sets and Add Set.
+    @ViewBuilder private var sets: some View {
+        let labels = SetNumbering.labels(for: entry.sets.map(\.type))
+        // Bindings from the collection, not by index, so a row being deleted never reads past the end.
+        ForEach($entry.sets) { $plannedSet in
+            let setIndex = entry.sets.firstIndex { $0.id == plannedSet.id } ?? 0
+            PlannedSetRow(
+                type: $plannedSet.type, label: labels[setIndex],
+                identifierPrefix: "\(identifierPrefix).set.\(setIndex)"
+            ) { typeChangeCount += 1 }
+        }
+        .onDelete { offsets in
+            withAnimation(reduceMotion ? nil : .default) {
+                entry.sets.remove(atOffsets: offsets)
+            }
+            deleteCount += 1
+        }
+        Button("Add Set", systemImage: "plus") {
+            withAnimation(reduceMotion ? nil : .default) { entry.addSet() }
+        }
+        .accessibilityIdentifier("\(identifierPrefix).addSet")
     }
 }
 

@@ -1,20 +1,14 @@
 import Foundation
 
 /// A bundled routine from `starter-routines.json`, read-only: one of a starter programme's routines, a
-/// standalone one, or a stretch routine. A routine of sets starts a workout or seeds a routine through
-/// `StarterLibrary`; a stretch routine plays in the guided player.
+/// standalone one, or a stretch routine. It starts a workout, plays in the guided player or seeds a routine through
+/// `StarterLibrary`, by its format.
 @MainActor
-struct StarterRoutine: Decodable, Identifiable {
+struct StarterRoutine: @MainActor Decodable, Identifiable {
     /// The time a set takes besides its rest, for the estimate.
     static let secondsPerSet = 40
     /// The lead-in before each hold of a stretch routine, for the estimate.
     static let leadInSeconds = 10
-
-    /// How the starter routine plays. The file writes "stretch" for a stretch routine and nothing for a routine of
-    /// sets.
-    enum Format: String, Decodable {
-        case stretch
-    }
 
     /// One exercise of the starter routine, named as in `starter-exercises.json`, with a target: a rep range or a
     /// target duration.
@@ -81,9 +75,34 @@ struct StarterRoutine: Decodable, Identifiable {
     let programme: String?
     /// Why the starter routine is built the way it is, in one line.
     let why: String
-    /// Nil for a routine of sets.
-    let format: Format?
+    /// The file writes it as a routine stores it: `format` ("timedAMRAP" or "stretch", nothing for Sets) and, for
+    /// a Timed AMRAP, `timeCapSeconds`. Decoding fails for one that doesn't read as a `RoutineFormat`.
+    let format: RoutineFormat
     let exercises: [Entry]
+
+    private enum CodingKeys: String, CodingKey {
+        case name, programme, why, format, timeCapSeconds, exercises
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        programme = try container.decodeIfPresent(String.self, forKey: .programme)
+        why = try container.decode(String.self, forKey: .why)
+        guard
+            let format = RoutineFormat(
+                rawValue: try container.decodeIfPresent(String.self, forKey: .format),
+                timeCapSeconds: try container.decodeIfPresent(Int.self, forKey: .timeCapSeconds))
+        else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .format, in: container,
+                debugDescription:
+                    "A format is nothing, \"stretch\" or \"timedAMRAP\" with a time cap of 1 to 60 whole minutes."
+            )
+        }
+        self.format = format
+        exercises = try container.decode([Entry].self, forKey: .exercises)
+    }
 
     nonisolated var id: String { name }
 
@@ -110,20 +129,14 @@ struct StarterRoutine: Decodable, Identifiable {
         }
     }
 
-    /// The standalone routines of sets, in file order.
+    /// The standalone routines that aren't stretch routines, such as Golden Six and Cindy, in file order.
     static func standalone(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
-        starterRoutines.filter { $0.programme == nil && $0.format == nil }
+        starterRoutines.filter { $0.programme == nil && $0.format != .stretch }
     }
 
     /// The stretch routines, in file order.
     static func stretching(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
         starterRoutines.filter { $0.format == .stretch }
-    }
-
-    /// The routines of sets, which can be copied into My Routines or a programme, in file order. Stretch routines
-    /// can't be copied yet.
-    static func copyable(in starterRoutines: [StarterRoutine]) -> [StarterRoutine] {
-        starterRoutines.filter { $0.format == nil }
     }
 
     /// What an empty routine list suggests: the first routine of the first two programmes.
@@ -148,19 +161,26 @@ struct StarterRoutine: Decodable, Identifiable {
         }
     }
 
-    /// Rounded to the nearest minute: one round of a stretch routine, which takes no rest; otherwise every set
-    /// takes its rest plus `secondsPerSet`.
+    /// Rounded to the nearest minute: one round of a stretch routine, which takes no rest; a Timed AMRAP's time
+    /// cap; otherwise every set takes its rest plus `secondsPerSet`.
     func estimatedMinutes(restSeconds: Int) -> Int {
         let seconds =
-            format == .stretch
-            ? stretchRoundSeconds : setCount * (restSeconds + Self.secondsPerSet)
+            switch format {
+            case .sets: setCount * (restSeconds + Self.secondsPerSet)
+            case .timedAMRAP(let timeCapSeconds): timeCapSeconds
+            case .stretch: stretchRoundSeconds
+            }
         return Int((Double(seconds) / 60).rounded())
     }
 
-    /// "7 exercises · about 39 min", or "7 stretches · about 6 min" for a stretch routine.
+    /// "7 exercises · about 39 min", "7 stretches · about 6 min" for a stretch routine, or "3 exercises · Timed
+    /// AMRAP · 20 min".
     func summary(restSeconds: Int) -> String {
         let (one, many) = format == .stretch ? ("stretch", "stretches") : ("exercise", "exercises")
         let count = exercises.count == 1 ? "1 \(one)" : "\(exercises.count) \(many)"
+        if case .timedAMRAP = format, let summary = format.summary {
+            return "\(count) · \(summary)"
+        }
         return "\(count) · about \(estimatedMinutes(restSeconds: restSeconds)) min"
     }
 }

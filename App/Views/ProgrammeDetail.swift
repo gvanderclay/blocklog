@@ -31,7 +31,7 @@ struct ProgrammeDetail: View {
             Section {
                 ForEach(routines.enumerated(), id: \.element.id) { index, routine in
                     HStack {
-                        NavigationLink(routine.name, value: routine)
+                        RoutineLink(routine: routine)
                             .accessibilityIdentifier("programme.routine.\(index)")
                         StartRoutineButton(routine: routine, present: present)
                             .accessibilityIdentifier("programme.routine.\(index).start")

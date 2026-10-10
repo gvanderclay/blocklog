@@ -12,6 +12,10 @@ final class Routine {
     var programme: Programme?
     /// The routine's place in its programme, from 0.
     var programmePosition: Int?
+    /// How the routine plays, with `timeCapSeconds`; read both through `format`. Nil is Sets.
+    var formatRawValue: String?
+    /// A Timed AMRAP routine's length; nil for any other format.
+    var timeCapSeconds: Int?
 
     /// Unordered: sort by `position`.
     @Relationship(deleteRule: .cascade, inverse: \RoutineExercise.routine)

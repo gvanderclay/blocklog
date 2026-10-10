@@ -99,6 +99,7 @@ struct Backup {
                     creationDate: BackupDocument.fileDate(routine.creationDate),
                     programmeID: routine.programme?.id,
                     programmePosition: routine.programmePosition,
+                    format: routine.formatRawValue, timeCapSeconds: routine.timeCapSeconds,
                     exercises: routine.exercises.sorted(by: \.position).compactMap { entry in
                         // ponytail: an entry whose exercise is gone can't be referenced, so it is left out.
                         guard let exercise = entry.exercise else { return nil }
@@ -115,6 +116,8 @@ struct Backup {
                     startDate: BackupDocument.fileDate(workout.startDate),
                     endDate: workout.endDate.map(BackupDocument.fileDate),
                     routineID: workout.routine?.id,
+                    format: workout.formatRawValue, amrapRounds: workout.amrapRounds,
+                    amrapExtraReps: workout.amrapExtraReps,
                     exercises: WorkoutLog.orderedExercises(of: workout).compactMap { entry in
                         guard let exercise = entry.exercise else { return nil }
                         return .init(
@@ -192,6 +195,8 @@ struct Backup {
                 id: record.id, name: record.name, creationDate: record.creationDate)
             context.insert(routine)
             routines[record.id] = routine
+            routine.format = try Self.read(
+                RoutineFormat(rawValue: record.format, timeCapSeconds: record.timeCapSeconds))
             if let programmeID = record.programmeID, let position = record.programmePosition {
                 routine.membership = ProgrammeMembership(
                     programme: try Self.resolve(programmeID, in: programmes), position: position)
@@ -213,6 +218,10 @@ struct Backup {
                 endDate: record.endDate,
                 routine: try record.routineID.map { try Self.resolve($0, in: routines) })
             context.insert(workout)
+            workout.format = try Self.read(
+                WorkoutFormat(
+                    rawValue: record.format, rounds: record.amrapRounds,
+                    extraReps: record.amrapExtraReps))
             for (position, entry) in record.exercises.sorted(by: \.position).enumerated() {
                 let workoutExercise = WorkoutExercise(
                     id: entry.id, exercise: try Self.resolve(entry.exerciseID, in: exercises),
@@ -239,6 +248,12 @@ struct Backup {
             throw BackupError.invalid("Unknown value “\(raw)”.")
         }
         return value
+    }
+
+    /// A reading `validate()` already checked.
+    private static func read<T>(_ reading: T?) throws -> T {
+        guard let reading else { throw BackupError.invalid("A format doesn’t read.") }
+        return reading
     }
 
     private static func resolve<T>(_ id: UUID, in records: [UUID: T]) throws -> T {

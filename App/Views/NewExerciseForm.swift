@@ -3,6 +3,8 @@ import SwiftUI
 
 /// The form that creates a custom exercise. Save creates it and hands it to `onCreate`, which adds it to the workout.
 struct NewExerciseForm: View {
+    /// The types the new exercise can have.
+    let types: [ExerciseType]
     let onCreate: (Exercise) -> Void
 
     @Environment(\.modelContext) private var modelContext
@@ -10,8 +12,14 @@ struct NewExerciseForm: View {
     @State private var name = ""
     @State private var muscleGroup = MuscleGroup.chest
     @State private var equipment = Equipment.dumbbell
-    @State private var type = ExerciseType.weightReps
+    @State private var type: ExerciseType
     @State private var saveFailed = false
+
+    init(types: [ExerciseType] = ExerciseType.allCases, onCreate: @escaping (Exercise) -> Void) {
+        self.types = types
+        self.onCreate = onCreate
+        self.type = types.first ?? .weightReps
+    }
 
     private var problem: ExerciseCatalog.NameProblem? {
         ExerciseCatalog.nameProblem(for: name, among: exercises)
@@ -40,7 +48,7 @@ struct NewExerciseForm: View {
                 }
                 .accessibilityIdentifier("newExercise.equipment")
                 Picker("Type", selection: $type) {
-                    ForEach(ExerciseType.allCases, id: \.self) {
+                    ForEach(types, id: \.self) {
                         Text($0.title).tag($0)
                     }
                 }

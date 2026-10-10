@@ -73,7 +73,7 @@ struct WorkoutTab: View {
                         }
                     }
                     ForEach(routines) { routine in
-                        NavigationLink(routine.name, value: routine)
+                        RoutineLink(routine: routine)
                             .accessibilityIdentifier("workoutTab.routine.\(routine.name)")
                             .swipeActions(edge: .trailing) {
                                 // No destructive role: with it the list removes the row before the user confirms.

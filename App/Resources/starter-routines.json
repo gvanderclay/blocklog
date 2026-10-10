@@ -91,6 +91,17 @@
     ]
   },
   {
+    "name": "Cindy",
+    "format": "timedAMRAP",
+    "timeCapSeconds": 1200,
+    "why": "A classic CrossFit benchmark: as many rounds as possible in 20 minutes of 5 pull-ups, 10 push-ups and 15 squats.",
+    "exercises": [
+      {"exercise": "Pull-up", "sets": ["normal"], "repRange": [5, 5]},
+      {"exercise": "Push-up", "sets": ["normal"], "repRange": [10, 10]},
+      {"exercise": "Squat", "sets": ["normal"], "repRange": [15, 15]}
+    ]
+  },
+  {
     "name": "Full-Body Quick Stretch",
     "format": "stretch",
     "why": "Seven stretches from hips to shoulders, mostly 30-second holds; do it after lifting or in a separate warmed-up session.",

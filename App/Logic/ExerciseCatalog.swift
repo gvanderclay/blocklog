@@ -20,15 +20,17 @@ struct ExerciseCatalog {
 
     let context: ModelContext
 
-    /// The exercises whose name contains the query, ignoring case and diacritics, and that use the
-    /// equipment (nil for all), grouped by muscle group in `MuscleGroup` order. Each group is sorted by
-    /// name, and groups with no matching exercise are left out.
+    /// The exercises whose name contains the query, ignoring case and diacritics, that use the equipment
+    /// (nil for all) and are of one of the types, grouped by muscle group in `MuscleGroup` order. Each group is
+    /// sorted by name, and groups with no matching exercise are left out.
     static func sections(
-        from exercises: [Exercise], matching query: String, equipment: Equipment?
+        from exercises: [Exercise], matching query: String, equipment: Equipment?,
+        types: [ExerciseType] = ExerciseType.allCases
     ) -> [Section] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let matches = exercises.filter { exercise in
             (equipment == nil || exercise.equipment == equipment)
+                && types.contains(exercise.type)
                 && (query.isEmpty || exercise.name.localizedStandardContains(query))
         }
         return MuscleGroup.allCases.compactMap { group in

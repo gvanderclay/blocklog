@@ -31,7 +31,7 @@ struct AddRoutineSheet: View {
                     }
                 }
                 Section("Copy of Starter Routine") {
-                    ForEach(StarterRoutine.copyable(in: StarterRoutine.bundled)) { starterRoutine in
+                    ForEach(StarterRoutine.bundled) { starterRoutine in
                         Button(starterRoutine.name) {
                             do {
                                 add(

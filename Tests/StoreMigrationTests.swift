@@ -45,4 +45,27 @@ struct StoreMigrationTests {
         #expect(bench.routineExercises.count == 1)
         #expect(exercises.first { $0.name == "cat-cow" }?.isCustom == true)
     }
+
+    @Test func routinesAndWorkoutsSurviveTheFormatFieldsAsSets() throws {
+        let fixture = try FixtureStore("before-33a")
+        defer { fixture.remove() }
+        let routines = try fixture.context.fetch(RoutineLibrary.routinesByName)
+
+        #expect(routines.map(\.name) == ["Core", "Push"])
+        #expect(routines.allSatisfy { $0.formatRawValue == nil && $0.timeCapSeconds == nil })
+        #expect(routines.allSatisfy { $0.format == .sets })
+        let push = try #require(routines.last)
+        #expect(push.membership?.programme.name == "PPL")
+        #expect(
+            RoutineLibrary.orderedExercises(of: push).map(RoutineLibrary.summary(of:)) == [
+                "2 × 8–12"
+            ])
+        let workout = try #require(try fixture.context.fetch(FetchDescriptor<Workout>()).first)
+        #expect(workout.routine === push)
+        #expect(workout.formatRawValue == nil)
+        #expect(workout.amrapRounds == nil)
+        #expect(workout.amrapExtraReps == nil)
+        #expect(workout.format == .sets)
+        #expect(workout.exercises.first?.sets.first?.reps == 12)
+    }
 }

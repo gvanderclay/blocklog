@@ -98,6 +98,12 @@ enum RoutineTarget: Equatable {
         return .repRange(range.lowerBound...max(high, range.lowerBound))
     }
 
+    /// A range whose low and high ends are both `reps`, a fixed rep count; a duration is unchanged.
+    func settingReps(_ reps: Int) -> RoutineTarget {
+        guard case .repRange = self else { return self }
+        return .repRange(reps...reps)
+    }
+
     /// A duration with the new seconds; a range is unchanged.
     func settingSeconds(_ seconds: Int) -> RoutineTarget {
         guard case .duration = self else { return self }

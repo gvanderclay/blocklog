@@ -260,7 +260,7 @@ struct BackupTests {
     @Test func fileIsIso8601JsonWithRawStringEnums() throws {
         let source = try makeSource()
         let text = String(decoding: try exported(source).encoded(), as: UTF8.self)
-        #expect(text.contains("\"version\" : 2"))
+        #expect(text.contains("\"version\" : 3"))
         #expect(text.contains("\"exportedAt\" : \"2027-01-16T"))
         #expect(text.contains("\"setType\" : \"warmUp\""))
     }
@@ -479,7 +479,7 @@ struct BackupTests {
     }
 
     @Test func rejectsAnUnknownVersion() throws {
-        try expectRejected(containing: "version 3") { $0.version = 3 }
+        try expectRejected(containing: "version 4") { $0.version = 4 }
     }
 
     @Test func rejectsAnOlderVersionWithAClearError() throws {
@@ -687,5 +687,186 @@ struct BackupTests {
             .sorted { $0.position < $1.position }
         #expect(stored.map(\.repRangeLow) == [nil, nil])
         #expect(stored.map(\.targetDurationSeconds) == [nil, nil])
+    }
+
+    // MARK: Routine and workout formats
+
+    /// The `makeSource` store plus copies of Cindy and Full-Body Quick Stretch, and a finished Cindy workout with
+    /// its score.
+    private func makeGuidedSource() throws -> ModelContainer {
+        let source = try makeSource()
+        let context = source.mainContext
+        let starters = try StarterRoutine.load()
+        let library = RoutineLibrary(context: context)
+        var routines: [Routine] = []
+        for (offset, name) in ["Cindy", "Full-Body Quick Stretch"].enumerated() {
+            let starter = try #require(starters.first { $0.name == name })
+            let draft = try StarterLibrary(context: context).draft(of: starter)
+            routines.append(
+                try #require(
+                    try library.save(
+                        draft, to: nil, at: Self.start.addingTimeInterval(Double(offset)))))
+        }
+        addWorkout(
+            context, title: "Cindy", start: Self.start.addingTimeInterval(200_000), finished: true,
+            routine: routines[0]
+        ) { workout in
+            workout.format = .timedAMRAP(rounds: 14, extraReps: 7)
+            addExercise(
+                (try? exercise("Push-up", in: context))!, to: workout, in: context, position: 0,
+                sets: [WorkoutSet(position: 0, reps: 147, isCompleted: true)])
+        }
+        try context.save()
+        return source
+    }
+
+    /// The index of the routine or workout record named `name`.
+    private func index(of name: String, in records: [String]) throws -> Int {
+        try #require(records.firstIndex(of: name))
+    }
+
+    @Test func formatsAndTheAMRAPScoreRoundTrip() throws {
+        let document = try exported(makeGuidedSource())
+        let cindy = try index(of: "Cindy", in: document.routines.map(\.name))
+        let stretch = try index(of: "Full-Body Quick Stretch", in: document.routines.map(\.name))
+        #expect(document.routines[cindy].format == "timedAMRAP")
+        #expect(document.routines[cindy].timeCapSeconds == 1200)
+        #expect(document.routines[stretch].format == "stretch")
+        #expect(document.routines[0].format == nil)
+        let text = String(decoding: try document.encoded(), as: UTF8.self)
+        #expect(text.contains("\"amrapRounds\" : 14"))
+
+        let target = try emptyContainer()
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(document.encoded()))
+
+        #expect(try exported(target) == document)
+        let routines = try target.mainContext.fetch(RoutineLibrary.routinesByName)
+        #expect(routines.first { $0.name == "Cindy" }?.format == .timedAMRAP(timeCapSeconds: 1200))
+        #expect(routines.first { $0.name == "Full-Body Quick Stretch" }?.format == .stretch)
+        #expect(routines.first { $0.name == "Push Day" }?.format == .sets)
+        let workouts = try target.mainContext.fetch(FetchDescriptor<Workout>())
+        #expect(
+            workouts.first { $0.title == "Cindy" }?.format == .timedAMRAP(rounds: 14, extraReps: 7))
+        #expect(workouts.first { $0.title == "Carries" }?.format == .sets)
+    }
+
+    @Test func aVersionTwoBackupWithoutTheFormatKeysStillImports() throws {
+        var document = try exported(makeSource())
+        document.version = 2
+        let text = String(decoding: try document.encoded(), as: UTF8.self)
+        #expect(!text.contains("\"format\""))
+        let target = try emptyContainer()
+
+        try Backup(context: target.mainContext).replaceAll(
+            with: BackupDocument.read(Data(text.utf8)))
+
+        let routines = try target.mainContext.fetch(FetchDescriptor<Routine>())
+        #expect(routines.count == 3)
+        #expect(routines.allSatisfy { $0.format == .sets })
+    }
+
+    /// Applies the change to the guided source's document, then expects it refused with the store unchanged.
+    private func expectGuidedRejected(
+        containing fragment: String, sourceLocation: SourceLocation = #_sourceLocation,
+        _ change: (inout BackupDocument) throws -> Void
+    ) throws {
+        var document = try exported(makeGuidedSource())
+        try change(&document)
+        try expectRejected(
+            data: document.encoded(), containing: fragment, sourceLocation: sourceLocation)
+    }
+
+    @Test func rejectsFormatFieldsThatDontReadAsAFormat() throws {
+        let fragment = "has a format that isn’t Sets"
+        try expectGuidedRejected(containing: fragment) { $0.routines[0].timeCapSeconds = 600 }
+        try expectGuidedRejected(containing: fragment) { $0.routines[0].format = "ladder" }
+        try expectGuidedRejected(containing: fragment) {
+            let cindy = try index(of: "Cindy", in: $0.routines.map(\.name))
+            $0.routines[cindy].timeCapSeconds = nil
+        }
+        try expectGuidedRejected(containing: fragment) {
+            let cindy = try index(of: "Cindy", in: $0.routines.map(\.name))
+            $0.routines[cindy].timeCapSeconds = 3660
+        }
+        try expectGuidedRejected(containing: fragment) {
+            let stretch = try index(of: "Full-Body Quick Stretch", in: $0.routines.map(\.name))
+            $0.routines[stretch].timeCapSeconds = 600
+        }
+    }
+
+    @Test func rejectsATimedAMRAPWhoseExercisesDontBuildARound() throws {
+        let fragment = "is a Timed AMRAP whose exercises"
+        func cindy(_ document: BackupDocument) throws -> Int {
+            try index(of: "Cindy", in: document.routines.map(\.name))
+        }
+        try expectGuidedRejected(containing: fragment) {
+            let cindy = try cindy($0)
+            $0.routines[cindy].exercises[1].plannedSetTypes = ["normal", "normal"]
+        }
+        try expectGuidedRejected(containing: fragment) {
+            let cindy = try cindy($0)
+            $0.routines[cindy].exercises[2].repRangeLow = 10
+        }
+        try expectGuidedRejected(containing: fragment) {
+            let cindy = try cindy($0)
+            $0.routines[cindy].exercises = []
+        }
+        // A duration exercise with a target duration in the round.
+        try expectGuidedRejected(containing: fragment) {
+            let cindy = try cindy($0)
+            var plank = $0.routines[0].exercises[1]
+            plank.id = UUID()
+            plank.position = 3
+            $0.routines[cindy].exercises.append(plank)
+        }
+        // Push Day, a routine of sets, turned into a Timed AMRAP.
+        try expectGuidedRejected(containing: fragment) {
+            $0.routines[0].format = "timedAMRAP"
+            $0.routines[0].timeCapSeconds = 600
+        }
+    }
+
+    @Test func rejectsAStretchRoutineWithANonDurationExercise() throws {
+        try expectGuidedRejected(containing: "is a Stretch routine whose exercises") {
+            let stretch = try index(of: "Full-Body Quick Stretch", in: $0.routines.map(\.name))
+            var bench = $0.routines[0].exercises[0]
+            bench.id = UUID()
+            bench.position = 99
+            $0.routines[stretch].exercises.append(bench)
+        }
+    }
+
+    @Test func rejectsAWorkoutWhoseFormatAndScoreDisagree() throws {
+        let fragment = "has a format and AMRAP score that don’t match"
+        func cindy(_ document: BackupDocument) throws -> Int {
+            try index(of: "Cindy", in: document.workouts.map(\.title))
+        }
+        try expectGuidedRejected(containing: fragment) { $0.workouts[0].amrapRounds = 3 }
+        try expectGuidedRejected(containing: fragment) {
+            $0.workouts[0].format = "timedAMRAP"
+        }
+        try expectGuidedRejected(containing: fragment) {
+            $0.workouts[try cindy($0)].amrapExtraReps = nil
+        }
+        try expectGuidedRejected(containing: fragment) {
+            $0.workouts[try cindy($0)].amrapRounds = -1
+        }
+        try expectGuidedRejected(containing: fragment) {
+            $0.workouts[try cindy($0)].amrapExtraReps = -1
+        }
+        try expectGuidedRejected(containing: fragment) {
+            $0.workouts[try cindy($0)].format = "stretch"
+        }
+    }
+
+    @Test func exportRefusesAStoredAMRAPThatDoesntBuildARound() throws {
+        let source = try makeGuidedSource()
+        let cindy = try #require(
+            try source.mainContext.fetch(RoutineLibrary.routinesByName).first { $0.name == "Cindy" }
+        )
+        RoutineLibrary.orderedExercises(of: cindy)[0].target = .repRange(3...5)
+
+        #expect(throws: BackupError.self) { try Backup(context: source.mainContext).export() }
     }
 }

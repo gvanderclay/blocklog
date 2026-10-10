@@ -29,7 +29,7 @@ struct StarterRoutineTests {
 
     @Test func theFileLoadsAndNamesOnlyStarterExercisesOfTheRightType() throws {
         let starterRoutines = try StarterRoutine.load()
-        #expect(starterRoutines.count == 11)
+        #expect(starterRoutines.count == 12)
         #expect(Set(starterRoutines.map(\.name)).count == starterRoutines.count)
         let starters = try container.mainContext.fetch(FetchDescriptor<Exercise>())
         let types = Dictionary(uniqueKeysWithValues: starters.map { ($0.name, $0.type) })
@@ -82,14 +82,13 @@ struct StarterRoutineTests {
             programmes.map { $0.routines.map(\.name) } == [
                 ["Full Body"], ["Upper Body", "Lower Body"], ["Push", "Pull", "Legs"],
             ])
-        #expect(StarterRoutine.standalone(in: starterRoutines).map(\.name) == ["Golden Six"])
+        #expect(
+            StarterRoutine.standalone(in: starterRoutines).map(\.name) == ["Golden Six", "Cindy"])
         #expect(
             StarterRoutine.stretching(in: starterRoutines).map(\.name) == [
                 "Full-Body Quick Stretch", "Dynamic Lifting Warm-Up", "Hips and Lower Back",
                 "Upper Body Reset",
             ])
-        #expect(StarterRoutine.copyable(in: starterRoutines).count == 7)
-        #expect(!StarterRoutine.copyable(in: starterRoutines).contains { $0.format == .stretch })
         #expect(
             StarterRoutine.suggestions(in: starterRoutines).map(\.name) == [
                 "Full Body", "Upper Body",

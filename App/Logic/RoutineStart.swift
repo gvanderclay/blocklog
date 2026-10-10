@@ -27,10 +27,12 @@ struct RoutineStart {
     ///   the bottom of the rep range;
     /// - any other set gets the previous counted set's weight and reps;
     /// - with nothing from last time, a set starts like a new freeform set: 5 lb (or "BW") and empty reps.
-    /// Routine exercises whose exercise was deleted are skipped. Nil while another workout is in progress.
+    /// Routine exercises whose exercise was deleted are skipped. Nil while another workout is in progress, and
+    /// for a routine that isn't of the Sets format, since a guided player plays it.
     /// The result also carries the progressions applied, for the screen to show.
     func startWorkout(from routine: Routine, at date: Date = .now) throws -> Started? {
-        guard WorkoutLog(context: context).inProgressWorkout() == nil else { return nil }
+        guard routine.format == .sets, WorkoutLog(context: context).inProgressWorkout() == nil
+        else { return nil }
         // Read the routine's exercises before linking the workout to it. Linking first leaves
         // `routine.exercises` unloaded, and after a rollback reading it traps in SwiftData ("Could not cast
         // DefaultStoreSnapshotValueFuture to Array<RoutineExercise>").

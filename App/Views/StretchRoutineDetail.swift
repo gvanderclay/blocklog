@@ -2,7 +2,8 @@ import SwiftData
 import SwiftUI
 
 /// A starter stretch routine's stretches with their holds, such as "30 s per side", why it is built that way, its
-/// estimated time for one round, and the rounds and Start that open the guided player.
+/// estimated time for one round, the rounds and Start that open the guided player, and Add to My Routines, which
+/// copies it as a Stretch routine.
 struct StretchRoutineDetail: View {
     let starterRoutine: StarterRoutine
 
@@ -10,6 +11,9 @@ struct StretchRoutineDetail: View {
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
     @State private var rounds = StretchPlayer.roundChoices.lowerBound
     @State private var player: StretchPlayer?
+    // Presented with sheet(item:), as the starter routine detail does.
+    @State private var draft: RoutineDraft?
+    @State private var saveFailed = false
 
     var body: some View {
         List {
@@ -55,8 +59,22 @@ struct StretchRoutineDetail: View {
                     Text("Finish or discard the workout in progress first.")
                 }
             }
+            Section {
+                Button("Add to My Routines") { addToRoutines() }
+                    .accessibilityIdentifier("stretchRoutineDetail.addToRoutines")
+            }
         }
         .navigationTitle(starterRoutine.name)
         .fullScreenCover(item: $player) { StretchPlayerScreen(player: $0) }
+        .sheet(item: $draft) { RoutineEditor(newFrom: $0) }
+        .saveFailedAlert(isPresented: $saveFailed)
+    }
+
+    private func addToRoutines() {
+        do {
+            draft = try StarterLibrary(context: modelContext).draft(of: starterRoutine)
+        } catch {
+            saveFailed = true
+        }
     }
 }

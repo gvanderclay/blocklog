@@ -13,34 +13,62 @@ struct RoutineLibrary {
 
     /// The routine's exercises in position order.
     static func orderedExercises(of routine: Routine) -> [RoutineExercise] {
-        routine.exercises.sorted { $0.position < $1.position }
+        ordered(routine.exercises)
     }
 
-    /// A routine exercise's plan: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration.
+    /// Routine exercises in position order.
+    static func ordered(_ routineExercises: [RoutineExercise]) -> [RoutineExercise] {
+        routineExercises.sorted { $0.position < $1.position }
+    }
+
+    /// A routine exercise's plan: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration, or in a Timed
+    /// AMRAP routine "10 reps".
     static func summary(of routineExercise: RoutineExercise) -> String {
         summary(
-            setCount: routineExercise.plannedSetTypeRawValues.count, target: routineExercise.target)
+            setCount: routineExercise.plannedSetTypeRawValues.count, target: routineExercise.target,
+            in: routineExercise.routine?.format ?? .sets)
     }
 
     /// A plan of `setCount` sets: "3 × 8–12" for a rep range, "3 × 45 s" for a target duration, "3 × —" for
-    /// no target.
-    static func summary(setCount count: Int, target: RoutineTarget?) -> String {
+    /// no target. In a Timed AMRAP, a rep range reads as its fixed rep count: "10 reps"; in a Stretch routine, a
+    /// target duration reads as the hold, "30 s", since the player holds it once a round whatever the set count.
+    static func summary(
+        setCount count: Int, target: RoutineTarget?, in format: RoutineFormat = .sets
+    )
+        -> String
+    {
+        if case .timedAMRAP = format, let range = target?.repRange {
+            return "\(range.upperBound) reps"
+        }
+        if format == .stretch, case .duration(let seconds) = target {
+            return "\(seconds) s"
+        }
         switch target {
-        case .repRange(let range): "\(count) × \(range.lowerBound)–\(range.upperBound)"
-        case .duration(let seconds): "\(count) × \(seconds) s"
-        case nil: "\(count) × —"
+        case .repRange(let range): return "\(count) × \(range.lowerBound)–\(range.upperBound)"
+        case .duration(let seconds): return "\(count) × \(seconds) s"
+        case nil: return "\(count) × —"
         }
     }
 
     /// The plan read aloud: "3 sets of 8 to 12 reps" or "3 sets of 45 seconds".
     static func spokenSummary(of routineExercise: RoutineExercise) -> String {
         spokenSummary(
-            setCount: routineExercise.plannedSetTypeRawValues.count, target: routineExercise.target)
+            setCount: routineExercise.plannedSetTypeRawValues.count, target: routineExercise.target,
+            in: routineExercise.routine?.format ?? .sets)
     }
 
     /// A plan of `setCount` sets read aloud: "3 sets of 8 to 12 reps", "3 sets of 45 seconds" or, with no
-    /// target, "3 sets".
-    static func spokenSummary(setCount count: Int, target: RoutineTarget?) -> String {
+    /// target, "3 sets". In a Timed AMRAP, a rep range reads as "10 reps"; in a Stretch routine, a target duration
+    /// reads as "30 seconds".
+    static func spokenSummary(
+        setCount count: Int, target: RoutineTarget?, in format: RoutineFormat = .sets
+    ) -> String {
+        if case .timedAMRAP = format, let range = target?.repRange {
+            return "\(range.upperBound) reps"
+        }
+        if format == .stretch, case .duration(let seconds) = target {
+            return "\(seconds) seconds"
+        }
         let sets = count == 1 ? "1 set" : "\(count) sets"
         switch target {
         case .repRange(let range):
@@ -73,8 +101,8 @@ struct RoutineLibrary {
         return occurrences[occurrence].target?.repRange
     }
 
-    /// Writes the draft into `routine`, replacing its name and exercises, or into a new routine when it is
-    /// nil, and saves. Nil, changing nothing, when the draft can't be saved.
+    /// Writes the draft into `routine`, replacing its name, format and exercises, or into a new routine when it
+    /// is nil, and saves. Nil, changing nothing, when the draft can't be saved.
     @discardableResult
     func save(_ draft: RoutineDraft, to routine: Routine?, at date: Date = .now) throws -> Routine?
     {
@@ -89,6 +117,7 @@ struct RoutineLibrary {
         let target = routine ?? Routine(name: draft.trimmedName, creationDate: date)
         if routine == nil { context.insert(target) }
         target.name = draft.trimmedName
+        target.format = draft.format
         let old = target.exercises
         target.exercises.removeAll()
         old.forEach(context.delete)

@@ -1,9 +1,11 @@
 import SwiftData
 import SwiftUI
 
-/// The exercises a workout can add, grouped by muscle group and filtered by name and equipment. Tapping one
-/// adds it to the workout; New Exercise creates a custom one.
+/// The exercises a workout or routine can add, grouped by muscle group and filtered by name and equipment.
+/// Tapping one adds it; New Exercise creates a custom one.
 struct ExercisePicker: View {
+    /// The exercise types offered, such as only rep exercises for a Timed AMRAP routine.
+    var types = ExerciseType.allCases
     let onPick: (Exercise) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -14,7 +16,8 @@ struct ExercisePicker: View {
     @State private var isCreating = false
 
     private var sections: [ExerciseCatalog.Section] {
-        ExerciseCatalog.sections(from: exercises, matching: query, equipment: equipment)
+        ExerciseCatalog.sections(
+            from: exercises, matching: query, equipment: equipment, types: types)
     }
 
     var body: some View {
@@ -44,7 +47,7 @@ struct ExercisePicker: View {
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $isCreating) {
-                NewExerciseForm { exercise in
+                NewExerciseForm(types: types) { exercise in
                     onPick(exercise)
                     dismiss()
                 }

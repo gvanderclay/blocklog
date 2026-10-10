@@ -10,9 +10,10 @@ struct RoutineDifference {
     /// an exercise's set count does. Weight, reps, duration and set-type edits never count. False for a
     /// workout with no routine. Call it after Finish, which has dropped unchecked sets and empty exercises.
     /// Routine and workout exercises whose exercise was deleted are left out, since a workout started from
-    /// the routine never held them.
+    /// the routine never held them. False for a routine played in a guided player (Stretch or Timed AMRAP), since
+    /// its logged sets don't mirror its plan.
     static func isStructural(_ workout: Workout) -> Bool {
-        guard let routine = workout.routine else { return false }
+        guard let routine = workout.routine, routine.format == .sets else { return false }
         let planned = plannedExercises(of: routine).map {
             ($0.exercise, $0.plannedSetTypeRawValues.count)
         }

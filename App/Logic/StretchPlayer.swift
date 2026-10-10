@@ -2,9 +2,10 @@ import Foundation
 import Observation
 import SwiftData
 
-/// Drives the guided player through a stretch routine: for each round, each stretch in order, a lead-in then a
-/// hold, and for a per-side stretch a second lead-in ("Switch sides") and hold. The last seconds of each hold tick
-/// and its end chimes; lead-ins are silent. Logs what was done as a finished workout.
+/// Drives the guided player through a stretch routine, a starter one or a Stretch-format routine: for each round,
+/// each stretch in order, a lead-in then a hold, and for a per-side stretch a second lead-in ("Switch sides") and
+/// hold. The last seconds of each hold tick and its end chimes; lead-ins are silent. Logs what was done as a
+/// finished workout.
 @Observable
 @MainActor
 final class StretchPlayer: Identifiable {
@@ -36,7 +37,11 @@ final class StretchPlayer: Identifiable {
         }
     }
 
-    let starterRoutine: StarterRoutine
+    /// The routine's name, which titles the player and the workout.
+    let name: String
+    let round: StretchRound
+    /// The stored routine played, which the workout links to; nil for a starter stretch routine.
+    let routine: Routine?
     let rounds: Int
     let countdown: PhasedCountdown<Step>
     let startDate: Date
@@ -45,39 +50,67 @@ final class StretchPlayer: Identifiable {
 
     @ObservationIgnored private let now: () -> Date
 
-    private init(starterRoutine: StarterRoutine, rounds: Int, now: @escaping () -> Date) {
-        self.starterRoutine = starterRoutine
+    private init(
+        name: String, round: StretchRound, routine: Routine?, rounds: Int,
+        now: @escaping () -> Date
+    ) {
+        self.name = name
+        self.round = round
+        self.routine = routine
         self.rounds = rounds
         self.now = now
         startDate = now()
         let leadIn = StarterRoutine.leadInSeconds
         var phases: [PhasedCountdown<Step>.Phase] = []
+        let stretches = round.stretches
         for round in 1...rounds {
-            for (position, entry) in starterRoutine.exercises.enumerated() {
-                // The 32a seeding resolves a stretch by name, maybe to a custom exercise, so the side count comes
-                // from the starter routine's entry, never from the stored exercise.
-                for side in entry.isPerSide ? [1, 2] : [nil] {
+            for (position, stretch) in stretches.enumerated() {
+                for side in stretch.isPerSide ? [1, 2] : [nil] {
                     let step = { Step(kind: $0, round: round, entry: position, side: side) }
                     phases.append(.init(step: step(.leadIn), seconds: leadIn, isSignalled: false))
                     phases.append(
                         .init(
-                            step: step(.hold), seconds: entry.target?.seconds ?? 0,
-                            isSignalled: true))
+                            step: step(.hold), seconds: stretch.seconds, isSignalled: true))
                 }
             }
         }
         countdown = PhasedCountdown(phases: phases, now: now)
     }
 
-    /// Starts playing the routine for the rounds, clamped to `roundChoices`. Nil, starting nothing, while a
-    /// workout is in progress.
+    /// Starts playing the starter stretch routine for the rounds, clamped to `roundChoices`. Nil, starting
+    /// nothing, while a workout is in progress or when it doesn't build a `StretchRound`.
     static func start(
         _ starterRoutine: StarterRoutine, rounds: Int, in context: ModelContext,
         now: @escaping () -> Date = { .now }
     ) -> StretchPlayer? {
+        guard let round = StretchRound(starterRoutine) else { return nil }
+        return start(
+            name: starterRoutine.name, round: round, routine: nil, rounds: rounds, in: context,
+            now: now)
+    }
+
+    /// Starts playing a Stretch-format routine for the rounds, clamped to `roundChoices`; the workout it logs links
+    /// to the routine. Nil, starting nothing, while a workout is in progress, for a routine of another format, or
+    /// when its exercises don't build a `StretchRound`.
+    static func start(
+        _ routine: Routine, rounds: Int, in context: ModelContext,
+        now: @escaping () -> Date = { .now }
+    ) -> StretchPlayer? {
+        guard routine.format == .stretch, let round = StretchRound(routine.exercises) else {
+            return nil
+        }
+        return start(
+            name: routine.name, round: round, routine: routine, rounds: rounds, in: context,
+            now: now)
+    }
+
+    private static func start(
+        name: String, round: StretchRound, routine: Routine?, rounds: Int,
+        in context: ModelContext, now: @escaping () -> Date
+    ) -> StretchPlayer? {
         guard WorkoutLog(context: context).inProgressWorkout() == nil else { return nil }
         let rounds = min(max(rounds, roundChoices.lowerBound), roundChoices.upperBound)
-        return StretchPlayer(starterRoutine: starterRoutine, rounds: rounds, now: now)
+        return StretchPlayer(name: name, round: round, routine: routine, rounds: rounds, now: now)
     }
 
     // MARK: Reading
@@ -86,7 +119,7 @@ final class StretchPlayer: Identifiable {
     var step: Step? { countdown.phase?.step }
 
     /// The current stretch's name; nil once finished.
-    var stretchName: String? { step.map { starterRoutine.exercises[$0.entry].exercise } }
+    var stretchName: String? { step.map { round.stretches[$0.entry].name } }
 
     /// The current stretch's cue and variations; nil once finished or for a stretch with none.
     var cue: StretchCue? { stretchName.flatMap { StretchCue.bundled[$0] } }
@@ -101,10 +134,10 @@ final class StretchPlayer: Identifiable {
     /// finished.
     var upNext: String? {
         guard let step else { return nil }
-        let entries = starterRoutine.exercises
+        let stretches = round.stretches
         let next = step.entry + 1
-        if next < entries.count { return entries[next].exercise }
-        return step.round < rounds ? entries.first?.exercise : nil
+        if next < stretches.count { return stretches[next].name }
+        return step.round < rounds ? stretches.first?.name : nil
     }
 
     /// Whether any hold ran to its end, so quitting has something to save.
@@ -139,7 +172,8 @@ final class StretchPlayer: Identifiable {
 
     // MARK: Logging
 
-    /// Saves a finished workout titled with the routine's name, with no routine link, from the start of play to
+    /// Saves a finished workout titled with the routine's name, linked to the stored routine played (none for a
+    /// starter routine), from the start of play to
     /// now, holding one completed duration set per stretch per round whose hold (either side, for a per-side
     /// stretch) ran to its end. The set holds that hold's length with any added seconds, the longer side's for a
     /// per-side stretch. A stretch whose stored exercise doesn't record a duration (a custom exercise sharing the
@@ -156,11 +190,11 @@ final class StretchPlayer: Identifiable {
                 held[step.entry]?[step.round] ?? 0, seconds)
         }
         guard !held.isEmpty else { return nil }
-        let entries = starterRoutine.exercises
+        let stretches = round.stretches
         let exercises = try StarterExercises.exercises(
-            named: held.keys.map { entries[$0].exercise }, in: context)
+            named: held.keys.map { stretches[$0].name }, in: context)
         let logged = held.keys.sorted().compactMap { entry -> (Exercise, [Int])? in
-            guard let exercise = exercises[entries[entry].exercise], exercise.type == .duration,
+            guard let exercise = exercises[stretches[entry].name], exercise.type == .duration,
                 let rounds = held[entry]
             else { return nil }
             return (exercise, rounds.keys.sorted().compactMap { rounds[$0] })
@@ -168,7 +202,7 @@ final class StretchPlayer: Identifiable {
         // Every name resolves (a missing starter is inserted), so nothing is pending when all are left out.
         guard !logged.isEmpty else { return nil }
         let workout = Workout(
-            title: starterRoutine.name, startDate: startDate, endDate: max(now(), startDate))
+            title: name, startDate: startDate, endDate: max(now(), startDate), routine: routine)
         context.insert(workout)
         for (position, (exercise, seconds)) in logged.enumerated() {
             let workoutExercise = WorkoutExercise(exercise: exercise, position: position)

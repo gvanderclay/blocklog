@@ -15,7 +15,9 @@ enum BackupError: LocalizedError, Equatable {
         switch self {
         case .unreadable(let detail): detail
         case .unsupportedVersion(let version):
-            "This backup is version \(version); this app reads only version \(BackupDocument.currentVersion), so older backups can't be imported."
+            version < BackupDocument.readableVersions.lowerBound
+                ? "This backup is version \(version); this app reads versions \(BackupDocument.readableVersions.lowerBound) to \(BackupDocument.currentVersion), so older backups can't be imported."
+                : "This backup is version \(version), from a newer Blocklog; this app reads versions \(BackupDocument.readableVersions.lowerBound) to \(BackupDocument.currentVersion)."
         case .invalid(let detail): detail
         case .workoutInProgress: "Finish or discard your workout in progress first."
         }
@@ -27,7 +29,10 @@ enum BackupError: LocalizedError, Equatable {
 /// with a message naming it. Records refer to each other by `id`.
 @MainActor
 struct BackupDocument: Codable, Equatable {
-    nonisolated static let currentVersion = 2
+    nonisolated static let currentVersion = 3
+    /// The versions Import reads. Version 3 added the routine format and AMRAP score keys, which version 2 files
+    /// lack and which read as absent.
+    nonisolated static let readableVersions = 2...currentVersion
     /// The largest rep range value a routine exercise may have.
     static let maxRepRange = 50
 
@@ -67,6 +72,9 @@ struct BackupDocument: Codable, Equatable {
         /// The programme the routine belongs to, with `programmePosition`; both nil for My Routines.
         var programmeID: UUID?
         var programmePosition: Int?
+        /// The stored format raw value and time cap, verbatim; absent from version 2 files and for a Sets routine.
+        var format: String? = nil
+        var timeCapSeconds: Int? = nil
         var exercises: [RoutineExerciseRecord]
     }
 
@@ -90,6 +98,11 @@ struct BackupDocument: Codable, Equatable {
         var endDate: Date?
         /// The routine the workout started from; nil for a freeform workout.
         var routineID: UUID?
+        /// The stored format raw value and AMRAP score, verbatim; absent from version 2 files and for a Sets
+        /// workout.
+        var format: String? = nil
+        var amrapRounds: Int? = nil
+        var amrapExtraReps: Int? = nil
         var exercises: [WorkoutExerciseRecord]
     }
 
@@ -150,7 +163,9 @@ struct BackupDocument: Codable, Equatable {
         struct Header: Decodable { let version: Int }
         do {
             let version = try JSONDecoder().decode(Header.self, from: data).version
-            guard version == currentVersion else { throw BackupError.unsupportedVersion(version) }
+            guard readableVersions.contains(version) else {
+                throw BackupError.unsupportedVersion(version)
+            }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .custom { decoder in
                 let text = try decoder.singleValueContainer().decode(String.self)
@@ -199,7 +214,9 @@ struct BackupDocument: Codable, Equatable {
 
     /// Throws `BackupError` naming the first problem. Nothing is stored from a document that fails.
     func validate() throws {
-        guard version == Self.currentVersion else { throw BackupError.unsupportedVersion(version) }
+        guard Self.readableVersions.contains(version) else {
+            throw BackupError.unsupportedVersion(version)
+        }
         // A store always holds at least one exercise; an empty one would be re-seeded with the starters at launch.
         guard !exercises.isEmpty else { throw BackupError.invalid("The backup has no exercises.") }
         var ids = Set<UUID>()
@@ -272,7 +289,18 @@ struct BackupDocument: Codable, Equatable {
             case (nil, _?):
                 throw BackupError.invalid("\(owner) has a programme position but no programme.")
             }
+            guard
+                let format = RoutineFormat(
+                    rawValue: routine.format, timeCapSeconds: routine.timeCapSeconds)
+            else {
+                throw BackupError.invalid(
+                    "\(owner) has a format that isn’t Sets, Stretch, or a Timed AMRAP of 1 to 60 whole minutes."
+                )
+            }
             try requireUniquePositions(routine.exercises.map(\.position), in: owner)
+            // Each exercise's type, planned set count and target, in position order, for the format's rules.
+            var rows: [(position: Int, type: ExerciseType, setCount: Int, target: RoutineTarget?)] =
+                []
             for entry in routine.exercises {
                 try claim(entry.id, for: owner)
                 guard let type = types[entry.exerciseID] else {
@@ -309,6 +337,31 @@ struct BackupDocument: Codable, Equatable {
                 if entry.targetDurationSeconds != nil, target?.seconds == nil {
                     throw BackupError.invalid("\(owner) has a target duration for a rep exercise.")
                 }
+                rows.append((entry.position, type, entry.plannedSetTypes.count, target))
+            }
+            rows.sort { $0.position < $1.position }
+            switch format {
+            case .sets: break
+            case .timedAMRAP:
+                guard
+                    AMRAPRound.fixedReps(
+                        of: rows.map {
+                            .init(type: $0.type, plannedSetCount: $0.setCount, target: $0.target)
+                        }) != nil
+                else {
+                    throw BackupError.invalid(
+                        "\(owner) is a Timed AMRAP whose exercises aren’t all rep exercises with one set and a fixed rep count."
+                    )
+                }
+            case .stretch:
+                guard
+                    StretchRound.holdSeconds(
+                        of: rows.map { .init(type: $0.type, target: $0.target) }) != nil
+                else {
+                    throw BackupError.invalid(
+                        "\(owner) is a Stretch routine whose exercises aren’t all timed exercises with a target duration."
+                    )
+                }
             }
         }
 
@@ -328,6 +381,15 @@ struct BackupDocument: Codable, Equatable {
             }
             guard end >= workout.startDate else {
                 throw BackupError.invalid("\(owner) ends before it starts.")
+            }
+            guard
+                WorkoutFormat(
+                    rawValue: workout.format, rounds: workout.amrapRounds,
+                    extraReps: workout.amrapExtraReps) != nil
+            else {
+                throw BackupError.invalid(
+                    "\(owner) has a format and AMRAP score that don’t match: rounds and extra reps, each 0 or more, come with a Timed AMRAP and nothing else."
+                )
             }
             if let routineID = workout.routineID, !routineIDs.contains(routineID) {
                 throw BackupError.invalid(
