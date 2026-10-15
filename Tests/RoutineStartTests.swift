@@ -203,12 +203,12 @@ struct RoutineStartTests {
         let workout = try #require(try start.startWorkout(from: push, at: try day(9))?.workout)
         let exercises = WorkoutLog.orderedExercises(of: workout)
 
-        #expect(RoutineLibrary.repRangeText(for: exercises[0]) == "6–10")
-        #expect(RoutineLibrary.repRangeText(for: exercises[1]) == nil)
+        #expect(RoutineLibrary.repRange(for: exercises[0]) == 6...10)
+        #expect(RoutineLibrary.repRange(for: exercises[1]) == nil)
 
         try log.addExercise(try exercise("Hammer Curl"), to: workout)
         let added = try #require(WorkoutLog.orderedExercises(of: workout).last)
-        #expect(RoutineLibrary.repRangeText(for: added) == nil)
+        #expect(RoutineLibrary.repRange(for: added) == nil)
     }
 
     @Test func anExerciseListedTwiceShowsEachOccurrencesRange() throws {
@@ -224,8 +224,8 @@ struct RoutineStartTests {
         let workout = try #require(try start.startWorkout(from: twice, at: try day(9))?.workout)
         let exercises = WorkoutLog.orderedExercises(of: workout)
 
-        #expect(RoutineLibrary.repRangeText(for: exercises[0]) == "6–8")
-        #expect(RoutineLibrary.repRangeText(for: exercises[1]) == "10–12")
+        #expect(RoutineLibrary.repRange(for: exercises[0]) == 6...8)
+        #expect(RoutineLibrary.repRange(for: exercises[1]) == 10...12)
     }
 
     @Test func aDurationSetWithNoTargetGetsThirtySeconds() throws {
@@ -258,14 +258,14 @@ struct RoutineStartTests {
         let workout = try #require(try start.startWorkout(from: routine, at: try day(9))?.workout)
 
         let exercises = WorkoutLog.orderedExercises(of: workout)
-        #expect(exercises.map { RoutineLibrary.repRangeText(for: $0) } == [nil, nil, nil])
+        #expect(exercises.map { RoutineLibrary.repRange(for: $0) } == [nil, nil, nil])
     }
 
     @Test func aFreeformWorkoutShowsNoRange() throws {
         let workout = try #require(try log.startEmptyWorkout(at: try day(9)))
         try log.addExercise(try exercise("Dumbbell Bench Press"), to: workout)
 
-        #expect(RoutineLibrary.repRangeText(for: try #require(workout.exercises.first)) == nil)
+        #expect(RoutineLibrary.repRange(for: try #require(workout.exercises.first)) == nil)
     }
 
     @Test func finishWithABlankTitleKeepsTheRoutineName() throws {

@@ -14,14 +14,14 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Accent: **Amber**, `AccentColor` in `App/Resources/Assets.xcassets`: `#B45309` in light mode, `#E8710A` in dark mode. Views get it through the default tint; never hard-code `.orange` or a hex value in a view.
   - Why amber: it nods to PowerBlock's yellow-and-black branding and reads as warm and energetic, while staying clearly apart from the green of completed sets, the red of destructive actions and the default system blue.
   - Contrast (WCAG): light `#B45309` is 5.0:1 on white and 4.5:1 on the grouped background, and white text on it is 5.0:1. Dark `#E8710A` is 5.5:1 on the dark cell background (`#1C1C1E`) and 6.8:1 on black, and white text on it is 3.1:1, which passes only for large text (at least 18 pt regular or 14 pt bold). So white text on the accent, such as a prominent button's label, uses `.headline` (17 pt semibold) or a larger text style, never a smaller one.
-- Completed sets: the row background is `Color.green.opacity(0.15)` (system green, so it adapts to dark mode), and the check-off symbol is `checkmark.circle.fill` in `.green`. Unchecked sets use `circle` in `.secondary` on the normal row background.
+- Set summaries: a done summary has the row background `Color.green.opacity(0.15)` (system green, so it adapts to dark mode) and `checkmark.circle.fill` in `.green`. An upcoming summary has `circle` and its values in `.secondary`. The open set has no tint.
 - The accent marks what the user can act on, plus one highlight: a weight pre-filled by progression shows in the accent until the user changes it or checks off the set (ticket 19).
 - Everything else uses semantic styles: `.primary`, `.secondary` and `.tertiary` for text; system grouped backgrounds; `role: .destructive` for red (the one exception: a swipe Delete that confirms first, such as a routine's, is tinted `.red` with no destructive role, because the role removes the row before the confirmation). No other custom colors in views. The PowerBlock diagram's rail bands are the one exception, because they copy the physical block (ticket 14).
 
 ## Typography
 
 - System text styles only (`.body`, `.headline`, `.title2` …), never fixed point sizes, so Dynamic Type works everywhere.
-- Numbers the user watches or edits (weights, reps, durations, elapsed time, the rest countdown, summary stats) use `.fontDesign(.rounded)` with `.monospacedDigit()`, so they don't jitter. In set rows they keep the row's text style; the rest countdown uses `.title2.weight(.semibold)`; the finish summary's stats use `.title`. The AMRAP player's countdown, read from across the room, is the one size beyond `.largeTitle`: 72 points scaled with Dynamic Type (`@ScaledMetric(relativeTo: .largeTitle)`), semibold.
+- Numbers the user watches or edits (weights, reps, durations, elapsed time, the rest countdown, summary stats) use `.fontDesign(.rounded)` with `.monospacedDigit()`, so they don't jitter. In the open set, weight and reps are `.title3` rounded and monospaced, with field labels in `.caption` `.secondary`; summaries use `.body`. the rest countdown uses `.title2.weight(.semibold)`; the finish summary's stats use `.title`. The AMRAP player's countdown, read from across the room, is the one size beyond `.largeTitle`: 72 points scaled with Dynamic Type (`@ScaledMetric(relativeTo: .largeTitle)`), semibold.
 - A changing number animates with `.contentTransition(.numericText(value:))` inside an animation; the rest countdown uses `.numericText(countsDown: true)`.
 - Secondary information (Previous, setup line, progression note, footnotes) uses `.subheadline` or `.footnote` with `.secondary`.
 
@@ -30,7 +30,8 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Use SwiftUI's default animation (`withAnimation { }` or `.animation(.default, value:)`, a spring). No custom timing curves, and nothing longer than about half a second.
 - Rows and sections insert and remove with animation: change the data inside `withAnimation`.
 - Bars and banners (the rest timer bar) enter and leave from their edge with `.move(edge:).combined(with: .opacity)`.
-- Confirmations use SF Symbol effects, played once: `.symbolEffect(.bounce, value:)` on the checkmark when a set is checked off (not when unchecked), on the progression arrow when the workout opens, and on the finish summary's checkmark.
+- Confirmations use SF Symbol effects, played once: `.symbolEffect(.bounce, value:)` on the set summary's check when a set is checked off (not when unchecked), on the progression arrow when the workout opens, and on the finish summary's checkmark.
+- Checking off collapses the set and expands the next with the default animation; tapping a summary does the same. The list scrolls only when the open set isn't wholly visible. With Reduce Motion, all of this happens without animation.
 - Reduce Motion: read `@Environment(\.accessibilityReduceMotion)`. When it is on, rows in lists are inserted, removed and filtered without animation (SwiftUI `List` gives no supported cross-fade for its rows; [Apple's guidance](https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion) allows removing the animation): pass `reduceMotion ? nil : .default` to `withAnimation` and `.animation`. Every other transition is `.opacity`, so sliding and scaling (sheets, the timer bar, the diagram's pin and adders) become cross-fades, and symbol bounces don't play. Numeric-text transitions stay; the system already tones them down.
 - No looping, pulsing or attention-seeking animation. The rest ring drains continuously, which is information, not decoration.
 - The stretch player (ticket 32b): the countdown rolls with `.numericText(countsDown: true)`, and when the lead-in or hold changes, the stretch's name, status, cue and up next cross-fade (`.contentTransition(.opacity)` with the default animation), which Reduce Motion keeps because it is already a cross-fade. Nothing else in the player moves.
@@ -45,6 +46,7 @@ Haptics go through SwiftUI's `.sensoryFeedback(_:trigger:)`, which follows the s
 | Weight step (−, +, or a menu pick), set-type change, ±15 s on the timer, tapping Previous to copy it | selection | `.selection` |
 | Set checked off | success | `.success` |
 | Set unchecked | light impact | `.impact(weight: .light)` |
+| Check-off tapped on a set with an empty field and no placeholder (focuses the field) | light impact | `.impact(weight: .light)` |
 | Set or exercise deleted | medium impact | `.impact(weight: .medium)` |
 | Rest timer at 3, 2 and 1 seconds left (app in foreground) | light impact | `.impact(weight: .light)` |
 | Rest timer reaches zero (app in foreground) | warning | `.warning` |
@@ -74,13 +76,15 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 
 Each touch is specified in its feature ticket; this is the rule that ticket implements.
 
-- Reps and duration fields use `.keyboardType(.numberPad)` with a keyboard toolbar (`ToolbarItemGroup(placement: .keyboard)`): a spacer, then "Next", which focuses the next empty field in the workout or dismisses the keyboard when there is none, then "Done", which checks off the focused set (same haptic and animation as its checkmark) and then moves focus like Next; when the set can't be checked off, Done only dismisses the keyboard. Checking a set with its checkmark also moves focus like Next; unchecking never moves focus. Checking off the workout's last unchecked set, by either path, starts no rest and asks "All sets done" (Finish opens the finish sheet; Keep Going dismisses).
+- Reps and duration fields use `.keyboardType(.numberPad)` with a keyboard toolbar (`ToolbarItemGroup(placement: .keyboard)`): a spacer, then "Next" and "Done". In a live workout, Next opens the next unchecked set (`NextSet.after`) without checking anything off and focuses its field, or dismisses the keyboard when there is none; in past-workout editing, Next opens the next set missing its value. Done checks off the open set (same haptic and animation as its check) and the next set opens, with focus following only if the keyboard was up; when the set has no reps (or seconds) and no placeholder, Done keeps the field focused with a light tap. Checking off with the check button while the keyboard is down leaves it down; unchecking never moves focus. Checking off the workout's last unchecked set, by either path, starts no rest and asks "All sets done" (Finish opens the finish sheet; Keep Going dismisses).
 - The workout screen ends, after Add Exercise, with a destructive "Discard Workout" button (the same confirmation as the ••• menu).
-- Set rows have a long-press `.contextMenu` (ticket 08) as well as swipe actions.
+- Set summaries and the open set have a long-press `.contextMenu` (ticket 08) as well as swipe actions.
+- One set per workout is open, shown expanded: its type menu, Previous with Copy, weight − / value / +, reps (seconds for duration) with small `.caption` labels above, and a large check. Every other set is a one-line summary: check state, set label and values; tapping it opens that set. The workout screen opens the first unchecked set after the last checked one (else the first unchecked); checking off and keyboard Next open the next unchecked set; a set the user adds (Add Set, Duplicate, Add Exercise) opens at once. Deleting the open set opens the next set to do (none in a past workout). Which set is open is view state, never stored. The summary of an unchecked set shows the values checking it off would log, such as "40 lb × 10" with the 10 from the placeholder, and "5 lb × —" with none; a pre-filled progression weight shows in the accent. In past-workout editing nothing is open at first, the open set has no check and its Previous has no Copy, and an invalid summary keeps the red outline and "Add reps" hint; Done closes the open set. At accessibility sizes the open set stacks its labelled controls, with the check beside a visible "Check Off" or "Uncheck", and summaries wrap.
+- An empty reps or seconds field shows one grey number, the placeholder: the rep range's low end, else Previous, else the set above's value. Checking a set off fills each empty field from its placeholder, so one tap logs it (an upcoming summary shows the placeholder in place of the empty reps); with no placeholder the set stays unchecked and its field is focused.
 - Empty states use `ContentUnavailableView` with an SF Symbol and one sentence; an empty search uses `ContentUnavailableView.search`.
 - Destructive actions confirm with a destructive-role button that names the action ("Discard Workout", "Delete Routine"), plus Cancel. Confirm: discarding a workout, deleting a workout, routine or program, removing an exercise that has checked sets, and replacing data on import. Exception: deleting a single set (swipe or menu) happens at once, because it is quick to redo. Removing a routine from a program isn't destructive (the routine moves to My Routines), so it asks nothing.
 - Finishing a workout shows a short summary (ticket 06); after a program workout it adds a secondary line, "Next in <program>: <routine>", which starts nothing.
-- Tapping a Previous value copies it into an unchecked set (ticket 09).
+- The open set's Previous Copy copies last time's values into an unchecked set (ticket 09).
 - The setup diagram animates between setups (ticket 14).
 - The stretch player keeps the screen awake while it shows (ticket 32b). Finish at the top left always asks "Finish early?": Save What I Did (logs the holds so far, the one under way for the seconds held), Discard and Keep Going (the popover's tap outside). The clock keeps running while it asks; if the routine ends meanwhile, the dialog closes and the routine logs as usual.
 - The AMRAP player (ticket 33b) is a `fullScreenCover` with Cancel at the top left before Start (it closes at once) and Finish after. Before Start it is a list: the dumbbell weights with − and + (or the weight menu), the round's exercises with their reps, last time's score, and Start. During the AMRAP it shows "Round N", "Get ready" or "Paused", the big countdown, and the round's exercises with reps and weight; a bottom bar holds Pause (icon only) and a prominent Round done, enabled only while the clock runs. At time up it is a form: "Time's up" ("Finished early" after Finish early), an Extra reps stepper (0 to one fewer than a round's reps), the score, and Save at the top right; then the summary shows today's and last time's score with Done. It keeps the screen awake. Finish always asks "Finish early?": Save What I Did (stops the clock and opens the time-up form, for the reps of the round under way), Discard and Keep Going. The clock keeps running while it asks; if time runs out meanwhile, the dialog closes for the time-up form. At time up the top-left button reads Discard and asks "Discard your score?" (Discard, Cancel).
@@ -116,7 +120,8 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 
 - Every interactive element has a label that reads naturally, with units spelled out, and its state as the value: "Weight, 35 pounds", "Reps, 10", "Set 1, done", "Previous, 35 pounds times 10". Symbol-only buttons get a text label ("Minimize", "Increase weight").
 - Tap targets are at least 44 × 44 points, including − and + and the check-off button.
-- Every screen works at the largest accessibility text size: rows wrap rather than truncate (no `.lineLimit(1)` on content), set rows stack their parts vertically when `dynamicTypeSize.isAccessibilitySize`, and toolbars don't collide (move secondary actions into a `Menu`).
+- Set row labels name their set ("Set 2 reps", "Set 2 weight", "Set 2 previous", "Warm-up 1 reps"). A summary is one button: label "Set 2", value "40 pounds times 10, done" (or "not done"; past editing appends the hint, such as ", Add reps", and leaves out "done"), hint "Opens the set". After a check-off or Next opens a set, VoiceOver focus moves to the new open set's type menu (`@AccessibilityFocusState`), because the check just tapped is gone. At large text sizes the open set stacks its labelled controls and summaries wrap.
+- Every screen works at the largest accessibility text size: rows wrap rather than truncate (no `.lineLimit(1)` on content), set rows stack their parts vertically at accessibility sizes (and earlier when they don't fit), and toolbars don't collide (move secondary actions into a `Menu`).
 - Color is never the only signal: a completed set also shows its filled checkmark.
 - Every interactive element has an `accessibilityIdentifier` (`AGENTS.md` rule 13).
 
@@ -136,7 +141,7 @@ Phase 1 (tickets 06–10):
 - [ ] Remove an exercise that has checked sets: it confirms first, then a medium thump.
 - [ ] Change a set's type from the label menu or the long-press menu: a selection tick.
 - [ ] Long-press a set row: the menu offers Set Type, Duplicate and Delete.
-- [ ] Reps keyboard: Next jumps to the next empty field; Done checks off the set and jumps the same way, closing the keyboard at the end. The checkmark also moves to the next empty field.
+- [ ] Reps keyboard: Next opens the next unchecked set and moves to its field, closing the keyboard at the end; Done checks off the open set and the next set opens with the keyboard still up.
 - [ ] Check off the workout's last unchecked set: no rest starts, and "All sets done" offers Finish and Keep Going.
 - [ ] The bottom Discard Workout button opens the discard confirmation.
 - [ ] Elapsed time ticks without jitter.
@@ -159,7 +164,6 @@ Phase 2 (tickets 13–15):
 - [ ] Timer Sounds off: no chime in the app, and the notification is silent.
 - [ ] Rest with the app in the background: the notification arrives with the chime.
 - [ ] Skip: the bar leaves with no buzz or chime.
-- [ ] Change the weight in the diagram sheet: the pin slides and the adders fade.
 - [ ] Rest before a weight change: the change line fades in; tapping it shows the diagram moving from now to next.
 - [ ] With Reduce Motion on, the rest bar and the diagram cross-fade.
 
@@ -190,6 +194,12 @@ Phase 7 (tickets 33a–33b):
 - [ ] Round done: a success tap, and the round number rolls.
 - [ ] The time cap's last 5 seconds: a tick and a light tap each, then the chime and a warning buzz at zero.
 - [ ] At time up, step the extra reps: a selection tick each; Save shows "14 rounds + 7 reps" and last time's score, and History shows the score.
+
+Phase 8 (ticket 26):
+
+- [ ] Tap the check on an empty set with a hint: the hint turns into the value, a success tap; with no hint, a light tap and the keyboard opens on it.
+- [ ] Check off the open set: a success tap, it collapses to a green line whose check bounces, and the next set opens below with nothing jumping under your finger.
+- [ ] Tap a done set's line: it opens; its check unchecks it.
 
 ## App icon
 

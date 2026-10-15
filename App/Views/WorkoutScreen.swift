@@ -13,9 +13,13 @@ struct WorkoutScreen: View {
     @Environment(RestTimer.self) private var restTimer
     @AppStorage("defaultRestSeconds") private var defaultRest = 90
     @FocusState private var focusedRepsSetID: UUID?
+    @AccessibilityFocusState private var accessibilityFocusedSetID: UUID?
+    /// The set shown open. View state only: a reopened screen recomputes it with `NextSet.current`.
+    @State private var openSetID: UUID?
     @State private var isPickingExercise = false
     @State private var isReordering = false
     @State private var deleteCount = 0
+    @State private var missingValueCount = 0
     @State private var isFinishing = false
     @State private var isConfirmingDiscard = false
     @State private var isOfferingFinish = false
@@ -24,80 +28,24 @@ struct WorkoutScreen: View {
     /// Held here, not on the section header, so the dialog shows however far the list has scrolled.
     @State private var exerciseToRemove: WorkoutExercise?
 
+    init(workout: Workout, progressions: Binding<AppliedProgressions>) {
+        self.workout = workout
+        _progressions = progressions
+        _openSetID = State(initialValue: NextSet.current(in: workout)?.id)
+    }
+
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(WorkoutLog.orderedExercises(of: workout).enumerated(), id: \.element.id) {
-                    index, workoutExercise in
-                    ExerciseSection(
-                        workoutExercise: workoutExercise, exerciseIndex: index,
-                        workout: workout, focusedRepsSetID: $focusedRepsSetID,
-                        deleteCount: $deleteCount, progressions: $progressions, onRemove: remove,
-                        onAllSetsDone: { isOfferingFinish = true })
-                }
-                Section {
-                    Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
-                        .accessibilityIdentifier("workout.addExercise")
-                }
-                Section {
-                    Button("Discard Workout", role: .destructive) { isConfirmingDiscard = true }
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("workout.discardBottom")
-                }
+            ScrollViewReader { proxy in
+                list
+                    // No anchor: the list scrolls only as far as the set needs to be wholly visible.
+                    .onChange(of: openSetID) { _, id in scroll(to: id, with: proxy) }
+                    .onAppear { scroll(to: openSetID, with: proxy) }
             }
-            .safeAreaInset(edge: .bottom) {
-                if restTimer.isRunning {
-                    RestTimerBar()
-                        .transition(
-                            reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(.default, value: restTimer.isRunning)
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Minimize", systemImage: "chevron.down") { dismiss() }
-                        .accessibilityIdentifier("workout.minimize")
-                }
-                ToolbarItem(placement: .principal) {
-                    Text(workout.startDate, style: .timer)
-                        .font(.headline)
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                        .accessibilityLabel("Elapsed time")
-                        .accessibilityIdentifier("workout.elapsed")
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Finish") { isFinishing = true }
-                        .accessibilityIdentifier("workout.finish")
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Menu("More", systemImage: "ellipsis.circle") {
-                        Button("Reorder", systemImage: "arrow.up.arrow.down") {
-                            isReordering = true
-                        }
-                        .disabled(!WorkoutLog.canReorder(workout))
-                        .accessibilityIdentifier("workout.reorder")
-                        Button("Discard Workout", systemImage: "trash", role: .destructive) {
-                            isConfirmingDiscard = true
-                        }
-                        .accessibilityIdentifier("workout.discard")
-                    }
-                    .accessibilityIdentifier("workout.menu")
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Next") {
-                        focusedRepsSetID = focusedRepsSetID.flatMap {
-                            WorkoutLog.nextEmptySet(after: $0, in: workout)?.id
-                        }
-                    }
-                    .accessibilityIdentifier("keyboard.next")
-                    Button("Done") { checkOffFocusedSet() }
-                        .accessibilityIdentifier("keyboard.done")
-                }
-            }
+            .sensoryFeedback(.impact(weight: .light), trigger: missingValueCount)
+            .toolbar { toolbar }
             .confirmationDialog(
                 "Discard this workout?", isPresented: $isConfirmingDiscard,
                 titleVisibility: .visible
@@ -132,7 +80,8 @@ struct WorkoutScreen: View {
                 ExercisePicker { exercise in
                     withAnimation(reduceMotion ? nil : .default) {
                         do {
-                            try WorkoutLog(context: modelContext).addExercise(exercise, to: workout)
+                            openSetID = try WorkoutLog(context: modelContext)
+                                .addExercise(exercise, to: workout).id
                         } catch {
                             saveFailed = true
                         }
@@ -161,6 +110,83 @@ struct WorkoutScreen: View {
         }
     }
 
+    private func scroll(to id: UUID?, with proxy: ScrollViewProxy) {
+        guard let id else { return }
+        withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(id) }
+    }
+
+    private var list: some View {
+        List {
+            ForEach(WorkoutLog.orderedExercises(of: workout).enumerated(), id: \.element.id) {
+                index, workoutExercise in
+                ExerciseSection(
+                    workoutExercise: workoutExercise, exerciseIndex: index,
+                    workout: workout, focusedRepsSetID: $focusedRepsSetID,
+                    openSetID: $openSetID, accessibilityFocus: $accessibilityFocusedSetID,
+                    deleteCount: $deleteCount, progressions: $progressions, onRemove: remove,
+                    onAllSetsDone: { isOfferingFinish = true })
+            }
+            Section {
+                Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
+                    .accessibilityIdentifier("workout.addExercise")
+            }
+            Section {
+                Button("Discard Workout", role: .destructive) { isConfirmingDiscard = true }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("workout.discardBottom")
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if restTimer.isRunning {
+                RestTimerBar()
+                    .transition(
+                        reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : .default, value: restTimer.isRunning)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button("Minimize", systemImage: "chevron.down") { dismiss() }
+                .accessibilityIdentifier("workout.minimize")
+        }
+        ToolbarItem(placement: .principal) {
+            Text(workout.startDate, style: .timer)
+                .font(.headline)
+                .fontDesign(.rounded)
+                .monospacedDigit()
+                .accessibilityLabel("Elapsed time")
+                .accessibilityIdentifier("workout.elapsed")
+        }
+        ToolbarItem(placement: .confirmationAction) {
+            Button("Finish") { isFinishing = true }
+                .accessibilityIdentifier("workout.finish")
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Menu("More", systemImage: "ellipsis.circle") {
+                Button("Reorder", systemImage: "arrow.up.arrow.down") {
+                    isReordering = true
+                }
+                .disabled(!WorkoutLog.canReorder(workout))
+                .accessibilityIdentifier("workout.reorder")
+                Button("Discard Workout", systemImage: "trash", role: .destructive) {
+                    isConfirmingDiscard = true
+                }
+                .accessibilityIdentifier("workout.discard")
+            }
+            .accessibilityIdentifier("workout.menu")
+        }
+        ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button("Next") { openNextSet() }
+                .accessibilityIdentifier("keyboard.next")
+            Button("Done") { checkOffFocusedSet() }
+                .accessibilityIdentifier("keyboard.done")
+        }
+    }
+
     /// Removes at once, or asks first when the exercise has a checked set.
     private func remove(_ workoutExercise: WorkoutExercise) {
         if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
@@ -171,17 +197,36 @@ struct WorkoutScreen: View {
     }
 
     private func removeExercise(_ workoutExercise: WorkoutExercise) {
+        let removedIDs = workoutExercise.sets.map(\.id)
         withAnimation(reduceMotion ? nil : .default) {
             do {
                 try WorkoutLog(context: modelContext).removeExercise(workoutExercise)
                 deleteCount += 1
+                if let openSetID, removedIDs.contains(openSetID) {
+                    self.openSetID = NextSet.current(in: workout)?.id
+                }
             } catch {
                 saveFailed = true
             }
         }
     }
 
-    /// Keyboard Done: checks off the focused set and moves on like Next; closes the keyboard when it can't.
+    /// Keyboard Next: opens the set after the open one, without checking anything off, and focuses its field;
+    /// closes the keyboard when there is none.
+    private func openNextSet() {
+        let next = openSetID.flatMap { id in
+            WorkoutLog.orderedExercises(of: workout).flatMap(WorkoutLog.orderedSets(of:))
+                .first { $0.id == id }
+        }.flatMap(NextSet.after)
+        withAnimation(reduceMotion ? nil : .default) {
+            if let next { openSetID = next.id }
+            focusedRepsSetID = next?.id
+            accessibilityFocusedSetID = next?.id
+        }
+    }
+
+    /// Keyboard Done: checks off the focused set, and the next set opens with the keyboard still up; closes
+    /// the keyboard when it can't.
     private func checkOffFocusedSet() {
         guard let id = focusedRepsSetID,
             let set = WorkoutLog.orderedExercises(of: workout).flatMap(WorkoutLog.orderedSets(of:))
@@ -195,11 +240,17 @@ struct WorkoutScreen: View {
                 switch try WorkoutLog(context: modelContext, restTimer: restTimer)
                     .checkOff(set, in: workout, defaultRest: defaultRest)
                 {
-                case .focus(let next):
+                case .open(let next):
+                    openSetID = next?.id
                     focusedRepsSetID = next?.id
+                    accessibilityFocusedSetID = next?.id
                 case .allSetsDone:
+                    openSetID = nil
                     focusedRepsSetID = nil
                     isOfferingFinish = true
+                case .missingValue(let missing):
+                    focusedRepsSetID = missing.id
+                    missingValueCount += 1
                 }
             } catch {
                 saveFailed = true
@@ -214,6 +265,9 @@ struct ExerciseSection: View {
     let exerciseIndex: Int
     let workout: Workout
     let focusedRepsSetID: FocusState<UUID?>.Binding
+    /// The set shown open; Add Set opens the set it adds.
+    @Binding var openSetID: UUID?
+    let accessibilityFocus: AccessibilityFocusState<UUID?>.Binding
     /// Bumped on every deletion, so the screen plays the delete haptic.
     @Binding var deleteCount: Int
     @Binding var progressions: AppliedProgressions
@@ -236,15 +290,16 @@ struct ExerciseSection: View {
                 SetRow(
                     set: set,
                     identifierPrefix: "workout.exercise.\(exerciseIndex).set.\(setIndex)",
-                    focusedRepsSetID: focusedRepsSetID, workout: workout,
+                    focusedRepsSetID: focusedRepsSetID, openSetID: $openSetID,
+                    accessibilityFocus: accessibilityFocus, workout: workout,
                     progressions: $progressions, onDelete: { deleteCount += 1 },
                     onAllSetsDone: onAllSetsDone, isEditingPast: isEditingPast)
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {
                     do {
-                        try WorkoutLog(context: modelContext)
-                            .addSet(to: workoutExercise, completed: isEditingPast)
+                        openSetID = try WorkoutLog(context: modelContext)
+                            .addSet(to: workoutExercise, completed: isEditingPast).id
                     } catch {
                         saveFailed = true
                     }

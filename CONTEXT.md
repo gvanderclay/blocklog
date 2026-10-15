@@ -52,12 +52,15 @@ Terms marked *(planned, phase N)* name features planned in `.scratch/blocklog/sp
 - **Adder**: a 2.5 lb weight that fits in the handle. 0, 1 or 2 are installed.
 - **Printed number**: the number on a slot: its total weight with both adders installed. Setup text names the printed number and the adder count, never arithmetic, so 27.5 lb is "Pin 30 · 1 adder", not "25 + 2.5".
 - **Setup**: how to set the block for one PowerBlock setting: handle only, the first slot or a slot, plus an adder count. Each setting has exactly one setup.
-- **Setup line**: a setup as one line of text, such as "Handle only · no adders", "Pin first slot · 2 adders" or "Pin 30 · 1 adder". It shows under every set that has a weight.
+- **Setup line**: a setup as one line of text, such as "Handle only · no adders", "Pin first slot · 2 adders" or "Pin 30 · 1 adder". It shows in the change preview, beside the rest bar's change line and diagram.
 - **Change line**: what to change on the block between two weights, such as "Pin 30 → 40 · remove 1 adder". The rest timer shows it when the next set's weight differs; it is nil for equal weights.
 
 ## Rest and history
 
-- **Previous numbers**: what the user did last time, shown as "Previous" beside each set: the sets of the most recent finished workout containing the exercise, paired with the current sets by counted-set order. Warm-ups get none.
+- **Previous numbers**: what the user did last time, shown as "Previous" in the open set: the sets of the most recent finished workout containing the exercise, paired with the current sets by counted-set order. A warm-up shows last time's warm-up, paired by order among warm-ups.
+- **Placeholder** (`SetPlaceholder`): the grey number in an empty reps or seconds field: the rep range's low end, else the set's previous numbers, else the set above's value or placeholder. Checking a set off fills each empty field from it. With none, the set isn't checked off and its field is focused. A set summary shows it in place of the empty value.
+- **Open set**: the one set of a workout shown expanded for editing: its type, Previous with Copy, weight, reps or seconds, and the check (none in past-workout editing). The workout screen opens the set after the last checked one; checking a set off opens the next unchecked set, as does Next. Tapping a set summary opens that set, and a set the user adds opens. It is not stored.
+- **Set summary**: a set that isn't open, shown as one line: check state, set label and values ("40 lb × 10", "BW × 15", "45 s"). An unchecked one shows its placeholder in place of empty reps or seconds. Tapping it opens the set.
 - **Default rest**: the app-wide rest length, 90 seconds unless changed in Settings, stored with `@AppStorage`. It applies to every exercise without a rest override.
 - **Rest override**: an exercise's own rest length in seconds. It replaces the default rest for that exercise in every workout.
 - **Rest timer** (`RestTimer`): the countdown that starts when a set is checked off. It stores its end date and total length, never a ticking counter; ±15 moves both, Skip, Finish and Discard end it, and Minimize leaves it running.

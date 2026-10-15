@@ -78,12 +78,6 @@ struct RoutineLibrary {
         }
     }
 
-    /// "8–12" for a workout exercise whose workout started from a routine that gives the exercise a rep
-    /// range; nil otherwise.
-    static func repRangeText(for workoutExercise: WorkoutExercise) -> String? {
-        repRange(for: workoutExercise).map { "\($0.lowerBound)–\($0.upperBound)" }
-    }
-
     /// The rep range a workout exercise's routine gives it; nil for a freeform workout or an exercise
     /// with no range. When the routine lists the exercise more than once, the nth such workout exercise
     /// (by position) takes the nth occurrence's range.

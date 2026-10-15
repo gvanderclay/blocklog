@@ -444,6 +444,38 @@ struct RestTimerTests {
         #expect(notifications.scheduled.count == 1)
     }
 
+    @Test func aFailedFillAndSaveLeavesTheEmptySetUntouched() throws {
+        let store = try ReadOnlyStore { context in
+            let workout = Workout(title: "Push Day", startDate: .now)
+            let workoutExercise = WorkoutExercise(
+                exercise: Exercise(
+                    name: "Hammer Curl", muscleGroup: .biceps, equipment: .dumbbell,
+                    type: .weightReps),
+                position: 0)
+            context.insert(workout)
+            workout.exercises.append(workoutExercise)
+            // The second set is empty; its placeholder is the first set's 10.
+            workoutExercise.sets.append(WorkoutSet(position: 0, weight: 20, reps: 10))
+            workoutExercise.sets.append(WorkoutSet(position: 1, weight: 20))
+        }
+        defer { store.remove() }
+        let log = WorkoutLog(context: store.context, restTimer: timer)
+        let workout = try #require(log.inProgressWorkout())
+        let workoutExercise = try #require(workout.exercises.first)
+        let set = try #require(WorkoutLog.orderedSets(of: workoutExercise).last)
+        #expect(SetPlaceholder(context: store.context).value(for: set) == 10)
+
+        #expect(throws: (any Error).self) {
+            _ = try log.checkOff(set, in: workout, defaultRest: 90)
+        }
+        #expect(set.reps == nil)
+        #expect(!set.isCompleted)
+        #expect(!store.context.hasChanges)
+        #expect(!timer.isRunning)
+        #expect(timer.checkedSet == nil)
+        #expect(notifications.scheduled.isEmpty)
+    }
+
     @Test func finishingStopsTheTimerAndCancelsTheNotification() throws {
         let (log, workout, set, _) = try store()
         _ = try log.checkOff(set, in: workout, defaultRest: 90)

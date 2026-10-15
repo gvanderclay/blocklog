@@ -83,33 +83,30 @@ struct WorkoutLog {
 
     // MARK: Changing
 
-    /// Checks the set off when it can be, then returns the set to focus next, chosen as `nextEmptySet` does;
-    /// an already checked set is left as it is. Nil, meaning close the keyboard, when there is no next set
-    /// or the set can't be checked off.
-    func checkOffAndAdvance(_ set: WorkoutSet, in workout: Workout) throws -> WorkoutSet? {
-        if !set.isCompleted {
-            guard set.values.canCheckOff else { return nil }
-            try toggleCompleted(set)
-        }
-        return Self.nextEmptySet(after: set.id, in: workout)
-    }
-
-    /// Checks the set off through `checkOffAndAdvance` and, once that has saved, starts the rest for its
-    /// exercise, as the checkmark and the keyboard's Done both do. Checking off the workout's last unchecked
-    /// set starts no rest and reports `allSetsDone` instead. An already checked set, one that can't be checked
-    /// off, or a failed save starts nothing.
+    /// Checks the set off and, once that has saved, starts the rest for its exercise, as the checkmark and the
+    /// keyboard's Done both do; `open` carries the set to open next (`NextSet.after`). Checking off the
+    /// workout's last unchecked set starts no rest and reports `allSetsDone` instead. An already checked set,
+    /// one with no value to log, or a failed save starts nothing.
     func checkOff(_ set: WorkoutSet, in workout: Workout, defaultRest: Int) throws
         -> CheckOffOutcome
     {
         let wasChecked = set.isCompleted
-        let next = try checkOffAndAdvance(set, in: workout)
-        guard !wasChecked, set.isCompleted else { return .focus(next) }
+        if !wasChecked, !set.values.canCheckOff {
+            // An empty or zero field takes its placeholder; with none the set stays unchecked (never log 0).
+            guard let number = SetPlaceholder(context: context).value(for: set) else {
+                return .missingValue(set)
+            }
+            set.values = set.values.filling(number)
+        }
+        // A failed save rolls the context back, which also undoes the fill.
+        guard !wasChecked else { return .open(NextSet.after(set)) }
+        try toggleCompleted(set)
         guard Self.hasUncheckedSet(workout) else { return .allSetsDone }
         let exercise = set.workoutExercise?.exercise
         restTimer?.start(
             duration: RestTimer.restSeconds(for: exercise, defaultRest: defaultRest),
             exerciseName: exercise?.name, checkedSet: set)
-        return .focus(next)
+        return .open(NextSet.after(set))
     }
 
     /// Starts an empty workout titled for its start time. Nil while another workout is in progress.
@@ -121,20 +118,27 @@ struct WorkoutLog {
         return workout
     }
 
-    /// Appends the exercise to the workout with one first set, completed when `completed` (editing a past workout).
-    func addExercise(_ exercise: Exercise, to workout: Workout, completed: Bool = false) throws {
+    /// Appends the exercise to the workout with one first set, completed when `completed` (editing a past
+    /// workout). Returns that first set.
+    @discardableResult
+    func addExercise(_ exercise: Exercise, to workout: Workout, completed: Bool = false) throws
+        -> WorkoutSet
+    {
         let workoutExercise = WorkoutExercise(exercise: exercise, position: workout.exercises.count)
         context.insert(workoutExercise)
         workout.exercises.append(workoutExercise)
-        appendSet(to: workoutExercise, completed: completed)
+        let set = appendSet(to: workoutExercise, completed: completed)
         try context.saveOrRollBack()
+        return set
     }
 
     /// Appends a set copying the last set's type and values, or a first set when there is none; completed when
-    /// `completed` (editing a past workout).
-    func addSet(to workoutExercise: WorkoutExercise, completed: Bool = false) throws {
-        appendSet(to: workoutExercise, completed: completed)
+    /// `completed` (editing a past workout). Returns the new set.
+    @discardableResult
+    func addSet(to workoutExercise: WorkoutExercise, completed: Bool = false) throws -> WorkoutSet {
+        let set = appendSet(to: workoutExercise, completed: completed)
         try context.saveOrRollBack()
+        return set
     }
 
     /// Sets the weight, which must be a PowerBlock setting; a bodyweight set's added weight may also be nil
@@ -163,8 +167,10 @@ struct WorkoutLog {
     }
 
     /// Inserts a copy of the set right after it, unchecked unless `completed` (editing a past workout).
-    func duplicateSet(_ set: WorkoutSet, completed: Bool = false) throws {
-        guard let workoutExercise = set.workoutExercise else { return }
+    /// Returns the copy; nil, changing nothing, when the set belongs to no exercise.
+    @discardableResult
+    func duplicateSet(_ set: WorkoutSet, completed: Bool = false) throws -> WorkoutSet? {
+        guard let workoutExercise = set.workoutExercise else { return nil }
         for later in workoutExercise.sets where later.position > set.position {
             later.position += 1
         }
@@ -174,6 +180,7 @@ struct WorkoutLog {
         context.insert(copy)
         workoutExercise.sets.append(copy)
         try context.saveOrRollBack()
+        return copy
     }
 
     /// Deletes the workout exercise with its sets and renumbers the remaining exercises.
@@ -200,7 +207,7 @@ struct WorkoutLog {
     /// nothing, when the set is checked or has no previous set.
     func copyPrevious(to set: WorkoutSet) throws -> Bool {
         guard !set.isCompleted,
-            let previous = PreviousSetLookup(context: context).previous(for: set)
+            let previous = PreviousSetLookup(context: context).previousNumbers(for: set)
         else { return false }
         set.values = previous
         try context.saveOrRollBack()
@@ -281,7 +288,7 @@ struct WorkoutLog {
     }
 
     /// A first set starts at 5 lb for weight × reps, with empty reps; later sets copy the last one.
-    private func appendSet(to workoutExercise: WorkoutExercise, completed: Bool) {
+    private func appendSet(to workoutExercise: WorkoutExercise, completed: Bool) -> WorkoutSet {
         let last = Self.orderedSets(of: workoutExercise).last
         let set = WorkoutSet(
             position: workoutExercise.sets.count, setType: last?.setType ?? .normal)
@@ -290,15 +297,18 @@ struct WorkoutLog {
         set.isCompleted = completed
         context.insert(set)
         workoutExercise.sets.append(set)
+        return set
     }
 }
 
 /// What a check-off leaves for the workout screen to do.
 enum CheckOffOutcome: Equatable {
-    /// Focus moves to the set (nil closes the keyboard), as Next does.
-    case focus(WorkoutSet?)
+    /// The set to open next (`NextSet.after`); nil when none is left to open.
+    case open(WorkoutSet?)
     /// The workout's last unchecked set was checked off, so no rest started; the screen offers Finish.
     case allSetsDone
+    /// The set has no reps (or seconds) and no placeholder, so nothing changed; the screen focuses its field.
+    case missingValue(WorkoutSet)
 }
 
 /// What the finish summary shows about a just-finished workout.

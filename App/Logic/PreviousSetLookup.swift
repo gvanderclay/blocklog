@@ -18,6 +18,11 @@ struct PreviousSetLookup {
         return lastTime(for: set, index: number - 1, matching: SetNumbering.isCounted)
     }
 
+    /// What the Previous cell shows: `previous(for:)` for a counted set, `previousWarmUp(for:)` for a warm-up.
+    func previousNumbers(for set: WorkoutSet) -> SetValues? {
+        set.setType == .warmUp ? previousWarmUp(for: set) : previous(for: set)
+    }
+
     /// The values of last time's warm-up paired with the warm-up `set` by order among warm-ups, or nil when
     /// there is none or `set` is not a warm-up. Skips the set's own workout like `previous(for:)`.
     func previousWarmUp(for set: WorkoutSet) -> SetValues? {

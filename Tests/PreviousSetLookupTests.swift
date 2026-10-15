@@ -107,6 +107,18 @@ struct PreviousSetLookupTests {
         #expect(warmUpLookup.previousWarmUp(for: currentSets[3]) == nil)
     }
 
+    @Test func previousNumbersPairsWarmUpsWithWarmUpsAndCountedSetsWithCountedSets() throws {
+        _ = try workout(
+            starting: try day(7), sets: [(.warmUp, 5, 12), (.normal, 20, 6)])
+        let current = try workout(
+            starting: try day(12), sets: [(.warmUp, 5, 1), (.normal, 5, 1)], finished: false)
+
+        let currentSets = try sets(of: current)
+        let lookup = PreviousSetLookup(context: container.mainContext)
+        #expect(lookup.previousNumbers(for: currentSets[0]) == .weightReps(weight: 5, reps: 12))
+        #expect(lookup.previousNumbers(for: currentSets[1]) == .weightReps(weight: 20, reps: 6))
+    }
+
     @Test func setsPastThePreviousCountGetNothing() throws {
         _ = try workout(starting: try day(7), sets: [(.normal, 15, 10)])
         let current = try workout(
@@ -288,9 +300,9 @@ struct PreviousSetLookupTests {
         (.bodyweightReps(addedWeight: nil, reps: 12), "BW × 12", "bodyweight times 12"),
         (.bodyweightReps(addedWeight: 10, reps: 8), "+10 lb × 8", "10 pounds added times 8"),
         (.duration(seconds: 45), "45 s", "45 seconds"),
-        (.weightReps(weight: 35, reps: nil), "35 lb × —", "35 pounds times —"),
-        (.bodyweightReps(addedWeight: 10, reps: nil), "+10 lb × —", "10 pounds added times —"),
-        (.duration(seconds: nil), "— s", "— seconds"),
+        (.weightReps(weight: 35, reps: nil), "35 lb × —", "35 pounds, no reps"),
+        (.bodyweightReps(addedWeight: 10, reps: nil), "+10 lb × —", "10 pounds added, no reps"),
+        (.duration(seconds: nil), "— s", "no seconds"),
     ])
     func previousValuesReadAsTheirDisplayFormats(
         values: SetValues, shown: String, spoken: String

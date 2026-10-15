@@ -170,4 +170,27 @@ struct SetValuesTests {
         #expect(set.durationSeconds == 45)
         #expect(set.weight == nil && set.reps == nil)
     }
+
+    @Test(arguments: [
+        (SetValues.weightReps(weight: 35, reps: nil), SetValues.weightReps(weight: 35, reps: 8)),
+        (.bodyweightReps(addedWeight: 10, reps: 3), .bodyweightReps(addedWeight: 10, reps: 8)),
+        (.duration(seconds: nil), .duration(seconds: 8)),
+    ])
+    func fillingSetsTheRepsOrSecondsAndKeepsTheWeight(values: SetValues, expected: SetValues) {
+        #expect(values.filling(8) == expected)
+    }
+
+    @Test func fieldTitlesNameTheOpenSetsFields() {
+        #expect(SetValues.fieldTitles(for: .weightReps) == ("Weight", "Reps"))
+        #expect(SetValues.fieldTitles(for: .bodyweightReps) == ("Added weight", "Reps"))
+        #expect(SetValues.fieldTitles(for: .duration) == (nil, "Seconds"))
+    }
+
+    @Test func spokenTextReadsAMissingValueAsNone() {
+        #expect(SetValues.weightReps(weight: 5, reps: nil).spokenText == "5 pounds, no reps")
+        #expect(
+            SetValues.bodyweightReps(addedWeight: nil, reps: nil).spokenText
+                == "bodyweight, no reps")
+        #expect(SetValues.duration(seconds: nil).spokenText == "no seconds")
+    }
 }

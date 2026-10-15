@@ -78,4 +78,26 @@ struct NextSetTests {
         #expect(NextSet.change(after: sets[0]) == nil)
         #expect(NextSet.change(after: sets[1]) == nil)
     }
+
+    @Test func currentIsTheFirstSetOfAFreshWorkout() {
+        let sets = addExercise([(30, false), (30, false)])
+        #expect(NextSet.current(in: workout) === sets[0])
+    }
+
+    @Test func currentFollowsTheLastCheckedSetPastASkippedOne() {
+        _ = addExercise([(30, true), (30, false)])
+        let second = addExercise([(30, true), (30, false)])
+        #expect(NextSet.current(in: workout) === second[1])
+    }
+
+    @Test func currentFallsBackToTheFirstUncheckedSet() {
+        let first = addExercise([(30, false)])
+        _ = addExercise([(30, true)])
+        #expect(NextSet.current(in: workout) === first[0])
+    }
+
+    @Test func currentIsNilWhenEverySetIsChecked() {
+        _ = addExercise([(30, true), (30, true)])
+        #expect(NextSet.current(in: workout) == nil)
+    }
 }

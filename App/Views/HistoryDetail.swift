@@ -11,6 +11,9 @@ struct HistoryDetail: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var focusedRepsSetID: UUID?
+    @AccessibilityFocusState private var accessibilityFocusedSetID: UUID?
+    /// The set shown open while editing; none when Edit starts.
+    @State private var openSetID: UUID?
     @State private var isEditing = false
     @State private var isPickingExercise = false
     @State private var isReordering = false
@@ -31,7 +34,8 @@ struct HistoryDetail: View {
                 if isEditing {
                     ExerciseSection(
                         workoutExercise: workoutExercise, exerciseIndex: e, workout: workout,
-                        focusedRepsSetID: $focusedRepsSetID, deleteCount: $deleteCount,
+                        focusedRepsSetID: $focusedRepsSetID, openSetID: $openSetID,
+                        accessibilityFocus: $accessibilityFocusedSetID, deleteCount: $deleteCount,
                         progressions: $progressions, onRemove: remove, onAllSetsDone: {},
                         isEditingPast: true)
                 } else {
@@ -68,8 +72,8 @@ struct HistoryDetail: View {
             ExercisePicker { exercise in
                 withAnimation(reduceMotion ? nil : .default) {
                     do {
-                        try WorkoutLog(context: modelContext)
-                            .addExercise(exercise, to: workout, completed: true)
+                        openSetID = try WorkoutLog(context: modelContext)
+                            .addExercise(exercise, to: workout, completed: true).id
                     } catch {
                         saveFailed = true
                     }
@@ -156,12 +160,8 @@ struct HistoryDetail: View {
             }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Next") {
-                    focusedRepsSetID = focusedRepsSetID.flatMap {
-                        WorkoutLog.nextEmptySet(after: $0, in: workout)?.id
-                    }
-                }
-                .accessibilityIdentifier("keyboard.next")
+                Button("Next") { openNextEmptySet() }
+                    .accessibilityIdentifier("keyboard.next")
                 Button("Done") { focusedRepsSetID = nil }
                     .accessibilityIdentifier("keyboard.done")
             }
@@ -186,11 +186,23 @@ struct HistoryDetail: View {
     private func finishEditing() {
         do {
             focusedRepsSetID = nil
+            openSetID = nil
             if try PastWorkoutEditing(context: modelContext).finishEditing(workout) {
                 isEditing = false
             }
         } catch {
             saveFailed = true
+        }
+    }
+
+    /// Keyboard Next: opens the next set missing its value and focuses its field; closes the keyboard when
+    /// there is none.
+    private func openNextEmptySet() {
+        let next = focusedRepsSetID.flatMap { WorkoutLog.nextEmptySet(after: $0, in: workout) }
+        withAnimation(reduceMotion ? nil : .default) {
+            if let next { openSetID = next.id }
+            focusedRepsSetID = next?.id
+            accessibilityFocusedSetID = next?.id
         }
     }
 
@@ -204,10 +216,12 @@ struct HistoryDetail: View {
     }
 
     private func removeExercise(_ workoutExercise: WorkoutExercise) {
+        let removedIDs = workoutExercise.sets.map(\.id)
         withAnimation(reduceMotion ? nil : .default) {
             do {
                 try WorkoutLog(context: modelContext).removeExercise(workoutExercise)
                 deleteCount += 1
+                if let openSetID, removedIDs.contains(openSetID) { self.openSetID = nil }
             } catch {
                 saveFailed = true
             }

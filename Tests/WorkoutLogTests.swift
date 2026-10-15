@@ -247,7 +247,7 @@ struct WorkoutLogTests {
         #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) == nil)
     }
 
-    @Test func checkingOffAdvancesToTheNextEmptySetThenTheNextExerciseThenNothing() throws {
+    @Test func checkingOffOpensTheNextUncheckedSetThenTheNextExerciseThenNothing() throws {
         let workout = try workout(sets: 2)
         try log.addExercise(try exercise("Hammer Curl"), to: workout)
         let bench = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
@@ -256,26 +256,63 @@ struct WorkoutLogTests {
         bench[1].repsText = ""
         curl[0].repsText = ""
 
-        #expect(try log.checkOffAndAdvance(bench[0], in: workout) === bench[1])
+        #expect(try log.checkOff(bench[0], in: workout, defaultRest: 90) == .open(bench[1]))
         bench[1].repsText = "8"
-        #expect(try log.checkOffAndAdvance(bench[1], in: workout) === curl[0])
+        #expect(try log.checkOff(bench[1], in: workout, defaultRest: 90) == .open(curl[0]))
         curl[0].repsText = "5"
-        #expect(try log.checkOffAndAdvance(curl[0], in: workout) == nil)
+        #expect(try log.checkOff(curl[0], in: workout, defaultRest: 90) == .allSetsDone)
         #expect(curl[0].isCompleted)
     }
 
-    @Test func checkOffAndAdvanceLeavesUncheckableAndCheckedSetsAlone() throws {
+    @Test func checkOffLeavesUncheckableSetsAloneAndOpensPastACheckedOne() throws {
         let workout = try workout(sets: 2)
         let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
         sets[0].repsText = ""
-        #expect(try log.checkOffAndAdvance(sets[0], in: workout) == nil)
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .missingValue(sets[0]))
         #expect(!sets[0].isCompleted)
 
         sets[0].repsText = "10"
         try log.toggleCompleted(sets[0])
         sets[1].repsText = ""
-        #expect(try log.checkOffAndAdvance(sets[0], in: workout) === sets[1])
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .open(sets[1]))
         #expect(sets[0].isCompleted)
+    }
+
+    @Test func checkingOffOpensTheNextUncheckedSetEvenWhenItsRepsAreFilled() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        #expect(sets[1].reps == 2)
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .open(sets[1]))
+    }
+
+    @Test func checkingOffACheckedSetChangesNothingAndOpensTheNextUncheckedSet() throws {
+        let workout = try workout(sets: 3)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        try log.toggleCompleted(sets[0])
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .open(sets[1]))
+        #expect(sets[0].isCompleted && !sets[1].isCompleted)
+        #expect(!restTimer.isRunning)
+    }
+
+    @Test func checkingOffTheLastSetInOrderWithAnEarlierSetSkippedOpensNothingAndStartsRest()
+        throws
+    {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        #expect(try log.checkOff(sets[1], in: workout, defaultRest: 90) == .open(nil))
+        #expect(sets[1].isCompleted && !sets[0].isCompleted)
+        #expect(restTimer.isRunning)
+    }
+
+    @Test func addSetDuplicateAndAddExerciseReturnTheNewSet() throws {
+        let workout = try workout(sets: 1)
+        let workoutExercise = try #require(workout.exercises.first)
+        let added = try log.addSet(to: workoutExercise)
+        #expect(WorkoutLog.orderedSets(of: workoutExercise).last === added)
+        let copy = try #require(try log.duplicateSet(added))
+        #expect(copy !== added && copy.position == added.position + 1)
+        let curl = try log.addExercise(try exercise("Hammer Curl"), to: workout)
+        #expect(WorkoutLog.orderedExercises(of: workout).last?.sets.first === curl)
     }
 
     @Test func setsAreNumberedInPositionOrderAndRenumberedAfterFinish() throws {
@@ -563,7 +600,7 @@ struct WorkoutLogTests {
         let workout = try workout(sets: 2)
         let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
         sets[1].repsText = ""
-        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .focus(sets[1]))
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .open(sets[1]))
         #expect(restTimer.isRunning)
         restTimer.skip()
 
@@ -577,7 +614,7 @@ struct WorkoutLogTests {
         let workout = try workout(sets: 2)
         let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
         sets[1].repsText = ""
-        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .focus(sets[1]))
+        #expect(try log.checkOff(sets[0], in: workout, defaultRest: 90) == .open(sets[1]))
         #expect(restTimer.isRunning)
         #expect(restTimer.remaining == 90)
         #expect(restTimer.checkedSet === sets[0])
@@ -587,8 +624,43 @@ struct WorkoutLogTests {
         let workout = try workout(sets: 1)
         let set = try #require(workout.exercises.first?.sets.first)
         set.repsText = ""
-        #expect(try log.checkOff(set, in: workout, defaultRest: 90) == .focus(nil))
+        #expect(try log.checkOff(set, in: workout, defaultRest: 90) == .missingValue(set))
         #expect(!set.isCompleted)
         #expect(!restTimer.isRunning)
+    }
+
+    @Test func checkingOffAnEmptySetWithAPlaceholderFillsItAndStartsRest() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        sets[1].repsText = ""
+        _ = try log.checkOff(sets[1], in: workout, defaultRest: 90)
+        #expect(sets[1].reps == 1)
+        #expect(sets[1].isCompleted)
+        #expect(restTimer.isRunning)
+    }
+
+    @Test func aSetWithZeroRepsIsFilledNotLogged() throws {
+        let workout = try workout(sets: 3)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        sets[1].reps = 0
+        _ = try log.checkOff(sets[1], in: workout, defaultRest: 90)
+        #expect(sets[1].reps == 1)
+        #expect(sets[1].isCompleted)
+        #expect(restTimer.isRunning)
+    }
+
+    @Test func aWarmUpCopiesLastTimesWarmUp() throws {
+        let first = try workout(sets: 2)
+        let firstSets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: first)[0])
+        try log.setType(.warmUp, of: firstSets[0])
+        for set in firstSets { try log.toggleCompleted(set) }
+        _ = try log.finish(first, title: "Push")
+
+        let second = try workout(sets: 1)
+        let set = try #require(second.exercises.first?.sets.first)
+        try log.setType(.warmUp, of: set)
+        set.reps = nil
+        #expect(try log.copyPrevious(to: set))
+        #expect(set.reps == 1)
     }
 }

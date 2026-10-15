@@ -48,6 +48,21 @@ enum SetNumbering {
         return labels(for: types(of: set))[index]
     }
 
+    /// The set named for VoiceOver: "Set 2", "Failure set 3" or "Drop set 4" by counted number, and
+    /// "Warm-up 1" by order among warm-ups.
+    static func spokenName(of set: WorkoutSet) -> String {
+        if set.setType == .warmUp {
+            let warmUps = types(of: set).prefix((index(of: set) ?? 0) + 1).filter { $0 == .warmUp }
+            return "Warm-up \(max(warmUps.count, 1))"
+        }
+        let number = countedNumber(of: set) ?? 1
+        switch set.setType {
+        case .failure: return "Failure set \(number)"
+        case .drop: return "Drop set \(number)"
+        default: return "Set \(number)"
+        }
+    }
+
     private static func types(of set: WorkoutSet) -> [SetType] {
         set.workoutExercise.map(WorkoutLog.orderedSets(of:))?.map(\.setType) ?? []
     }

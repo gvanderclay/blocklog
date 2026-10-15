@@ -10,6 +10,9 @@ struct WeightControl: View {
     var isHighlighted = false
     /// `workout.exercise.<e>.set.<s>`.
     let identifierPrefix: String
+    /// The set's spoken name, such as "Set 2", which starts each VoiceOver label; nil for a control that isn't
+    /// a set's, such as the AMRAP player's weight.
+    var spokenSetName: String?
     /// True for the identifiers `<prefix>.decrease`, `.value`, `.option.<i>` and `.increase`, as the AMRAP
     /// player's weights use; otherwise `<prefix>.weightMinus`, `.weightValue`, `.weightOption.<i>` and
     /// `.weightPlus` (`addedWeight…` for an added weight).
@@ -38,6 +41,7 @@ struct WeightControl: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
             .disabled(!canDecrease)
+            .accessibilityLabel(spoken("Decrease weight"))
             .accessibilityIdentifier("\(identifierPrefix).\(ids.minus)")
 
             Menu {
@@ -63,7 +67,7 @@ struct WeightControl: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .layoutPriority(1)
-            .accessibilityLabel(isAdded ? "Added weight" : "Weight")
+            .accessibilityLabel(spoken(isAdded ? "Added weight" : "Weight"))
             .accessibilityValue(
                 weight.map { "\($0.formatted()) pounds" } ?? "bodyweight"
             )
@@ -76,10 +80,17 @@ struct WeightControl: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
             .disabled(next == nil)
+            .accessibilityLabel(spoken("Increase weight"))
             .accessibilityIdentifier("\(identifierPrefix).\(ids.plus)")
         }
         .buttonStyle(.borderless)
         .sensoryFeedback(.selection, trigger: weight)
+    }
+
+    /// "Set 2 decrease weight" for a set's control, else the label as it is.
+    private func spoken(_ label: String) -> String {
+        guard let spokenSetName else { return label }
+        return "\(spokenSetName) \(label.prefix(1).lowercased())\(label.dropFirst())"
     }
 
     private func text(for weight: Double?) -> String {

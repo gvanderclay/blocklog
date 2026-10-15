@@ -137,7 +137,27 @@ enum SetValues: Equatable {
         }
     }
 
+    /// These values with the reps (the seconds for duration) set to `value`; the weight stays.
+    func filling(_ value: Int) -> SetValues {
+        switch self {
+        case .weightReps(let weight, _): .weightReps(weight: weight, reps: value)
+        case .bodyweightReps(let addedWeight, _):
+            .bodyweightReps(addedWeight: addedWeight, reps: value)
+        case .duration: .duration(seconds: value)
+        }
+    }
+
     // MARK: Text
+
+    /// The labels over the open set's controls: the weight (nil for duration) and the field the user fills in.
+    /// A bodyweight set's weight is the added weight.
+    static func fieldTitles(for type: ExerciseType) -> (weight: String?, value: String) {
+        switch type {
+        case .weightReps: ("Weight", "Reps")
+        case .bodyweightReps: ("Added weight", "Reps")
+        case .duration: (nil, "Seconds")
+        }
+    }
 
     /// The value beside a set: "35 lb × 10", "BW × 12", "+10 lb × 8" or "45 s"; "—" for a missing value.
     var text: String {
@@ -150,13 +170,14 @@ enum SetValues: Equatable {
     }
 
     /// The value read aloud: "35 pounds times 10", "bodyweight times 12", "10 pounds added times 8" or
-    /// "45 seconds".
+    /// "45 seconds"; a missing value reads "35 pounds, no reps" or "no seconds".
     var spokenText: String {
         switch self {
-        case .weightReps(let weight, _): "\(weight.formatted()) pounds times \(repsText)"
-        case .bodyweightReps(let addedWeight, _):
-            "\(addedWeight.map { "\($0.formatted()) pounds added" } ?? "bodyweight") times \(repsText)"
-        case .duration(let seconds): "\(seconds.map(String.init) ?? "—") seconds"
+        case .weightReps(let weight, let reps):
+            "\(weight.formatted()) pounds\(reps.map { " times \($0)" } ?? ", no reps")"
+        case .bodyweightReps(let addedWeight, let reps):
+            "\(addedWeight.map { "\($0.formatted()) pounds added" } ?? "bodyweight")\(reps.map { " times \($0)" } ?? ", no reps")"
+        case .duration(let seconds): seconds.map { "\($0) seconds" } ?? "no seconds"
         }
     }
 

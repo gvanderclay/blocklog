@@ -19,6 +19,13 @@ enum NextSet {
             .first
     }
 
+    /// The set the workout screen opens when it appears: the first unchecked set after the last checked one
+    /// in workout order, else the first unchecked set; nil when every set is checked.
+    static func current(in workout: Workout) -> WorkoutSet? {
+        let sets = WorkoutLog.orderedExercises(of: workout).flatMap(WorkoutLog.orderedSets(of:))
+        return sets.last(where: \.isCompleted).flatMap(after) ?? sets.first { !$0.isCompleted }
+    }
+
     /// The weights of a checked-off set and the next one, and what to change on the block between them.
     struct Change {
         let now: Double

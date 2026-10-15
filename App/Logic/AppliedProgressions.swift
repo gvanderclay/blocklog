@@ -29,7 +29,7 @@ struct AppliedProgressions {
         highlightedSetIDs.contains(set.id)
     }
 
-    /// The user changed the set's weight (by −, +, the weight menu, the setup sheet or last time's values):
+    /// The user changed the set's weight (by −, +, the weight menu or last time's values):
     /// its highlight ends for good, even if the weight comes back to the suggested one.
     mutating func weightChanged(of set: WorkoutSet) {
         highlightedSetIDs.remove(set.id)
