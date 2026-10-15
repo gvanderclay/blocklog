@@ -99,20 +99,14 @@ struct RoutineTargetTests {
         #expect(RoutineTarget(validDurationSeconds: seconds) == expected)
     }
 
-    @Test func theEditorsBoundsKeepTheEndsFromCrossingAndKeepAStoredEndOutsideThem() {
-        #expect(RoutineTarget.lowBounds(of: 8...12) == 1...12)
-        #expect(RoutineTarget.highBounds(of: 8...12) == 8...50)
-        #expect(RoutineTarget.lowBounds(of: 10...10) == 1...10)
-        #expect(RoutineTarget.highBounds(of: 10...10) == 10...50)
-        #expect(RoutineTarget.highBounds(of: 60...80) == 60...60)
-    }
-
-    @Test func settingAnEndHoldsItAtTheOtherEndAndIgnoresTheWrongCase() {
+    @Test func settingAnEndPastTheOtherSwapsThemClampsToTheBoundsAndIgnoresTheWrongCase() {
         let range = RoutineTarget.repRange(8...12)
         #expect(range.settingLow(6) == .repRange(6...12))
-        #expect(range.settingLow(20) == .repRange(12...12))
+        #expect(range.settingLow(20) == .repRange(12...20))
         #expect(range.settingHigh(15) == .repRange(8...15))
-        #expect(range.settingHigh(3) == .repRange(8...8))
+        #expect(range.settingHigh(3) == .repRange(3...8))
+        #expect(range.settingLow(0) == .repRange(1...12))
+        #expect(range.settingHigh(99) == .repRange(8...50))
         #expect(range.settingSeconds(60) == range)
         let duration = RoutineTarget.duration(seconds: 30)
         #expect(duration.settingSeconds(60) == .duration(seconds: 60))

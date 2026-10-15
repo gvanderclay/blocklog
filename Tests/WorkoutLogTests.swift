@@ -220,6 +220,8 @@ struct WorkoutLogTests {
         let set = try #require(try workout(sets: 1).exercises.first?.sets.first)
         set.repsText = "1a2"
         #expect(set.reps == 12)
+        set.repsText = "12345"
+        #expect(set.reps == 123)
         set.repsText = ""
         #expect(set.reps == nil)
         #expect(set.repsText == "")

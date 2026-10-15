@@ -73,29 +73,22 @@ enum RoutineTarget: Equatable {
         if case .duration(let seconds) = self { seconds } else { nil }
     }
 
-    /// The values the low end of a range can take: from the bounds' start up to the high end, so the low end
-    /// can't pass it. A stored end outside `repBounds` is kept as it is, so the bounds still contain it.
-    static func lowBounds(of range: ClosedRange<Int>) -> ClosedRange<Int> {
-        min(repBounds.lowerBound, range.upperBound)...range.upperBound
-    }
-
-    /// The values the high end of a range can take: from the low end up to the bounds' end.
-    static func highBounds(of range: ClosedRange<Int>) -> ClosedRange<Int> {
-        range.lowerBound...max(repBounds.upperBound, range.lowerBound)
-    }
-
     // MARK: Changing
 
-    /// A range with the new low end, held at the high end at most; a duration is unchanged.
+    /// A range with the new low end, held within `repBounds`; a low end above the high end swaps the two. A
+    /// duration is unchanged.
     func settingLow(_ low: Int) -> RoutineTarget {
         guard case .repRange(let range) = self else { return self }
-        return .repRange(min(low, range.upperBound)...range.upperBound)
+        let low = min(max(low, Self.repBounds.lowerBound), Self.repBounds.upperBound)
+        return .repRange(min(low, range.upperBound)...max(low, range.upperBound))
     }
 
-    /// A range with the new high end, held at the low end at least; a duration is unchanged.
+    /// A range with the new high end, held within `repBounds`; a high end below the low end swaps the two. A
+    /// duration is unchanged.
     func settingHigh(_ high: Int) -> RoutineTarget {
         guard case .repRange(let range) = self else { return self }
-        return .repRange(range.lowerBound...max(high, range.lowerBound))
+        let high = min(max(high, Self.repBounds.lowerBound), Self.repBounds.upperBound)
+        return .repRange(min(high, range.lowerBound)...max(high, range.lowerBound))
     }
 
     /// A range whose low and high ends are both `reps`, a fixed rep count; a duration is unchanged.

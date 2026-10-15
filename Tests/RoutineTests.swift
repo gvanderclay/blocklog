@@ -87,19 +87,77 @@ struct RoutineTests {
         #expect(draft.exercises[1].target == .duration(seconds: 30))
     }
 
-    @Test func theRepRangeEndsCantCrossAndStayWithinOneToFifty() throws {
+    @Test func aRangeEndThatCrossesTheOtherSwapsAndAnEmptiedFieldKeepsTheOldEnd() throws {
         // Held for the whole test: models crash once their container is freed.
         let container = try BlocklogApp.makeContainer(inMemory: true)
         let context = container.mainContext
         var draft = RoutineDraft()
         draft.addExercise(try exercise("Dumbbell Bench Press", in: context))
-        draft.exercises[0].repLow = 10
-        draft.exercises[0].repHigh = 10
+        let id = draft.exercises[0].id
+        let low = RoutineDraft.RangeField(entryID: id, end: .low)
+        let high = RoutineDraft.RangeField(entryID: id, end: .high)
 
-        let range = try #require(draft.exercises[0].target.repRange)
-        #expect(range == 10...10)
-        #expect(RoutineTarget.lowBounds(of: range) == 1...10)
-        #expect(RoutineTarget.highBounds(of: range) == 10...50)
+        draft.setRangeEnd(low, to: 15)
+        #expect(draft.exercises[0].target == .repRange(12...15))
+        #expect(draft.rangeValue(low) == 12)
+        #expect(draft.rangeValue(high) == 15)
+        draft.setRangeEnd(high, to: 5)
+        #expect(draft.exercises[0].target == .repRange(5...12))
+        draft.setRangeEnd(low, to: nil)
+        #expect(draft.exercises[0].target == .repRange(5...12))
+        draft.setRangeEnd(high, to: 99)
+        #expect(draft.exercises[0].target == .repRange(5...50))
+    }
+
+    @Test func theSetCountAddsSetsLikeTheLastAndRemovesTheLastButNeverTheOnlyOne() throws {
+        let container = try BlocklogApp.makeContainer(inMemory: true)
+        let context = container.mainContext
+        var draft = RoutineDraft()
+        draft.addExercise(try exercise("Dumbbell Bench Press", in: context))
+        draft.exercises[0].sets[0].type = .warmUp
+
+        draft.exercises[0].setCount = 3
+        #expect(draft.exercises[0].sets.map(\.type) == [.warmUp, .warmUp, .warmUp])
+        draft.exercises[0].sets[2].type = .failure
+        draft.exercises[0].setCount = 2
+        #expect(draft.exercises[0].sets.map(\.type) == [.warmUp, .warmUp])
+        draft.exercises[0].setCount = 0
+        #expect(draft.exercises[0].setCount == 1)
+        #expect(draft.exercises[0].setCountBounds == 1...20)
+        draft.exercises[0].setCount = 25
+        #expect(draft.exercises[0].setCountBounds == 1...25)
+    }
+
+    @Test func anUntouchedDraftHasNoChangesWhetherNewStoredOrAStarter() throws {
+        let container = try BlocklogApp.makeContainer(inMemory: true)
+        let context = container.mainContext
+        #expect(!RoutineDraft().hasChanges(from: RoutineDraft()))
+        let goldenSix = try #require(try StarterRoutine.load().first { $0.name == "Golden Six" })
+        let starters = StarterLibrary(context: context)
+        #expect(try !starters.draft(of: goldenSix).hasChanges(from: starters.draft(of: goldenSix)))
+        let routine = try #require(
+            try RoutineLibrary(context: context).save(try starters.draft(of: goldenSix), to: nil))
+        #expect(!RoutineDraft(routine: routine).hasChanges(from: RoutineDraft(routine: routine)))
+    }
+
+    @Test(arguments: ["rename", "setType", "reorder", "range", "setCount", "removeExercise"])
+    func anEditedDraftHasChanges(edit: String) throws {
+        let container = try BlocklogApp.makeContainer(inMemory: true)
+        let context = container.mainContext
+        var original = RoutineDraft()
+        original.name = "Push"
+        original.addExercise(try exercise("Dumbbell Bench Press", in: context))
+        original.addExercise(try exercise("Plank", in: context))
+        var draft = original
+        switch edit {
+        case "rename": draft.name = "Pull"
+        case "setType": draft.exercises[0].sets[0].type = .warmUp
+        case "reorder": draft.exercises.reverse()
+        case "range": draft.exercises[0].repHigh = 15
+        case "setCount": draft.exercises[1].setCount = 2
+        default: draft.exercises.removeLast()
+        }
+        #expect(draft.hasChanges(from: original))
     }
 
     @Test func renamingARoutineKeepsStoredValuesOutsideTheStepperBounds() throws {

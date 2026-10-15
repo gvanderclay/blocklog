@@ -22,14 +22,17 @@ struct RoutineDraft: Identifiable {
             self.target = .orStandard(target, for: exercise.type)
         }
 
-        /// The low end of the rep range, for a stepper to bind to. A duration entry reads the standard
-        /// range's low end, and setting it changes nothing.
+        /// The most planned sets the editor's Sets stepper reaches.
+        static let maxSetCount = 20
+
+        /// The low end of the rep range. A duration entry reads the standard range's low end, and setting it
+        /// changes nothing. A low end above the high end swaps the two (`RoutineTarget.settingLow`).
         var repLow: Int {
             get { target.repRange?.lowerBound ?? RoutineTarget.defaultRepRange.lowerBound }
             set { target = target.settingLow(newValue) }
         }
 
-        /// The high end of the rep range, for a stepper to bind to; see `repLow`.
+        /// The high end of the rep range; see `repLow`.
         var repHigh: Int {
             get { target.repRange?.upperBound ?? RoutineTarget.defaultRepRange.upperBound }
             set { target = target.settingHigh(newValue) }
@@ -60,6 +63,28 @@ struct RoutineDraft: Identifiable {
         mutating func addSet() {
             sets.append(PlannedSet(type: sets.last?.type ?? .normal))
         }
+
+        /// The counts the Sets stepper offers: 1 to `maxSetCount`, or up to the current count when a stored
+        /// routine already has more, so it is kept.
+        var setCountBounds: ClosedRange<Int> { 1...max(Self.maxSetCount, sets.count) }
+
+        /// The number of planned sets, for the Sets stepper to bind to. Raising it appends sets like `addSet()`;
+        /// lowering it removes the last sets, never going below one.
+        var setCount: Int {
+            get { sets.count }
+            set {
+                let count = max(newValue, 1)
+                while sets.count < count { addSet() }
+                if sets.count > count { sets.removeLast(sets.count - count) }
+            }
+        }
+    }
+
+    /// One end of one entry's rep range, as the editor's range fields name it.
+    struct RangeField: Hashable {
+        enum End { case low, high }
+        let entryID: UUID
+        let end: End
     }
 
     /// One planned set: only its type, since routines store no weights or reps.
@@ -159,6 +184,36 @@ struct RoutineDraft: Identifiable {
             for index in exercises.indices { exercises[index].makeFixed() }
         }
         return nil
+    }
+
+    /// The value at one end of an entry's rep range; the standard range's end when the entry is gone or is a
+    /// duration.
+    func rangeValue(_ field: RangeField) -> Int {
+        let entry = exercises.first { $0.id == field.entryID }
+        let range = entry?.target.repRange ?? RoutineTarget.defaultRepRange
+        return field.end == .low ? range.lowerBound : range.upperBound
+    }
+
+    /// Sets one end of an entry's rep range, swapping the ends when they cross. Nil, such as an emptied field,
+    /// keeps the old end.
+    mutating func setRangeEnd(_ field: RangeField, to value: Int?) {
+        guard let value, let index = exercises.firstIndex(where: { $0.id == field.entryID }) else {
+            return
+        }
+        switch field.end {
+        case .low: exercises[index].repLow = value
+        case .high: exercises[index].repHigh = value
+        }
+    }
+
+    /// Whether the draft differs from `original` in its name, format, exercises and their order, set types or
+    /// targets, so Cancel asks before dropping it. The entries' identifiers don't count.
+    func hasChanges(from original: RoutineDraft) -> Bool {
+        name != original.name || format != original.format
+            || !exercises.elementsEqual(original.exercises) { entry, other in
+                entry.exercise == other.exercise && entry.target == other.target
+                    && entry.sets.map(\.type) == other.sets.map(\.type)
+            }
     }
 
     /// Appends the exercise with one normal set and the standard target for its type, its range fixed at the high

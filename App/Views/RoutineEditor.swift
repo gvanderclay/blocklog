@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Creates or edits a routine: its name, its format (with a time cap for Timed AMRAP), and its exercises with their
 /// planned sets and a rep range or a target duration, or in a Timed AMRAP one fixed rep count. Changes stay in a
-/// draft until Save; Cancel drops them.
+/// draft until Save; Cancel drops them, asking first when there are any.
 struct RoutineEditor: View {
     /// The routine to edit; nil creates a new one.
     let routine: Routine?
@@ -14,6 +14,13 @@ struct RoutineEditor: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var draft: RoutineDraft
+    /// The draft as the editor opened, so Cancel knows whether there is anything to discard.
+    private let original: RoutineDraft
+    @FocusState private var focusedRange: RoutineDraft.RangeField?
+    /// The text typed into the focused range field, written to the draft when focus leaves it, so ends that
+    /// cross swap only then and not mid-typing. Nil until the user types.
+    @State private var rangeEdit: (field: RoutineDraft.RangeField, text: String)?
+    @State private var isConfirmingDiscard = false
     @State private var isPickingExercise = false
     @State private var isReordering = false
     @State private var deleteCount = 0
@@ -23,7 +30,9 @@ struct RoutineEditor: View {
 
     init(routine: Routine?) {
         self.routine = routine
-        self.draft = routine.map(RoutineDraft.init(routine:)) ?? RoutineDraft()
+        let draft = routine.map(RoutineDraft.init(routine:)) ?? RoutineDraft()
+        self.draft = draft
+        self.original = draft
     }
 
     /// A new routine at the end of the program.
@@ -31,12 +40,14 @@ struct RoutineEditor: View {
         self.routine = nil
         self.program = program
         self.draft = RoutineDraft()
+        self.original = RoutineDraft()
     }
 
     /// A new routine starting from the draft, such as a starter routine's.
     init(newFrom draft: RoutineDraft) {
         self.routine = nil
         self.draft = draft
+        self.original = draft
     }
 
     var body: some View {
@@ -59,7 +70,8 @@ struct RoutineEditor: View {
                         index: draft.exercises.firstIndex { $0.id == entry.id } ?? 0,
                         isFixed: draft.format.kind == .timedAMRAP,
                         showsSets: draft.format == .sets,
-                        deleteCount: $deleteCount
+                        focusedRange: $focusedRange,
+                        rangeText: rangeText
                     ) { remove(entry) }
                 }
                 Section {
@@ -71,15 +83,28 @@ struct RoutineEditor: View {
             .navigationTitle(routine == nil ? "New Routine" : "Edit Routine")
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
+            .onChange(of: focusedRange) { commitRange() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { cancel() }
                         .accessibilityIdentifier("routineEditor.cancel")
+                        .confirmationDialog(
+                            "Discard changes?", isPresented: $isConfirmingDiscard,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Discard Changes", role: .destructive) { dismiss() }
+                                .accessibilityIdentifier("routineEditor.discardConfirm")
+                            Button("Keep Editing", role: .cancel) {}
+                                .accessibilityIdentifier("routineEditor.keepEditing")
+                        }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(!draft.canSave)
-                        .accessibilityIdentifier("routineEditor.save")
+                    Button("Save") {
+                        commitRange()
+                        save()
+                    }
+                    .disabled(!draft.canSave)
+                    .accessibilityIdentifier("routineEditor.save")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Reorder", systemImage: "arrow.up.arrow.down") { isReordering = true }
@@ -106,6 +131,28 @@ struct RoutineEditor: View {
         }
         // A swipe down would drop the draft; leaving goes through Cancel or Save.
         .interactiveDismissDisabled()
+    }
+
+    /// A range field's text: what the user typed while it holds focus, otherwise the draft's value.
+    private func rangeText(_ field: RoutineDraft.RangeField) -> Binding<String> {
+        Binding(
+            get: {
+                rangeEdit?.field == field ? rangeEdit?.text ?? "" : String(draft.rangeValue(field))
+            },
+            set: { rangeEdit = (field, $0) }
+        )
+    }
+
+    /// Writes the typed range end to the draft; an emptied field keeps the old end.
+    private func commitRange() {
+        guard let rangeEdit else { return }
+        draft.setRangeEnd(rangeEdit.field, to: TypedNumber.parse(rangeEdit.text, maxDigits: 2))
+        self.rangeEdit = nil
+    }
+
+    private func cancel() {
+        commitRange()
+        if draft.hasChanges(from: original) { isConfirmingDiscard = true } else { dismiss() }
     }
 
     private func remove(_ entry: RoutineDraft.Entry) {
@@ -168,8 +215,8 @@ private struct FormatSection: View {
     }
 }
 
-/// One exercise of the draft: its rep range or target duration, its planned sets and an Add Set button; in a Timed
-/// AMRAP, only its fixed rep count.
+/// One exercise of the draft: its set count, its rep range or target duration, and its set types under a collapsed
+/// disclosure; in a Timed AMRAP, only its fixed rep count.
 private struct EntrySection: View {
     @Binding var entry: RoutineDraft.Entry
     let index: Int
@@ -177,8 +224,9 @@ private struct EntrySection: View {
     let isFixed: Bool
     /// False in a Stretch routine, whose player holds each stretch once a round whatever its set count.
     let showsSets: Bool
-    /// Bumped on every set deletion, so the editor plays the delete haptic.
-    @Binding var deleteCount: Int
+    let focusedRange: FocusState<RoutineDraft.RangeField?>.Binding
+    /// A range field's text, kept by the editor so Save and Cancel can write it.
+    let rangeText: (RoutineDraft.RangeField) -> Binding<String>
     let onRemove: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -221,8 +269,19 @@ private struct EntrySection: View {
         .sensoryFeedback(.selection, trigger: typeChangeCount)
     }
 
-    /// The rep range or target duration, the planned sets and Add Set.
+    /// The set count, the rep range or target duration, and the set types.
     @ViewBuilder private var plan: some View {
+        if showsSets {
+            let count = entry.setCount
+            Stepper(
+                value: $entry.setCount.animation(reduceMotion ? nil : .default),
+                in: entry.setCountBounds
+            ) {
+                NumberLabel(title: "Sets", value: count)
+            }
+            .accessibilityValue("\(count) \(count == 1 ? "set" : "sets")")
+            .accessibilityIdentifier("\(identifierPrefix).sets")
+        }
         switch entry.target {
         case .duration(let seconds):
             Stepper(
@@ -233,23 +292,47 @@ private struct EntrySection: View {
             }
             .accessibilityValue("\(seconds) seconds")
             .accessibilityIdentifier("\(identifierPrefix).targetDuration")
-        case .repRange(let range):
-            Stepper(value: $entry.repLow, in: RoutineTarget.lowBounds(of: range)) {
-                NumberLabel(title: "Low reps", value: range.lowerBound)
+        case .repRange:
+            HStack {
+                Text("Reps")
+                Spacer()
+                rangeField(.low, label: "Low reps", identifier: "repLow")
+                Text("to")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                rangeField(.high, label: "High reps", identifier: "repHigh")
             }
-            .accessibilityIdentifier("\(identifierPrefix).repLow")
-            Stepper(value: $entry.repHigh, in: RoutineTarget.highBounds(of: range)) {
-                NumberLabel(title: "High reps", value: range.upperBound)
-            }
-            .accessibilityIdentifier("\(identifierPrefix).repHigh")
         }
-        if showsSets { sets }
+        if showsSets {
+            DisclosureGroup("Set Types") { setTypes }
+                .accessibilityIdentifier("\(identifierPrefix).setTypes")
+        }
     }
 
-    /// The planned sets and Add Set.
-    @ViewBuilder private var sets: some View {
+    private func rangeField(
+        _ end: RoutineDraft.RangeField.End, label: String, identifier: String
+    ) -> some View {
+        let field = RoutineDraft.RangeField(entryID: entry.id, end: end)
+        let range = entry.target.repRange ?? RoutineTarget.defaultRepRange
+        // An emptied field shows the end it keeps.
+        let kept = end == .low ? range.lowerBound : range.upperBound
+        return TextField(label, text: rangeText(field), prompt: Text(String(kept)))
+            .keyboardType(.numberPad)
+            .multilineTextAlignment(.center)
+            .textFieldStyle(.roundedBorder)
+            .fontDesign(.rounded)
+            .monospacedDigit()
+            .frame(width: 56)
+            .frame(minHeight: 44)
+            .focused(focusedRange, equals: field)
+            .accessibilityLabel(label)
+            .accessibilityIdentifier("\(identifierPrefix).\(identifier)")
+    }
+
+    /// One set-type row per planned set.
+    @ViewBuilder private var setTypes: some View {
         let labels = SetNumbering.labels(for: entry.sets.map(\.type))
-        // Bindings from the collection, not by index, so a row being deleted never reads past the end.
+        // Bindings from the collection, not by index, so a row being removed never reads past the end.
         ForEach($entry.sets) { $plannedSet in
             let setIndex = entry.sets.firstIndex { $0.id == plannedSet.id } ?? 0
             PlannedSetRow(
@@ -257,16 +340,6 @@ private struct EntrySection: View {
                 identifierPrefix: "\(identifierPrefix).set.\(setIndex)"
             ) { typeChangeCount += 1 }
         }
-        .onDelete { offsets in
-            withAnimation(reduceMotion ? nil : .default) {
-                entry.sets.remove(atOffsets: offsets)
-            }
-            deleteCount += 1
-        }
-        Button("Add Set", systemImage: "plus") {
-            withAnimation(reduceMotion ? nil : .default) { entry.addSet() }
-        }
-        .accessibilityIdentifier("\(identifierPrefix).addSet")
     }
 }
 

@@ -336,7 +336,7 @@ extension WorkoutSet {
     var repsText: String {
         get { reps.map(String.init) ?? "" }
         set {
-            reps = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(3)))
+            reps = TypedNumber.parse(newValue, maxDigits: 3)
             if !values.canCheckOff { isCompleted = false }
         }
     }
@@ -349,7 +349,7 @@ extension WorkoutSet {
     var durationText: String {
         get { durationSeconds.map(String.init) ?? "" }
         set {
-            durationSeconds = Int(String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(4)))
+            durationSeconds = TypedNumber.parse(newValue, maxDigits: 4)
             if !values.canCheckOff { isCompleted = false }
         }
     }
