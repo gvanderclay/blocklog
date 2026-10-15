@@ -7,50 +7,14 @@ struct RestTimerBar: View {
     @Environment(RestTimer.self) private var restTimer
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var adjustCount = 0
-    @State private var previewWeights: PreviewWeights?
-
-    private struct PreviewWeights: Identifiable {
-        let now: Double
-        let next: Double
-        var id: Double { now * 1000 + next }
-    }
 
     var body: some View {
-        VStack(spacing: 8) {
-            TimelineView(.periodic(from: restTimer.timelineAnchor, by: 1)) { context in
-                content(restTimer.reading(at: context.date))
-            }
-            changeHint
+        TimelineView(.periodic(from: restTimer.timelineAnchor, by: 1)) { context in
+            content(restTimer.reading(at: context.date))
         }
         .padding()
         .background(.bar)
         .sensoryFeedback(.selection, trigger: adjustCount)
-    }
-
-    /// What to change on the block for the next set; fades in, and cross-fades when the next weight is edited.
-    @ViewBuilder private var changeHint: some View {
-        let change = restTimer.checkedSet.flatMap { NextSet.change(after: $0) }
-        let line = change?.line
-        ZStack {
-            if let change {
-                Button {
-                    previewWeights = PreviewWeights(now: change.now, next: change.next)
-                } label: {
-                    Text(change.line)
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .id(change.line)
-                .transition(.opacity)
-                .accessibilityHint("Shows the block change")
-                .accessibilityIdentifier("restTimer.change")
-            }
-        }
-        .animation(.default, value: line)
-        .sheet(item: $previewWeights) { ChangePreviewSheet(now: $0.now, next: $0.next) }
     }
 
     private func content(_ reading: RestTimer.Reading) -> some View {

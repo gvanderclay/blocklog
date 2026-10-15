@@ -49,6 +49,7 @@ struct HistoryDetail: View {
                 }
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(workout.title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(isEditing)
@@ -158,13 +159,6 @@ struct HistoryDetail: View {
                     .disabled(!WorkoutLog.canReorder(workout))
                     .accessibilityIdentifier("workout.reorder")
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Next") { openNextEmptySet() }
-                    .accessibilityIdentifier("keyboard.next")
-                Button("Done") { focusedRepsSetID = nil }
-                    .accessibilityIdentifier("keyboard.done")
-            }
         } else {
             ToolbarItem(placement: .primaryAction) {
                 Button("Edit") { isEditing = true }
@@ -192,17 +186,6 @@ struct HistoryDetail: View {
             }
         } catch {
             saveFailed = true
-        }
-    }
-
-    /// Keyboard Next: opens the next set missing its value and focuses its field; closes the keyboard when
-    /// there is none.
-    private func openNextEmptySet() {
-        let next = focusedRepsSetID.flatMap { WorkoutLog.nextEmptySet(after: $0, in: workout) }
-        withAnimation(reduceMotion ? nil : .default) {
-            if let next { openSetID = next.id }
-            focusedRepsSetID = next?.id
-            accessibilityFocusedSetID = next?.id
         }
     }
 

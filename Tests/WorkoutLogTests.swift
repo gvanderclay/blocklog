@@ -225,28 +225,6 @@ struct WorkoutLogTests {
         #expect(set.repsText == "")
     }
 
-    @Test func nextEmptySetSkipsFilledSetsAcrossExercises() throws {
-        let workout = try workout(sets: 2)
-        try log.addExercise(try exercise("Hammer Curl"), to: workout)
-        let bench = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
-        let curl = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[1])
-
-        #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) === curl[0])
-        #expect(WorkoutLog.nextEmptySet(after: curl[0].id, in: workout) == nil)
-    }
-
-    @Test func nextEmptySetFindsEmptyDurationFieldsAndSkipsFilledOnes() throws {
-        let workout = try workout(sets: 1)
-        try log.addExercise(try exercise("Plank"), to: workout)
-        let bench = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
-        let plank = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[1])
-        #expect(plank[0].durationSeconds == nil)
-        #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) === plank[0])
-
-        plank[0].durationText = "45"
-        #expect(WorkoutLog.nextEmptySet(after: bench[0].id, in: workout) == nil)
-    }
-
     @Test func checkingOffOpensTheNextUncheckedSetThenTheNextExerciseThenNothing() throws {
         let workout = try workout(sets: 2)
         try log.addExercise(try exercise("Hammer Curl"), to: workout)

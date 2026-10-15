@@ -19,7 +19,6 @@ struct WorkoutScreen: View {
     @State private var isPickingExercise = false
     @State private var isReordering = false
     @State private var deleteCount = 0
-    @State private var missingValueCount = 0
     @State private var isFinishing = false
     @State private var isConfirmingDiscard = false
     @State private var isOfferingFinish = false
@@ -44,7 +43,6 @@ struct WorkoutScreen: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
-            .sensoryFeedback(.impact(weight: .light), trigger: missingValueCount)
             .toolbar { toolbar }
             .confirmationDialog(
                 "Discard this workout?", isPresented: $isConfirmingDiscard,
@@ -136,6 +134,7 @@ struct WorkoutScreen: View {
                     .accessibilityIdentifier("workout.discardBottom")
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             if restTimer.isRunning {
                 RestTimerBar()
@@ -178,13 +177,6 @@ struct WorkoutScreen: View {
             }
             .accessibilityIdentifier("workout.menu")
         }
-        ToolbarItemGroup(placement: .keyboard) {
-            Spacer()
-            Button("Next") { openNextSet() }
-                .accessibilityIdentifier("keyboard.next")
-            Button("Done") { checkOffFocusedSet() }
-                .accessibilityIdentifier("keyboard.done")
-        }
     }
 
     /// Removes at once, or asks first when the exercise has a checked set.
@@ -204,53 +196,6 @@ struct WorkoutScreen: View {
                 deleteCount += 1
                 if let openSetID, removedIDs.contains(openSetID) {
                     self.openSetID = NextSet.current(in: workout)?.id
-                }
-            } catch {
-                saveFailed = true
-            }
-        }
-    }
-
-    /// Keyboard Next: opens the set after the open one, without checking anything off, and focuses its field;
-    /// closes the keyboard when there is none.
-    private func openNextSet() {
-        let next = openSetID.flatMap { id in
-            WorkoutLog.orderedExercises(of: workout).flatMap(WorkoutLog.orderedSets(of:))
-                .first { $0.id == id }
-        }.flatMap(NextSet.after)
-        withAnimation(reduceMotion ? nil : .default) {
-            if let next { openSetID = next.id }
-            focusedRepsSetID = next?.id
-            accessibilityFocusedSetID = next?.id
-        }
-    }
-
-    /// Keyboard Done: checks off the focused set, and the next set opens with the keyboard still up; closes
-    /// the keyboard when it can't.
-    private func checkOffFocusedSet() {
-        guard let id = focusedRepsSetID,
-            let set = WorkoutLog.orderedExercises(of: workout).flatMap(WorkoutLog.orderedSets(of:))
-                .first(where: { $0.id == id })
-        else {
-            focusedRepsSetID = nil
-            return
-        }
-        withAnimation(reduceMotion ? nil : .default) {
-            do {
-                switch try WorkoutLog(context: modelContext, restTimer: restTimer)
-                    .checkOff(set, in: workout, defaultRest: defaultRest)
-                {
-                case .open(let next):
-                    openSetID = next?.id
-                    focusedRepsSetID = next?.id
-                    accessibilityFocusedSetID = next?.id
-                case .allSetsDone:
-                    openSetID = nil
-                    focusedRepsSetID = nil
-                    isOfferingFinish = true
-                case .missingValue(let missing):
-                    focusedRepsSetID = missing.id
-                    missingValueCount += 1
                 }
             } catch {
                 saveFailed = true

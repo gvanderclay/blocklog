@@ -73,18 +73,9 @@ struct WorkoutLog {
         workout.exercises.contains { $0.sets.contains { !$0.isCompleted } }
     }
 
-    /// The first set after the given one, in workout order, whose field is empty: reps, or seconds for a
-    /// duration exercise. Nil when there is none.
-    static func nextEmptySet(after setID: UUID, in workout: Workout) -> WorkoutSet? {
-        let sets = orderedExercises(of: workout).flatMap(orderedSets(of:))
-        guard let index = sets.firstIndex(where: { $0.id == setID }) else { return nil }
-        return sets[(index + 1)...].first { $0.values.isFieldEmpty }
-    }
-
     // MARK: Changing
 
-    /// Checks the set off and, once that has saved, starts the rest for its exercise, as the checkmark and the
-    /// keyboard's Done both do; `open` carries the set to open next (`NextSet.after`). Checking off the
+    /// Checks the set off and, once that has saved, starts the rest for its exercise, as the checkmark does; `open` carries the set to open next (`NextSet.after`). Checking off the
     /// workout's last unchecked set starts no rest and reports `allSetsDone` instead. An already checked set,
     /// one with no value to log, or a failed save starts nothing.
     func checkOff(_ set: WorkoutSet, in workout: Workout, defaultRest: Int) throws
