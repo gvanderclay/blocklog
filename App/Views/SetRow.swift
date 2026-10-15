@@ -39,6 +39,11 @@ struct SetRow: View {
 
     private var isOpen: Bool { openSetID == set.id }
 
+    /// The focus value of the workout screen's hidden number field. A check-off parks the keyboard there
+    /// while the checked set's field goes away, and the next set's field takes it back as it appears, so the
+    /// keyboard never drops between sets.
+    static let keyboardHolderID = UUID()
+
     var body: some View {
         @Bindable var set = set
         let spokenName = SetNumbering.spokenName(of: set)
@@ -227,6 +232,11 @@ struct SetRow: View {
             .frame(width: width)
             .frame(minHeight: 44)
             .focused(focusedRepsSetID, equals: set.id)
+            .onAppear {
+                if focusedRepsSetID.wrappedValue == Self.keyboardHolderID {
+                    focusedRepsSetID.wrappedValue = set.id
+                }
+            }
     }
 
     // MARK: Actions
@@ -252,28 +262,17 @@ struct SetRow: View {
 
     private func checkButton(spokenName: String, showsText: Bool) -> some View {
         Button {
-            withAnimation(reduceMotion ? nil : .default) {
-                if set.isCompleted {
+            if set.isCompleted {
+                withAnimation(reduceMotion ? nil : .default) {
                     attempt { try $0.toggleCompleted(set) }
-                } else {
-                    attempt(restTimer: restTimer) {
-                        switch try $0.checkOff(set, in: workout, defaultRest: defaultRest) {
-                        case .open(let next):
-                            // The keyboard stays down after a tap with it down.
-                            let keyboardWasUp = focusedRepsSetID.wrappedValue != nil
-                            openSetID = next?.id
-                            focusedRepsSetID.wrappedValue = keyboardWasUp ? next?.id : nil
-                            accessibilityFocus.wrappedValue = next?.id
-                        case .allSetsDone:
-                            openSetID = nil
-                            focusedRepsSetID.wrappedValue = nil
-                            onAllSetsDone()
-                        case .missingValue(let missing):
-                            focusedRepsSetID.wrappedValue = missing.id
-                            missingValueCount += 1
-                        }
-                    }
                 }
+            } else if focusedRepsSetID.wrappedValue != nil {
+                // Park the keyboard before this set's field goes away, then check off on the next turn,
+                // so the keyboard stays up while the next set opens.
+                focusedRepsSetID.wrappedValue = Self.keyboardHolderID
+                Task { checkOff(keyboardWasUp: true) }
+            } else {
+                checkOff(keyboardWasUp: false)
             }
         } label: {
             HStack(spacing: 8) {
@@ -385,6 +384,34 @@ struct SetRow: View {
     }
 
     /// Runs a change through the workout log, showing the alert if it fails to save.
+    private func checkOff(keyboardWasUp: Bool) {
+        withAnimation(reduceMotion ? nil : .default) {
+            do {
+                switch try WorkoutLog(context: modelContext, restTimer: restTimer)
+                    .checkOff(set, in: workout, defaultRest: defaultRest)
+                {
+                case .open(let next):
+                    openSetID = next?.id
+                    // The next set's field takes the parked keyboard as it appears; with it down, it stays down.
+                    focusedRepsSetID.wrappedValue =
+                        keyboardWasUp && next != nil ? Self.keyboardHolderID : nil
+                    accessibilityFocus.wrappedValue = next?.id
+                case .allSetsDone:
+                    openSetID = nil
+                    focusedRepsSetID.wrappedValue = nil
+                    onAllSetsDone()
+                case .missingValue(let missing):
+                    focusedRepsSetID.wrappedValue = missing.id
+                    missingValueCount += 1
+                }
+            } catch {
+                // The set stays open; hand the parked keyboard back to its field.
+                if keyboardWasUp { focusedRepsSetID.wrappedValue = set.id }
+                saveFailed = true
+            }
+        }
+    }
+
     private func attempt(
         restTimer: RestTimer? = nil, _ change: (WorkoutLog) throws -> Void
     ) {

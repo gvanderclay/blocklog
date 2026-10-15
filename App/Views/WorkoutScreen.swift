@@ -16,6 +16,7 @@ struct WorkoutScreen: View {
     @AccessibilityFocusState private var accessibilityFocusedSetID: UUID?
     /// The set shown open. View state only: a reopened screen recomputes it with `NextSet.current`.
     @State private var openSetID: UUID?
+    @State private var listBottomInset: CGFloat = 0
     @State private var isPickingExercise = false
     @State private var isReordering = false
     @State private var deleteCount = 0
@@ -40,6 +41,12 @@ struct WorkoutScreen: View {
                     // No anchor: the list scrolls only as far as the set needs to be wholly visible.
                     .onChange(of: openSetID) { _, id in scroll(to: id, with: proxy) }
                     .onAppear { scroll(to: openSetID, with: proxy) }
+                    // The rest bar a check-off adds, or the keyboard, covers more of the list: keep the open set
+                    // in view. Not on shrinking, so the rest ending never moves the list. On the next turn, because
+                    // the list applies its new inset only after this update.
+                    .onChange(of: listBottomInset) { old, new in
+                        if new > old { Task { scroll(to: openSetID, with: proxy) } }
+                    }
             }
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
@@ -135,6 +142,17 @@ struct WorkoutScreen: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+        .onGeometryChange(for: CGFloat.self, of: \.safeAreaInsets.bottom) { listBottomInset = $0 }
+        .background {
+            // Holds the keyboard while a check-off swaps the open set's field (SetRow.keyboardHolderID).
+            TextField("", text: .constant(""))
+                .keyboardType(.numberPad)
+                .focused($focusedRepsSetID, equals: SetRow.keyboardHolderID)
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .accessibilityIdentifier("workout.keyboardHolder")
+        }
         .safeAreaInset(edge: .bottom) {
             if restTimer.isRunning {
                 RestTimerBar()
