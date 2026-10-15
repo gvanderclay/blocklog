@@ -177,12 +177,12 @@ device: generate
     set -euo pipefail
     device="${DEVICE:-}"
     if [[ -z "$device" ]]; then
-        devices=$(xcrun devicectl list devices | awk '/connected/ && /iPhone/ && /physical/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-/) print $i}')
+        devices=$(xcrun devicectl list devices | awk '(/connected/ || /available \(paired\)/) && /iPhone/ && /physical/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-/) print $i}')
         count=$(printf '%s' "$devices" | grep -c . || true)
         [[ "$count" == 1 ]] || { echo "Expected one connected iPhone, found $count. Set DEVICE=<identifier>." >&2; exit 1; }
         device=$devices
     fi
-    # The phone itself, not generic/platform=iOS: a free team's profile needs the device registered, and this registers it.
+    # The phone itself, not generic/platform=iOS: the development profile needs the device registered, and this registers it.
     just _xcb device -scheme Blocklog -destination "id=$device" -allowProvisioningUpdates build
     xcrun devicectl device install app --device "$device" "{{derived}}/Build/Products/Debug-iphoneos/Blocklog.app"
     xcrun devicectl device process launch --device "$device" {{bundle_id}}

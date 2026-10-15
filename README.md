@@ -7,7 +7,7 @@ Blocklog is a personal iOS workout logger for PowerBlock adjustable dumbbells. I
 Before using the recipes, complete these one-time steps:
 
 1. Select Xcode as the active developer directory: `sudo xcode-select -s /Applications/Xcode.app`.
-2. In Xcode, sign in with a free Apple account under **Settings → Accounts**.
+2. In Xcode, sign in under **Settings → Accounts** with the Apple account that holds the Apple Developer Program membership.
 3. Turn on Developer Mode on your iPhone and connect it to your Mac.
 4. After the first `just device`, trust the developer under **Settings → General → VPN & Device Management**.
 
@@ -42,13 +42,13 @@ Build and test logs go in `build/logs/`, and result bundles go in `build/results
 
 `Blocklog.xcodeproj` is generated and gitignored. Edit `project.yml`, not the generated project.
 
-## Free-account signing
+## Signing
 
-Free-account provisioning expires after 7 days and allows at most 3 sideloaded apps. Re-run `just device` weekly to reinstall and sign the app. The team ID `H2B8G7M3AZ` is committed in `project.yml`; it is not a secret.
+The app is signed by a paid Apple Developer Program team, so its development provisioning profile lasts a year; re-run `just device` before it expires. The team ID `H2B8G7M3AZ` is committed in `project.yml`; it is not a secret. If Xcode keeps signing with an old 7-day profile from the free account, delete the cached profiles in `~/Library/Developer/Xcode/UserData/Provisioning Profiles/` and build again.
 
 ## XcodeGen gate
 
-With Xcode 27.0 (build 27A266a), XcodeGen 2.46.0 passed: project generation, builds, unit tests, and signed device installation work, so Tuist was not needed. The Xcode 27 install this was tested on has no `Simulator.app`, so the simulator runs headless and `just run` saves `build/run.png`. `devicectl list devices` also lists simulators, so `just device` filters for physical devices. It builds for the phone's own ID rather than `generic/platform=iOS` because a free team's provisioning profile needs the device registered, which happens with a device-specific build. Test recipes pass `-collect-test-diagnostics never` because a failing test otherwise starts a minutes-long `simctl diagnose`.
+With Xcode 27.0 (build 27A266a), XcodeGen 2.46.0 passed: project generation, builds, unit tests, and signed device installation work, so Tuist was not needed. The Xcode 27 install this was tested on has no `Simulator.app`, so the simulator runs headless and `just run` saves `build/run.png`. `devicectl list devices` also lists simulators, so `just device` filters for physical devices. It builds for the phone's own ID rather than `generic/platform=iOS` because the development provisioning profile needs the device registered, which happens with a device-specific build. Test recipes pass `-collect-test-diagnostics never` because a failing test otherwise starts a minutes-long `simctl diagnose`.
 
 ## CI
 
