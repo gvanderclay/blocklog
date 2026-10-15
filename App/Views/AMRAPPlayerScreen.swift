@@ -3,8 +3,8 @@ import SwiftUI
 
 /// The full-screen guided player for a Timed AMRAP: before Start, the dumbbell weights, the round and last time's
 /// score; then the get-ready countdown, the big countdown with the round number and the round's exercises, Round
-/// done and Pause; at time up, the extra reps and Save; then today's and last time's score. Finish before time up
-/// asks whether to save what was done, through the extra reps, or discard it. The screen stays awake while it shows,
+/// done and Pause; at time up, the rounds, the extra reps and Save; then today's and last time's score. Finish before
+/// time up asks whether to end early, for the extra reps and Save, or discard it. The screen stays awake while it shows,
 /// and the clock keeps running in the background.
 struct AMRAPPlayerScreen: View {
     let player: AMRAPPlayer
@@ -12,6 +12,8 @@ struct AMRAPPlayerScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @State private var askingToSave = false
+    /// The progress shown in the Finish dialog, taken when Finish is tapped, since a dialog's message can't tick.
+    @State private var finishProgress = ""
     @State private var saveFailed = false
 
     var body: some View {
@@ -22,7 +24,7 @@ struct AMRAPPlayerScreen: View {
                 case .getReady, .running, .paused:
                     AMRAPRunView(player: player)
                         .safeAreaInset(edge: .bottom) { AMRAPControls(player: player) }
-                case .timeUp: AMRAPTimeUpView(player: player)
+                case .timeUp: AMRAPTimeUpView(player: player) { _ = save() }
                 case .finished: AMRAPFinishedView(player: player)
                 }
             }
@@ -43,10 +45,6 @@ struct AMRAPPlayerScreen: View {
                     }
                 case .timeUp:
                     finishItem(title: "Discard")
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") { _ = save() }
-                            .accessibilityIdentifier("amrap.save")
-                    }
                 default:
                     finishItem(title: "Finish")
                 }
@@ -55,9 +53,20 @@ struct AMRAPPlayerScreen: View {
         .guidedPlayerClock(player.countdown, advance: { player.advance() })
         // Time up with the Finish dialog open goes on as it would without it.
         .onChange(of: player.phase) { _, phase in
-            if phase == .timeUp { askingToSave = false }
+            if phase == .timeUp {
+                askingToSave = false
+                if !player.endedEarly { AccessibilityNotification.Announcement("Time’s up").post() }
+            }
         }
-        .sensoryFeedback(.success, trigger: player.score.rounds)
+        .onChange(of: player.roundNumber) { _, round in
+            if player.phase == .running {
+                AccessibilityNotification.Announcement("Round \(round)").post()
+            }
+        }
+        // Round done only; correcting the rounds at time up gives the stepper's selection tick instead.
+        .sensoryFeedback(trigger: player.score.rounds) { _, _ in
+            player.phase == .running ? .success : nil
+        }
         .sensoryFeedback(trigger: player.loggedWorkout != nil) { _, logged in
             logged ? .success : nil
         }
@@ -66,8 +75,8 @@ struct AMRAPPlayerScreen: View {
             isPresented: $askingToSave, titleVisibility: .visible
         ) {
             if player.phase != .timeUp {
-                Button("Save What I Did") { player.send(.finishEarly) }
-                    .accessibilityIdentifier("amrap.finishSave")
+                Button("End Early") { player.send(.finishEarly) }
+                    .accessibilityIdentifier("amrap.endEarly")
             }
             Button("Discard", role: .destructive) { dismiss() }
                 .accessibilityIdentifier("amrap.discard")
@@ -76,7 +85,7 @@ struct AMRAPPlayerScreen: View {
         } message: {
             if player.phase != .timeUp {
                 Text(
-                    "Save What I Did stops the clock, so you can add the reps of the round you’re in, then save."
+                    "\(finishProgress)\nStops the clock. Then add the reps of the round you’re in and save."
                 )
             }
         }
@@ -86,8 +95,11 @@ struct AMRAPPlayerScreen: View {
     /// Finish, or Discard at time up beside Save; either asks before closing.
     private func finishItem(title: String) -> some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
-            Button(title) { askingToSave = true }
-                .accessibilityIdentifier("amrap.finish")
+            Button(title) {
+                finishProgress = player.progressText(at: .now)
+                askingToSave = true
+            }
+            .accessibilityIdentifier("amrap.finish")
         }
     }
 
@@ -288,52 +300,6 @@ private struct AMRAPControls: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(.bar)
-    }
-}
-
-/// Time up: the rounds done, the extra reps of the unfinished round, and the score.
-private struct AMRAPTimeUpView: View {
-    let player: AMRAPPlayer
-
-    var body: some View {
-        let score = player.score
-        Form {
-            Section {
-                Text(player.endedEarly ? "Finished early" : "Time’s up")
-                    .font(.title2.weight(.semibold))
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier("amrap.timeUp")
-                Stepper(
-                    value: Binding(
-                        get: { score.extraReps }, set: { player.send(.setExtraReps($0)) }),
-                    in: 0...(player.round.repsPerRound - 1)
-                ) {
-                    LabeledContent("Extra reps") {
-                        Text("\(score.extraReps)")
-                            .fontDesign(.rounded)
-                            .monospacedDigit()
-                            .contentTransition(.numericText(value: Double(score.extraReps)))
-                            .animation(.default, value: score.extraReps)
-                    }
-                }
-                .accessibilityValue("\(score.extraReps)")
-                .accessibilityIdentifier("amrap.extraReps")
-                .sensoryFeedback(.selection, trigger: score.extraReps)
-            } footer: {
-                Text("The reps you did in the round you didn’t finish, counted in exercise order.")
-            }
-            Section {
-                LabeledContent("Score") {
-                    Text(score.text)
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Score")
-                .accessibilityValue(score.spokenText)
-                .accessibilityIdentifier("amrap.score")
-            }
-        }
     }
 }
 

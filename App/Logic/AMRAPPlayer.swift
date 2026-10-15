@@ -46,7 +46,12 @@ final class AMRAPPlayer: Identifiable {
         case finishEarly
         /// Sets the extra reps, held from 0 to one fewer than the round's reps; only at time up.
         case setExtraReps(Int)
+        /// Corrects the rounds done, held within `roundBounds`, keeping the extra reps; only at time up.
+        case setRounds(Int)
     }
+
+    /// The rounds the time-up form's stepper can set.
+    static let roundBounds = 0...999
 
     /// The routine's name, which titles the player and the workout.
     let name: String
@@ -156,6 +161,27 @@ final class AMRAPPlayer: Identifiable {
     /// The round being done, from 1.
     var roundNumber: Int { score.rounds + 1 }
 
+    /// Whether Save has something to log: false for a score of 0 rounds + 0 reps, when `log` returns nil.
+    var canLog: Bool { score.rounds > 0 || score.extraReps > 0 }
+
+    /// The extra reps as typed in a number field: "" for 0. Setting it sends the digits typed (up to 9, more than any
+    /// round's reps) as `.setExtraReps`, which holds them below one round's reps.
+    var extraRepsText: String {
+        get { score.extraReps == 0 ? "" : "\(score.extraReps)" }
+        set { send(.setExtraReps(TypedNumber.parse(newValue, maxDigits: 9) ?? 0)) }
+    }
+
+    /// The time done of the time cap, and the rounds, such as "7:42 of 12:00 · 6 rounds"; the time done is 0:00
+    /// during get ready.
+    func progressText(at date: Date) -> String {
+        let elapsed =
+            countdown?.phase?.step == .work
+            ? timeCapSeconds - (countdown?.seconds(at: date) ?? 0) : 0
+        let rounds = score.rounds
+        return
+            "\(RestTimer.clock(elapsed)) of \(RestTimer.clock(timeCapSeconds)) · \(rounds) \(rounds == 1 ? "round" : "rounds")"
+    }
+
     // MARK: Events
 
     /// Applies the event when the phase allows it, and returns the phase after it. An event the phase doesn't
@@ -190,6 +216,9 @@ final class AMRAPPlayer: Identifiable {
         case (.setExtraReps(let reps), .timeUp):
             let held = min(max(reps, 0), round.repsPerRound - 1)
             score = AMRAPScore(rounds: score.rounds, extraReps: held, of: round) ?? score
+        case (.setRounds(let rounds), .timeUp):
+            let held = min(max(rounds, Self.roundBounds.lowerBound), Self.roundBounds.upperBound)
+            score = AMRAPScore(rounds: held, extraReps: score.extraReps, of: round) ?? score
         default: break
         }
         return phase

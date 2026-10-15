@@ -307,6 +307,71 @@ struct AMRAPPlayerTests {
         #expect(player.score.extraReps == 0)
     }
 
+    @Test func roundsAreCorrectedOnlyAtTimeUpKeepingTheExtraReps() throws {
+        let player = try start(try myAMRAP())
+        player.send(.start)
+        run(player, seconds: 10)
+        player.send(.roundDone)
+        player.send(.setRounds(5))
+        #expect(player.score.rounds == 1)
+        run(player, seconds: 60)
+        player.send(.setExtraReps(3))
+
+        player.send(.setRounds(6))
+        #expect(player.score == (try score(6, 3)))
+        player.send(.setRounds(-1))
+        #expect(player.score == (try score(0, 3)))
+    }
+
+    @Test func saveIsPossibleOnlyWithARoundOrARep() throws {
+        let player = try startCindy()
+        player.send(.start)
+        player.send(.finishEarly)
+        #expect(!player.canLog)
+        player.send(.setExtraReps(1))
+        #expect(player.canLog)
+        player.send(.setExtraReps(0))
+        player.send(.setRounds(1))
+        #expect(player.canLog)
+    }
+
+    @Test func extraRepsTextIsEmptyForZeroAndHeldBelowOneRound() throws {
+        let player = try startCindy()
+        player.send(.start)
+        player.send(.finishEarly)
+        #expect(player.extraRepsText == "")
+        player.extraRepsText = "35"
+        #expect(player.extraRepsText == "29")
+        player.extraRepsText = "1000"
+        #expect(player.extraRepsText == "29")
+        player.extraRepsText = "1a2"
+        #expect(player.score.extraReps == 12)
+        player.extraRepsText = ""
+        #expect(player.score.extraReps == 0)
+    }
+
+    @Test func progressTextGivesTheTimeDoneOfTheCapAndTheRounds() throws {
+        let player = try startCindy()
+        player.send(.start)
+        #expect(player.progressText(at: clock.date) == "0:00 of 20:00 · 0 rounds")
+        player.send(.startNow)
+        run(player, seconds: 400)
+        for _ in 0..<6 { player.send(.roundDone) }
+        run(player, seconds: 62)
+        #expect(player.progressText(at: clock.date) == "7:42 of 20:00 · 6 rounds")
+        player.send(.pause)
+        clock.advance(100)
+        #expect(player.progressText(at: clock.date) == "7:42 of 20:00 · 6 rounds")
+    }
+
+    @Test func progressTextSaysRoundForOne() throws {
+        let player = try startCindy()
+        player.send(.start)
+        player.send(.startNow)
+        player.send(.roundDone)
+        #expect(player.progressText(at: clock.date) == "0:00 of 20:00 · 1 round")
+    }
+
     // MARK: Logging
 
     @Test func saveAtTimeUpLogsTheScoreAndATotalSetPerExercise() throws {
