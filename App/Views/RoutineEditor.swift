@@ -139,7 +139,15 @@ struct RoutineEditor: View {
             get: {
                 rangeEdit?.field == field ? rangeEdit?.text ?? "" : String(draft.rangeValue(field))
             },
-            set: { rangeEdit = (field, $0) }
+            set: { text in
+                // A newly focused field writes back its old text before the focus change is seen: commit the
+                // other field's edit and drop that echo, which would undo a swap.
+                if rangeEdit.map({ $0.field != field }) ?? false {
+                    commitRange()
+                    return
+                }
+                rangeEdit = (field, text)
+            }
         )
     }
 
