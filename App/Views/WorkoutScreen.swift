@@ -29,6 +29,8 @@ struct WorkoutScreen: View {
     @State private var exerciseToRemove: WorkoutExercise?
     /// Held here too, so a scrolled-away row can't drop the cover.
     @State private var stopwatch: Stopwatch?
+    /// shortcut: lost when the screen closes (Minimize); hold it with the progressions if that bites.
+    @State private var stopwatchGoals = StopwatchGoals()
     /// Set when Stop checks off the last unchecked set; "All sets done" waits until the stopwatch has closed.
     @State private var offersFinishAfterStopwatch = false
 
@@ -121,7 +123,7 @@ struct WorkoutScreen: View {
             }
         ) { stopwatch in
             StopwatchScreen(stopwatch: stopwatch) { seconds in
-                try logStopwatch(seconds, of: stopwatch.set)
+                try logStopwatch(seconds, of: stopwatch)
             }
         }
         .onDisappear {
@@ -220,15 +222,17 @@ struct WorkoutScreen: View {
     private func startStopwatch(for set: WorkoutSet) {
         focusedRepsSetID = nil
         restTimer.skip()
-        stopwatch = Stopwatch(
-            set: set, placeholder: SetPlaceholder(context: modelContext).value(for: set))
+        stopwatch = stopwatchGoals.stopwatch(
+            for: set, placeholder: SetPlaceholder(context: modelContext).value(for: set))
     }
 
     /// Stop: logs the seconds and checks the set off, which starts the rest, then closes the stopwatch. Keyboard
     /// focus stays where it is. A failed save throws and leaves the stopwatch open, so the run isn't lost.
-    private func logStopwatch(_ seconds: Int, of set: WorkoutSet) throws {
+    private func logStopwatch(_ seconds: Int, of stopwatch: Stopwatch) throws {
         let outcome = try WorkoutLog(context: modelContext, restTimer: restTimer)
-            .logStopwatch(seconds: seconds, of: set, in: workout, defaultRest: defaultRest)
+            .logStopwatch(
+                seconds: seconds, of: stopwatch.set, in: workout, defaultRest: defaultRest)
+        stopwatchGoals.logged(stopwatch)
         withAnimation(reduceMotion ? nil : .default) {
             switch outcome {
             case .open(let next): openSetID = next?.id
@@ -238,7 +242,7 @@ struct WorkoutScreen: View {
             case .missingValue: break
             }
         }
-        stopwatch = nil
+        self.stopwatch = nil
     }
 
     /// Removes at once, or asks first when the exercise has a checked set.

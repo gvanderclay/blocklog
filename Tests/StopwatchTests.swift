@@ -142,6 +142,82 @@ struct StopwatchTests {
         #expect(stopwatch.elapsed(at: clock.date) == 95)
     }
 
+    @Test(arguments: [45, nil] as [Int?])
+    func aRerunAfterAnUndoneStopKeepsTheGoalItRanWith(goal: Int?) throws {
+        set.values = .duration(seconds: goal)
+        let workout = try #require(set.workoutExercise?.workout)
+        let log = WorkoutLog(context: container.mainContext)
+        try log.addSet(to: try #require(set.workoutExercise))
+        var goals = StopwatchGoals()
+        let clock = clock
+        let first = goals.stopwatch(for: set, placeholder: nil, now: { clock.date })
+        #expect(first.goal == goal)
+
+        _ = try log.logStopwatch(seconds: 17, of: set, in: workout, defaultRest: 90)
+        goals.logged(first)
+        try log.toggleCompleted(set)
+        #expect(!set.isCompleted && set.values == .duration(seconds: 17))
+
+        #expect(goals.stopwatch(for: set, placeholder: 30, now: { clock.date }).goal == goal)
+    }
+
+    @Test func aSetNeverLoggedTakesItsSecondsAsTheGoal() {
+        set.values = .duration(seconds: 20)
+        #expect(StopwatchGoals().stopwatch(for: set, placeholder: 30).goal == 20)
+    }
+
+    @Test func pauseHoldsTheCountAndResumeLeavesThePausedTimeOut() {
+        let stopwatch = stopwatch(seconds: 10)
+        stopwatch.start()
+        stopwatch.startNow()
+        clock.advance(4)
+        stopwatch.pause()
+        #expect(stopwatch.isPaused)
+        clock.advance(30)
+        #expect(stopwatch.elapsed(at: clock.date) == 4)
+        #expect(stopwatch.advance() == nil)
+        stopwatch.resume()
+        #expect(!stopwatch.isPaused)
+        clock.advance(5)
+        #expect(stopwatch.elapsed(at: clock.date) == 9)
+        #expect(stopwatch.advance() == nil)
+        clock.advance(1)
+        #expect(stopwatch.advance() == .chime)
+    }
+
+    @Test func pauseAfterGetReadyEndedUnnoticedKeepsTheGoalOnTime() {
+        let stopwatch = stopwatch(seconds: 10)
+        stopwatch.start()
+        clock.advance(7)
+        stopwatch.pause()
+        clock.advance(30)
+        stopwatch.resume()
+        clock.advance(7.5)
+        #expect(stopwatch.elapsed(at: clock.date) == 9)
+        #expect(stopwatch.advance() == nil)
+        clock.advance(1)
+        #expect(stopwatch.elapsed(at: clock.date) == 10)
+        #expect(stopwatch.advance() == .chime)
+    }
+
+    @Test func pauseHoldsGetReady() {
+        let stopwatch = stopwatch()
+        stopwatch.start()
+        clock.advance(2)
+        stopwatch.pause()
+        clock.advance(60)
+        _ = stopwatch.advance()
+        #expect(stopwatch.phase == .getReady)
+        stopwatch.startNow()
+        #expect(stopwatch.phase == .getReady)
+        stopwatch.resume()
+        clock.advance(3)
+        _ = stopwatch.advance()
+        #expect(stopwatch.phase == .running)
+        clock.advance(2)
+        #expect(stopwatch.elapsed(at: clock.date) == 2)
+    }
+
     @Test func stopWaitsForAWholeSecond() {
         let stopwatch = stopwatch()
         #expect(!stopwatch.canStop(at: clock.date))

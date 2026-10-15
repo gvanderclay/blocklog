@@ -88,9 +88,18 @@ struct StopwatchScreen: View {
         }
     }
 
-    /// Start Now during get ready, then Stop, enabled once a second has counted.
+    /// Pause or Resume, beside Start Now during get ready, then Stop, enabled once a second has counted.
     private var controls: some View {
-        Group {
+        HStack(spacing: 12) {
+            Button(
+                stopwatch.isPaused ? "Resume" : "Pause",
+                systemImage: stopwatch.isPaused ? "play.fill" : "pause.fill"
+            ) {
+                if stopwatch.isPaused { stopwatch.resume() } else { stopwatch.pause() }
+            }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("stopwatch.pause")
             if stopwatch.phase == .getReady {
                 Button {
                     stopwatch.startNow()
@@ -98,6 +107,7 @@ struct StopwatchScreen: View {
                     Text("Start Now").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .disabled(stopwatch.isPaused)
                 .accessibilityIdentifier("stopwatch.startNow")
             } else {
                 TimelineView(.periodic(from: stopwatch.countStart ?? .now, by: 1)) { context in
@@ -137,11 +147,14 @@ private struct StopwatchRunView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                // Always laid out, so Pause and Resume don't move the count.
+                Text(status ?? "Paused")
+                    .font(.headline)
+                    .foregroundStyle(.tint)
+                    .opacity(status == nil ? 0 : 1)
+                    .accessibilityHidden(status == nil)
+                    .accessibilityIdentifier("stopwatch.status")
                 if stopwatch.phase == .getReady, let countdown = stopwatch.countdown {
-                    Text("Get ready")
-                        .font(.headline)
-                        .foregroundStyle(.tint)
-                        .accessibilityIdentifier("stopwatch.status")
                     CountdownText(countdown: countdown, identifier: "stopwatch.countdown")
                         .font(.system(size: countSize, weight: .semibold))
                 } else if let countStart = stopwatch.countStart {
@@ -155,6 +168,11 @@ private struct StopwatchRunView: View {
         }
         // Centred while it fits; at large text sizes it scrolls.
         .defaultScrollAnchor(.center, for: .alignment)
+    }
+
+    private var status: String? {
+        if stopwatch.isPaused { return "Paused" }
+        return stopwatch.phase == .getReady ? "Get ready" : nil
     }
 
     private func count(at date: Date) -> some View {
@@ -175,7 +193,7 @@ private struct StopwatchRunView: View {
                 .accessibilityAddTraits(.updatesFrequently)
                 .accessibilityIdentifier("stopwatch.elapsed")
             if let goal = stopwatch.goal {
-                Text("/ \(RestTimer.clock(goal))")
+                Text(RestTimer.clock(goal))
                     .font(.title.weight(.semibold))
                     .fontDesign(.rounded)
                     .monospacedDigit()

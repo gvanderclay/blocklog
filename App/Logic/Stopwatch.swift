@@ -3,7 +3,8 @@ import Observation
 
 /// The full-screen timer a live workout's duration set opens: before Start, a goal for this run only; then a
 /// 5-second get ready that ticks, then a count up from its start date. The goal chimes once when the count passes
-/// it, and the count keeps going. Time comes from dates, so it keeps counting while the app is in the background.
+/// it, and the count keeps going. Pause holds get ready or the count until Resume. Time comes from dates, so it keeps
+/// counting while the app is in the background.
 @Observable
 @MainActor
 final class Stopwatch: Identifiable {
@@ -22,16 +23,26 @@ final class Stopwatch: Identifiable {
     /// When the count up starts: the end of get ready, or when Start Now was tapped. Kept here because the
     /// countdown forgets its dates once finished.
     private(set) var countStart: Date?
+    /// When Pause was tapped; nil while not paused.
+    private(set) var pausedAt: Date?
 
     @ObservationIgnored private var hasChimed = false
     @ObservationIgnored private let now: () -> Date
 
-    /// The goal starts at the set's seconds, else its placeholder, else no goal; it is never written back.
-    init(set: WorkoutSet, placeholder: Int?, now: @escaping () -> Date = { .now }) {
+    /// The goal starts at `lastGoal` when the set has run on a stopwatch before (an undone Stop wrote its result into
+    /// the seconds, which are no goal), else at the set's seconds, else its placeholder, else no goal. It is never
+    /// written into the set.
+    init(
+        set: WorkoutSet, placeholder: Int?, lastGoal: Int?? = nil,
+        now: @escaping () -> Date = { .now }
+    ) {
         self.set = set
         self.now = now
-        goal = [set.values.seconds, placeholder].lazy.compactMap { $0 }.first { $0 > 0 }
+        goal =
+            lastGoal ?? [set.values.seconds, placeholder].lazy.compactMap { $0 }.first { $0 > 0 }
     }
+
+    var isPaused: Bool { pausedAt != nil }
 
     var phase: Phase {
         guard let countdown else { return .setup }
@@ -67,15 +78,34 @@ final class Stopwatch: Identifiable {
         countdown = PhasedCountdown(phases: phases, now: now)
     }
 
+    /// Holds get ready or the count; nothing before Start.
+    func pause() {
+        guard let countdown, pausedAt == nil else { return }
+        // Catch up first, or a get ready already over would freeze, and on Resume the goal would start late. A goal
+        // passed meanwhile still chimes at the next `advance()`, which reads the completed phase.
+        _ = countdown.advance()
+        pausedAt = now()
+        countdown.pause()
+    }
+
+    /// Goes on from where Pause held it, the paused time left out of the count.
+    func resume() {
+        guard let pausedAt, let countStart else { return }
+        self.countStart = countStart + now().timeIntervalSince(pausedAt)
+        self.pausedAt = nil
+        countdown?.resume()
+    }
+
     /// Ends get ready and starts the count up now.
     func startNow() {
-        guard phase == .getReady, let countdown else { return }
+        guard phase == .getReady, !isPaused, let countdown else { return }
         countStart = now()
         countdown.move(to: 1)
     }
 
     /// The whole seconds counted up at the date; 0 before the count starts.
     func elapsed(at date: Date) -> Int {
+        let date = min(date, pausedAt ?? date)
         guard let countStart, date > countStart else { return 0 }
         return Int(date.timeIntervalSince(countStart))
     }
@@ -98,5 +128,24 @@ final class Stopwatch: Identifiable {
             return .chime
         }
         return signal == .tick ? .tick : nil
+    }
+}
+
+/// The goal each set's last logged stopwatch run used, so a rerun after the set is undone starts from that goal,
+/// not from the seconds Stop wrote. In memory only; the workout screen holds it.
+@MainActor
+struct StopwatchGoals {
+    private var goals: [UUID: Int?] = [:]
+
+    /// A stopwatch for the set, its goal from the set's last logged run when there was one.
+    func stopwatch(
+        for set: WorkoutSet, placeholder: Int?, now: @escaping () -> Date = { .now }
+    ) -> Stopwatch {
+        Stopwatch(set: set, placeholder: placeholder, lastGoal: goals[set.id], now: now)
+    }
+
+    /// Remembers the goal of a run whose Stop logged the set.
+    mutating func logged(_ stopwatch: Stopwatch) {
+        goals[stopwatch.set.id] = stopwatch.goal
     }
 }
