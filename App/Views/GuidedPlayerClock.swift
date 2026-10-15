@@ -4,19 +4,21 @@ import UIKit
 extension View {
     /// Runs a guided player's countdown while the view shows: wakes at each next tick or phase end and calls
     /// `advance`, playing the signal it returns through Timer Sounds with its haptic (a light tap per tick, a
-    /// warning at the chime). Keeps the screen awake. The countdown keeps running in the background, where nothing
+    /// `chimeFeedback` at the chime). Keeps the screen awake. The countdown keeps running in the background, where nothing
     /// plays; back in the foreground it catches up, with one signal for whatever ended meanwhile.
     func guidedPlayerClock<Step: Equatable>(
-        _ countdown: PhasedCountdown<Step>?,
+        _ countdown: PhasedCountdown<Step>?, chimeFeedback: SensoryFeedback = .warning,
         advance: @escaping () -> PhasedCountdown<Step>.Signal?
     ) -> some View {
-        modifier(GuidedPlayerClock(countdown: countdown, advance: advance))
+        modifier(
+            GuidedPlayerClock(countdown: countdown, chimeFeedback: chimeFeedback, advance: advance))
     }
 }
 
 /// The wake loop, sounds, haptics and screen lock of `guidedPlayerClock`.
 private struct GuidedPlayerClock<Step: Equatable>: ViewModifier {
     let countdown: PhasedCountdown<Step>?
+    let chimeFeedback: SensoryFeedback
     let advance: () -> PhasedCountdown<Step>.Signal?
 
     @Environment(\.scenePhase) private var scenePhase
@@ -32,6 +34,8 @@ private struct GuidedPlayerClock<Step: Equatable>: ViewModifier {
             // restarts on return, when its first advance catches up with one signal.
             .task(id: WakeKey(state: countdown?.state, isInBackground: scenePhase == .background)) {
                 guard scenePhase != .background else { return }
+                // At once too, so a phase that starts inside its last 5 seconds ticks its first second.
+                play(advance())
                 while let wake = countdown?.nextWake {
                     do {
                         // Zero tolerance: by default the system may wake a long sleep late in proportion to its
@@ -45,7 +49,7 @@ private struct GuidedPlayerClock<Step: Equatable>: ViewModifier {
             .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
             .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
             .sensoryFeedback(.impact(weight: .light), trigger: tickCount)
-            .sensoryFeedback(.warning, trigger: chimeCount)
+            .sensoryFeedback(chimeFeedback, trigger: chimeCount)
     }
 
     private struct WakeKey: Equatable {

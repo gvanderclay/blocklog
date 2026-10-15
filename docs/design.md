@@ -14,6 +14,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Accent: **Amber**, `AccentColor` in `App/Resources/Assets.xcassets`: `#B45309` in light mode, `#E8710A` in dark mode. Views get it through the default tint; never hard-code `.orange` or a hex value in a view.
   - Why amber: it nods to PowerBlock's yellow-and-black branding and reads as warm and energetic, while staying clearly apart from the green of completed sets, the red of destructive actions and the default system blue.
   - Contrast (WCAG): light `#B45309` is 5.0:1 on white and 4.5:1 on the grouped background, and white text on it is 5.0:1. Dark `#E8710A` is 5.5:1 on the dark cell background (`#1C1C1E`) and 6.8:1 on black, and white text on it is 3.1:1, which passes only for large text (at least 18 pt regular or 14 pt bold). So white text on the accent, such as a prominent button's label, uses `.headline` (17 pt semibold) or a larger text style, never a smaller one.
+- The stopwatch's goal shows in `.green` once the count reaches it.
 - Set summaries: a done summary has the row background `Color.green.opacity(0.15)` (system green, so it adapts to dark mode) and `checkmark.circle.fill` in `.green`. An upcoming summary has `circle` and its values in `.secondary`. The open set has no tint.
 - The accent marks what the user can act on, plus one highlight: a weight pre-filled by progression shows in the accent until the user changes it or checks off the set (ticket 19).
 - Everything else uses semantic styles: `.primary`, `.secondary` and `.tertiary` for text; system grouped backgrounds; `role: .destructive` for red (the one exception: a swipe Delete that confirms first, such as a routine's, is tinted `.red` with no destructive role, because the role removes the row before the confirmation). No other custom colors in views. The PowerBlock diagram's rail bands are the one exception, because they copy the physical block (ticket 14).
@@ -36,6 +37,7 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - No looping, pulsing or attention-seeking animation. The rest ring drains continuously, which is information, not decoration.
 - The stretch player (ticket 32b): the countdown rolls with `.numericText(countsDown: true)`, and when the lead-in or hold changes, the stretch's name, status, cue and up next cross-fade (`.contentTransition(.opacity)` with the default animation), which Reduce Motion keeps because it is already a cross-fade. Nothing else in the player moves.
 - The AMRAP player (ticket 33b): the countdown rolls with `.numericText(countsDown: true)`, the round number rolls with `.numericText(value:)` on Round done, and "Get ready" and "Paused" cross-fade. The extra reps roll as they step. The finish summary's checkmark bounces once (not with Reduce Motion). Nothing else moves.
+- The stopwatch (ticket 26h): the goal rolls with `.numericText(value:)` as it steps, get ready rolls with `.numericText(countsDown: true)`, the count up rolls with `.numericText(value:)`; "Get ready" switches to the count at once, since a cross-fade showed the goal's countdown in passing. Nothing else moves.
 
 ## Haptics
 
@@ -59,6 +61,9 @@ Haptics go through SwiftUI's `.sensoryFeedback(_:trigger:)`, which follows the s
 | AMRAP player: Round done | success | `.success` |
 | AMRAP player: extra reps step | selection | `.selection` |
 | AMRAP logged (Save at time up, or Save on Finish) | success | `.success` |
+| Stopwatch: each second of get ready | light impact | `.impact(weight: .light)` |
+| Stopwatch: goal reached | success | `.success` |
+| Stopwatch goal − / + | selection | `.selection` |
 | Workout finished (summary appears) | success | `.success` |
 | Import completed | success | `.success` |
 
@@ -68,6 +73,7 @@ Nothing else gives haptic feedback. A − or + that can't step (5 lb or 90 lb) i
 
 - Two sounds: `App/Resources/rest-chime.caf`, a soft two-tone chime (A5 then E6) of 0.6 seconds, and `App/Resources/timer-tick.caf`, a short, quiet click (E6, 0.05 seconds, 6 dB below the chime). `scripts/make-chime.swift` synthesizes both, and `just chime` regenerates them; never replace them with downloaded files.
 - The guided players tick once a second through a hold's last 5 seconds (the time cap's, in the AMRAP player), and play the chime when it reaches zero; lead-ins and the AMRAP's get ready are silent. They play in the foreground only: in the background the player's clock keeps running silently, with no notification, and on return it catches up with one signal for whatever ended meanwhile.
+- The stopwatch (ticket 26h) is the one exception to silent lead-ins: its 5-second get ready ticks each second, and its end is silent. The goal plays the chime once and the count keeps going; with no goal, nothing plays after get ready. Like the players, it plays in the foreground only and catches up with one signal on return.
 - When the rest timer reaches zero with the app in the foreground, the app plays the chime with `AVAudioPlayer` through an `AVAudioSession` in the `.ambient` category (`TimerSounds`, which the guided players share). That category mixes with the user's music (never pausing or ducking it) and is silenced by the ring/silent switch.
 - The rest notification uses the same file: `UNNotificationSound(named: UNNotificationSoundName("rest-chime.caf"))`.
 - Settings has a "Timer Sounds" switch (`@AppStorage("timerSoundEnabled")`, on by default). Off means no foreground chime or tick and a notification with no sound; the haptics still play.
@@ -88,6 +94,7 @@ Each touch is specified in its feature ticket; this is the rule that ticket impl
 - The setup diagram animates between setups (ticket 14). Since ticket 26g dropped the rest bar's change line, no screen shows it; the code stays for a later screen.
 - The stretch player keeps the screen awake while it shows (ticket 32b). Finish at the top left always asks "Finish early?": Save What I Did (logs the holds so far, the one under way for the seconds held), Discard and Keep Going (the popover's tap outside). The clock keeps running while it asks; if the routine ends meanwhile, the dialog closes and the routine logs as usual.
 - The AMRAP player (ticket 33b) is a `fullScreenCover` with Cancel at the top left before Start (it closes at once) and Finish after. Before Start it is a list: the dumbbell weights with − and + (or the weight menu), the round's exercises with their reps, last time's score, and Start. During the AMRAP it shows "Round N", "Get ready" or "Paused", the big countdown, and the round's exercises with reps and weight; a bottom bar holds Pause (icon only) and a prominent Round done, enabled only while the clock runs. At time up it is a form: "Time's up" ("Finished early" after Finish early), an Extra reps stepper (0 to one fewer than a round's reps), the score, and Save at the top right; then the summary shows today's and last time's score with Done. It keeps the screen awake. Finish always asks "Finish early?": Save What I Did (stops the clock and opens the time-up form, for the reps of the round under way), Discard and Keep Going. The clock keeps running while it asks; if time runs out meanwhile, the dialog closes for the time-up form. At time up the top-left button reads Discard and asks "Discard your score?" (Discard, Cancel).
+- The stopwatch (ticket 26h) opens from a play button (icon only, "Set 1 stopwatch") beside a live workout's open duration set's seconds field and at the trailing edge of its unchecked duration summaries; there is none on done sets or in past-workout editing. Play puts the keyboard down, ends a running rest as Skip does, and opens a `fullScreenCover` titled "Plank · Set 1" with Cancel at the top left at every phase, which closes with nothing written; it has no swipe-down. Before Start it is a list: Goal with − and + in 5-second steps (− from 5 gives "No goal", + from it gives 5, at most 10:00), defaulting to the set's seconds, else its placeholder, else no goal, for this run only, and Start. Then "Get ready" counts 5 to 1 with Start Now in the bottom bar, then the big count up (72 points, as in the AMRAP player) over "/ 0:45", which turns green at the goal with the chime, a success tap and the VoiceOver announcement "Goal reached"; it keeps counting. The bottom bar's prominent Stop is enabled after a whole second; it writes the whole seconds counted (at most 9999) into the set and checks it off, which starts the rest or asks "All sets done" once the cover has closed, and it doesn't move keyboard focus. It keeps the screen awake, and the count runs from its start date, so it keeps counting in the background, in memory only.
 
 ## SF Symbols
 
@@ -112,6 +119,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Finish summary, stretch routine done, AMRAP summary | `checkmark.seal.fill` |
 | Stretch player Back / Skip | `backward.fill` / `forward.fill` (during a lead-in, Skip is the text button Start Now) |
 | Pause / resume a guided player | `pause.fill` / `play.fill` |
+| Start / stop the stopwatch | `play.fill` / `stop.fill` |
 | More actions menu | `ellipsis.circle` |
 | Filter the exercise list | `line.3.horizontal.decrease.circle` |
 | Export data / import data | `square.and.arrow.up` / `square.and.arrow.down` |
@@ -200,6 +208,7 @@ Phase 8 (ticket 26):
 - [ ] Tap the check on an empty set with a hint: the hint turns into the value, a success tap; with no hint, a light tap and the keyboard opens on it.
 - [ ] Check off the open set: a success tap, it collapses to a green line whose check bounces, and the next set opens below with nothing jumping under your finger.
 - [ ] Tap a done set's line: it opens; its check unchecks it.
+- [ ] Stopwatch: five ticks, then it counts up; at the goal the time turns green with a success tap and the chime, and keeps counting. Stop logs the seconds with a success tap and the rest starts.
 
 ## App icon
 

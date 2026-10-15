@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A set that isn't open, as one line: its check state, label and values. Tapping it opens the set.
-/// An unchecked set shows the values checking it off would log. The trailing edge stays free for the stopwatch.
+/// An unchecked set shows the values checking it off would log. The set row puts the stopwatch beside it.
 struct SetSummary: View {
     let label: String
     let spokenName: String

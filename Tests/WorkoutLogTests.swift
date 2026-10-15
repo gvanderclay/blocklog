@@ -535,6 +535,32 @@ struct WorkoutLogTests {
         #expect(log.finishedWorkoutCount() == 0)
     }
 
+    @Test func aFailedStopwatchSaveRollsBackTheSecondsAndTheCheck() throws {
+        let store = try ReadOnlyStore { context in
+            let workout = Workout(title: "Core", startDate: .now)
+            let workoutExercise = WorkoutExercise(
+                exercise: Exercise(
+                    name: "Plank", muscleGroup: .core, equipment: .bodyweight, type: .duration),
+                position: 0)
+            context.insert(workout)
+            workout.exercises.append(workoutExercise)
+            workoutExercise.sets.append(contentsOf: [
+                WorkoutSet(position: 0, durationSeconds: 30), WorkoutSet(position: 1),
+            ])
+        }
+        defer { store.remove() }
+        let log = WorkoutLog(context: store.context)
+        let workout = try #require(log.inProgressWorkout())
+        let set = try #require(workout.exercises.first?.sets.first { $0.position == 0 })
+
+        #expect(throws: (any Error).self) {
+            _ = try log.logStopwatch(seconds: 47, of: set, in: workout, defaultRest: 90)
+        }
+        #expect(!store.context.hasChanges)
+        #expect(set.values == .duration(seconds: 30))
+        #expect(!set.isCompleted)
+    }
+
     @Test func discardDeletesTheWorkoutWithItsSets() throws {
         let workout = try workout(sets: 2)
         try log.discard(workout)
@@ -585,6 +611,27 @@ struct WorkoutLogTests {
         sets[1].repsText = "5"
         #expect(try log.checkOff(sets[1], in: workout, defaultRest: 90) == .allSetsDone)
         #expect(sets[1].isCompleted)
+        #expect(!restTimer.isRunning)
+    }
+
+    @Test func loggingTheStopwatchWritesItsSecondsChecksTheSetOffAndStartsTheRest() throws {
+        let workout = try #require(try log.startEmptyWorkout())
+        let first = try log.addExercise(try exercise("Plank"), to: workout)
+        let second = try log.addSet(to: try #require(first.workoutExercise))
+
+        #expect(
+            try log.logStopwatch(seconds: 47, of: first, in: workout, defaultRest: 90)
+                == .open(second))
+        #expect(first.values == .duration(seconds: 47))
+        #expect(first.isCompleted)
+        #expect(restTimer.checkedSet === first)
+
+        restTimer.skip()
+        #expect(
+            try log.logStopwatch(seconds: 12_345, of: second, in: workout, defaultRest: 90)
+                == .allSetsDone)
+        #expect(second.values == .duration(seconds: 9999))
+        #expect(second.isCompleted)
         #expect(!restTimer.isRunning)
     }
 

@@ -27,6 +27,10 @@ struct WorkoutScreen: View {
     @State private var saveFailed = false
     /// Held here, not on the section header, so the dialog shows however far the list has scrolled.
     @State private var exerciseToRemove: WorkoutExercise?
+    /// Held here too, so a scrolled-away row can't drop the cover.
+    @State private var stopwatch: Stopwatch?
+    /// Set when Stop checks off the last unchecked set; "All sets done" waits until the stopwatch has closed.
+    @State private var offersFinishAfterStopwatch = false
 
     init(workout: Workout, progressions: Binding<AppliedProgressions>) {
         self.workout = workout
@@ -105,6 +109,21 @@ struct WorkoutScreen: View {
             }
             .saveFailedAlert(isPresented: $saveFailed)
         }
+        // Under the stopwatch cover, the list stays in the accessibility tree; hide it while it shows.
+        .accessibilityHidden(stopwatch != nil)
+        .fullScreenCover(
+            item: $stopwatch,
+            onDismiss: {
+                if offersFinishAfterStopwatch {
+                    offersFinishAfterStopwatch = false
+                    isOfferingFinish = true
+                }
+            }
+        ) { stopwatch in
+            StopwatchScreen(stopwatch: stopwatch) { seconds in
+                try logStopwatch(seconds, of: stopwatch.set)
+            }
+        }
         .onDisappear {
             // Deleted only once the screen is gone, so nothing renders a deleted workout.
             // shortcut: a failed save here has no screen left to alert on; discard rolls back, so the
@@ -129,7 +148,7 @@ struct WorkoutScreen: View {
                     workout: workout, focusedRepsSetID: $focusedRepsSetID,
                     openSetID: $openSetID, accessibilityFocus: $accessibilityFocusedSetID,
                     deleteCount: $deleteCount, progressions: $progressions, onRemove: remove,
-                    onAllSetsDone: { isOfferingFinish = true })
+                    onAllSetsDone: { isOfferingFinish = true }, onStartStopwatch: startStopwatch)
             }
             Section {
                 Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
@@ -197,6 +216,31 @@ struct WorkoutScreen: View {
         }
     }
 
+    /// Play: puts the keyboard down, ends a running rest (as Skip does) and opens the stopwatch.
+    private func startStopwatch(for set: WorkoutSet) {
+        focusedRepsSetID = nil
+        restTimer.skip()
+        stopwatch = Stopwatch(
+            set: set, placeholder: SetPlaceholder(context: modelContext).value(for: set))
+    }
+
+    /// Stop: logs the seconds and checks the set off, which starts the rest, then closes the stopwatch. Keyboard
+    /// focus stays where it is. A failed save throws and leaves the stopwatch open, so the run isn't lost.
+    private func logStopwatch(_ seconds: Int, of set: WorkoutSet) throws {
+        let outcome = try WorkoutLog(context: modelContext, restTimer: restTimer)
+            .logStopwatch(seconds: seconds, of: set, in: workout, defaultRest: defaultRest)
+        withAnimation(reduceMotion ? nil : .default) {
+            switch outcome {
+            case .open(let next): openSetID = next?.id
+            case .allSetsDone:
+                openSetID = nil
+                offersFinishAfterStopwatch = true
+            case .missingValue: break
+            }
+        }
+        stopwatch = nil
+    }
+
     /// Removes at once, or asks first when the exercise has a checked set.
     private func remove(_ workoutExercise: WorkoutExercise) {
         if WorkoutLog.needsRemovalConfirmation(workoutExercise) {
@@ -236,6 +280,8 @@ struct ExerciseSection: View {
     @Binding var progressions: AppliedProgressions
     let onRemove: (WorkoutExercise) -> Void
     let onAllSetsDone: () -> Void
+    /// Opens the stopwatch for a set; nil in past editing.
+    var onStartStopwatch: ((WorkoutSet) -> Void)?
     /// True when the section edits a finished workout: sets are completed, with no check-off control.
     var isEditingPast = false
 
@@ -256,7 +302,8 @@ struct ExerciseSection: View {
                     focusedRepsSetID: focusedRepsSetID, openSetID: $openSetID,
                     accessibilityFocus: accessibilityFocus, workout: workout,
                     progressions: $progressions, onDelete: { deleteCount += 1 },
-                    onAllSetsDone: onAllSetsDone, isEditingPast: isEditingPast)
+                    onAllSetsDone: onAllSetsDone, isEditingPast: isEditingPast,
+                    onStartStopwatch: isEditingPast ? nil : onStartStopwatch)
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {

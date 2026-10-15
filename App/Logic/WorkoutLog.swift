@@ -100,6 +100,19 @@ struct WorkoutLog {
         return .open(NextSet.after(set))
     }
 
+    /// Writes the stopwatch's whole seconds (at most 9999, what the seconds field holds) into the duration set, then
+    /// checks it off as `checkOff` does, in one save; a failed save rolls both back. A checked set, a set that isn't a
+    /// duration set, or 0 seconds changes nothing and reports `missingValue`.
+    func logStopwatch(seconds: Int, of set: WorkoutSet, in workout: Workout, defaultRest: Int)
+        throws -> CheckOffOutcome
+    {
+        guard !set.isCompleted, case .duration = set.values, seconds > 0 else {
+            return .missingValue(set)
+        }
+        set.values = .duration(seconds: min(seconds, 9999))
+        return try checkOff(set, in: workout, defaultRest: defaultRest)
+    }
+
     /// Starts an empty workout titled for its start time. Nil while another workout is in progress.
     func startEmptyWorkout(at date: Date = .now) throws -> Workout? {
         guard inProgressWorkout() == nil else { return nil }

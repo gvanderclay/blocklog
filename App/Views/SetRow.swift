@@ -24,6 +24,8 @@ struct SetRow: View {
     /// True when the row edits a finished workout: the set counts as done, so there is no check-off control,
     /// Previous has no Copy, and a set missing its required values shows a red outline and a hint.
     var isEditingPast = false
+    /// Opens the stopwatch for the set; nil where there is none (past editing).
+    var onStartStopwatch: ((WorkoutSet) -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(RestTimer.self) private var restTimer
@@ -55,14 +57,9 @@ struct SetRow: View {
                 openSet(spokenName: spokenName, hint: hint)
                     .transition(.identity)
             } else {
-                SetSummary(
-                    label: SetNumbering.label(of: set), spokenName: spokenName,
-                    values: SetPlaceholder(context: modelContext).summaryValues(for: set),
-                    isDone: set.isCompleted, isHighlighted: progressions.isHighlighted(set),
-                    isEditingPast: isEditingPast, hint: hint, identifierPrefix: identifierPrefix,
-                    checkOffCount: checkOffCount
-                ) {
-                    open(set)
+                HStack(spacing: 8) {
+                    summary(spokenName: spokenName, hint: hint)
+                    stopwatchButton(spokenName: spokenName)
                 }
                 .transition(.identity)
             }
@@ -183,6 +180,7 @@ struct SetRow: View {
                         .accessibilityLabel("\(spokenName) seconds")
                         .accessibilityIdentifier("\(identifierPrefix).duration")
                     }
+                    stopwatchButton(spokenName: spokenName)
                 } else {
                     labelled(titles.value) {
                         valueField(
@@ -204,6 +202,32 @@ struct SetRow: View {
                     .foregroundStyle(Color.red)
                     .accessibilityIdentifier("\(identifierPrefix).hint")
             }
+        }
+    }
+
+    private func summary(spokenName: String, hint: String?) -> some View {
+        SetSummary(
+            label: SetNumbering.label(of: set), spokenName: spokenName,
+            values: SetPlaceholder(context: modelContext).summaryValues(for: set),
+            isDone: set.isCompleted, isHighlighted: progressions.isHighlighted(set),
+            isEditingPast: isEditingPast, hint: hint, identifierPrefix: identifierPrefix,
+            checkOffCount: checkOffCount
+        ) {
+            open(set)
+        }
+    }
+
+    /// Play, on an unchecked duration set of a live workout: opens the stopwatch.
+    @ViewBuilder
+    private func stopwatchButton(spokenName: String) -> some View {
+        if let onStartStopwatch, !set.isCompleted, case .duration = set.values {
+            Button("\(spokenName) stopwatch", systemImage: "play.fill") { onStartStopwatch(set) }
+                .labelStyle(.iconOnly)
+                .font(.title3)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("\(identifierPrefix).stopwatch")
         }
     }
 
