@@ -20,10 +20,14 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # just testflight overrides it with the upload time, so each upload is newer than the last.
+        CURRENT_PROJECT_VERSION: "1"
     info:
       path: build/generated/Blocklog-Info.plist
       properties:
         CFBundleDisplayName: Blocklog
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
   BlocklogTests:

@@ -33,6 +33,7 @@ Run these commands from the repository root:
 | `just ci-report <run-id>` | Download a failed CI run's artifacts and print its test failures, recovered retries and crash reports. |
 | `just run` | Build, install, and launch on the simulator; save `build/run.png`. |
 | `just device` | Build, sign, install, and launch on a connected iPhone. |
+| `just testflight` | Archive a Release build and upload it to TestFlight. |
 | `just fmt` | Format the Swift sources with the toolchain's `swift format`. |
 | `just skills` | Export Apple's SwiftUI agent skills into `.agents/skills/apple/`. |
 | `just chime` | Regenerate the timer sounds, `App/Resources/rest-chime.caf` and `timer-tick.caf`. |
@@ -45,6 +46,12 @@ Build and test logs go in `build/logs/`, and result bundles go in `build/results
 ## Signing
 
 The app is signed by a paid Apple Developer Program team, so its development provisioning profile lasts a year; re-run `just device` before it expires. The team ID `H2B8G7M3AZ` is committed in `project.yml`; it is not a secret. If Xcode keeps signing with an old 7-day profile from the free account, delete the cached profiles in `~/Library/Developer/Xcode/UserData/Provisioning Profiles/` and build again.
+
+## TestFlight
+
+`just testflight` archives a Release build, signs it for App Store Connect and uploads it with the Apple account signed in to Xcode; `ExportOptions.plist` holds the export settings. Each upload's build number is its UTC time (`YYYYMMDDHHMM`), so every upload is newer than the last. The app declares `ITSAppUsesNonExemptEncryption = NO`, so uploads skip the export-compliance question, and `App/Resources/PrivacyInfo.xcprivacy` declares its UserDefaults use. A TestFlight build expires after 90 days; upload a new one before then.
+
+One-time setup in [App Store Connect](https://appstoreconnect.apple.com): create an iOS app with bundle ID `com.gvanderclay.blocklog` (the App Store name must be unique, but the home-screen name stays Blocklog), then under TestFlight add an internal testing group with yourself in it and turn on automatic distribution. On the iPhone, install the TestFlight app and sign in with the same Apple account.
 
 ## XcodeGen gate
 

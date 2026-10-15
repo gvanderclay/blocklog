@@ -187,6 +187,17 @@ device: generate
     xcrun devicectl device install app --device "$device" "{{derived}}/Build/Products/Debug-iphoneos/Blocklog.app"
     xcrun devicectl device process launch --device "$device" {{bundle_id}}
 
+# Archive a Release build and upload it to TestFlight with the Apple account signed in to Xcode.
+testflight: generate
+    #!/usr/bin/env bash
+    set -euo pipefail
+    archive=build/Blocklog.xcarchive
+    rm -rf "$archive" build/testflight
+    just _xcb archive -scheme Blocklog -configuration Release -destination generic/platform=iOS \
+        -archivePath "$archive" -allowProvisioningUpdates CURRENT_PROJECT_VERSION="$(date -u +%Y%m%d%H%M)" archive
+    xcodebuild -exportArchive -archivePath "$archive" -exportOptionsPlist ExportOptions.plist \
+        -exportPath build/testflight -allowProvisioningUpdates 2>&1 | tee build/logs/testflight.log | {{xcbeautify}}
+
 # Summarise a failed CI run: test failures, crash reports and log tail from its failure artifacts.
 ci-report run:
     #!/usr/bin/env bash
