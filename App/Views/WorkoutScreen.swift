@@ -312,8 +312,9 @@ struct ExerciseSection: View {
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {
                     do {
-                        openSetID = try WorkoutLog(context: modelContext)
-                            .addSet(to: workoutExercise, completed: isEditingPast).id
+                        let added = try WorkoutLog(context: modelContext)
+                            .addSet(to: workoutExercise, completed: isEditingPast)
+                        if NextSet.opensAddedSet(added) { openSetID = added.id }
                     } catch {
                         saveFailed = true
                     }

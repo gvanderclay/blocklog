@@ -26,6 +26,12 @@ enum NextSet {
         return sets.last(where: \.isCompleted).flatMap(after) ?? sets.first { !$0.isCompleted }
     }
 
+    /// Whether Add Set opens the set it added: only when every other set of its exercise is checked, so adding a
+    /// set mid-exercise leaves the set under way open.
+    static func opensAddedSet(_ set: WorkoutSet) -> Bool {
+        set.workoutExercise?.sets.allSatisfy { $0 === set || $0.isCompleted } ?? true
+    }
+
     /// The weights of a checked-off set and the next one, and what to change on the block between them.
     struct Change {
         let now: Double

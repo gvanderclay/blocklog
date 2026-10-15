@@ -29,6 +29,13 @@ struct NextSetTests {
         }
     }
 
+    @Test func anAddedSetOpensOnlyWhenTheRestOfItsExerciseIsChecked() {
+        let done = addExercise([(30, true), (30, true), (30, false)])
+        #expect(NextSet.opensAddedSet(done[2]))
+        let underWay = addExercise([(30, true), (30, false), (30, false)])
+        #expect(!NextSet.opensAddedSet(underWay[2]))
+    }
+
     @Test func nextIsTheFollowingUncheckedSetInTheExercise() {
         let sets = addExercise([(30, true), (30, false), (30, false)])
         #expect(NextSet.after(sets[0]) === sets[1])
