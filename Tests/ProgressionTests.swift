@@ -228,7 +228,8 @@ struct ProgressionTests {
         let first = try #require(WorkoutLog.orderedSets(of: workoutExercise).first)
         #expect(progressions.isHighlighted(first))
 
-        try log.setWeight(try #require(PowerBlockTable.stepDown(from: first.weight)), of: first)
+        let lighter = try #require(PowerBlockTable.stepDown(from: first.weight))
+        try log.setWeight(lighter, of: first)
         progressions.weightChanged(of: first)
 
         #expect(first.weight == 10)

@@ -102,6 +102,7 @@ struct WorkoutTab: View {
                             .accessibilityIdentifier(
                                 "workoutTab.suggestedStarterRoutine.\(starterRoutine.name)")
                         }
+                        allStarterRoutinesButton("See All Starter Routines")
                     }
                 }
                 Section {
@@ -131,10 +132,7 @@ struct WorkoutTab: View {
                     }
                     Button("New Routine", systemImage: "plus") { isCreatingRoutine = true }
                         .accessibilityIdentifier("workoutTab.newRoutine")
-                    Button("Starter Routines", systemImage: "rectangle.stack") {
-                        isShowingStarterRoutines = true
-                    }
-                    .accessibilityIdentifier("workoutTab.starterRoutines")
+                    if !isFirstRun { allStarterRoutinesButton("Starter Routines") }
                 } header: {
                     Text("My Routines")
                 } footer: {
@@ -188,6 +186,12 @@ struct WorkoutTab: View {
 }
 
 extension WorkoutTab {
+    /// Opens the full starter list: under the suggestions on first run, under My Routines after.
+    private func allStarterRoutinesButton(_ title: String) -> some View {
+        Button(title, systemImage: "rectangle.stack") { isShowingStarterRoutines = true }
+            .accessibilityIdentifier("workoutTab.starterRoutines")
+    }
+
     private func closeStarterRoutines() {
         var transaction = Transaction()
         transaction.disablesAnimations = true
