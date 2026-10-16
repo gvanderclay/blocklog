@@ -93,7 +93,11 @@ private struct RestRing: View {
                     .trim(from: 0, to: progress)
                     .stroke(.tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1), value: seconds)
+                    // Linear only for the timeline's ticks, which carry no animation; Skip and ±15 keep theirs, or the
+                    // arc would take a second to follow the bar off screen.
+                    .transaction(value: seconds) {
+                        if $0.animation == nil { $0.animation = .linear(duration: 1) }
+                    }
             }
             .frame(width: size, height: size)
             .accessibilityHidden(true)
