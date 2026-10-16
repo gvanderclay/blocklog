@@ -6,12 +6,16 @@ import SwiftUI
 struct RestTimerBar: View {
     @Environment(RestTimer.self) private var restTimer
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
     @State private var adjustCount = 0
 
     var body: some View {
         TimelineView(.periodic(from: restTimer.timelineAnchor, by: 1)) { context in
             content(restTimer.reading(at: context.date))
         }
+        // A new timeline on every phase change, so returning to the app reads the time at once instead of
+        // showing the last tick until the old timeline's next one.
+        .id(scenePhase)
         .padding()
         .background(.bar)
         .sensoryFeedback(.selection, trigger: adjustCount)
@@ -28,6 +32,10 @@ struct RestTimerBar: View {
             HStack(spacing: 12) {
                 RestRing(progress: reading.progress, seconds: reading.countdownSeconds)
                 Text(isOvertime ? RestTimer.overtimeClock(shown) : RestTimer.clock(shown))
+                    // Overtime and countdown are different views, so a new rest swaps the text instead of
+                    // rolling "+0:10" into "1:30".
+                    .id(isOvertime)
+                    .transition(.identity)
                     .font(.title2.weight(.semibold))
                     .fontDesign(.rounded)
                     .monospacedDigit()

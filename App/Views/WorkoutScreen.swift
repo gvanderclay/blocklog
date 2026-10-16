@@ -54,6 +54,8 @@ struct WorkoutScreen: View {
                         if new > old { Task { scroll(to: openSetID, with: proxy) } }
                     }
             }
+            // Behind the list, so the strip a falling keyboard exposes shows the grouped grey, not window white.
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
             .toolbar { toolbar }
@@ -176,9 +178,12 @@ struct WorkoutScreen: View {
         }
         .safeAreaInset(edge: .bottom) {
             if restTimer.isRunning {
+                // Hidden once Finish is tapped: the keyboard drops as the sheet rises, and the bar would ride it
+                // down across the list.
                 RestTimerBar()
-                    .transition(
-                        reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                    .opacity(isFinishing ? 0 : 1)
+                    // Move only: the bar's material doesn't fade with opacity, so it left before its contents did.
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom))
             }
         }
         .animation(reduceMotion ? nil : .default, value: restTimer.isRunning)

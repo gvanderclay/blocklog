@@ -21,8 +21,9 @@ struct WorkoutTab: View {
     @State private var routineToDelete: Routine?
     @State private var programToDelete: Program?
     @State private var isShowingStarterRoutines = false
-    /// A workout started from the Starter Routines sheet, shown once the sheet has closed.
-    @State private var startedFromStarterRoutines: RoutineStart.Started?
+    /// A workout started from the Starter Routines sheet, shown over the sheet.
+    @State private var startedFromStarterRoutines: Workout?
+    @State private var starterProgressions = AppliedProgressions()
 
     var body: some View {
         NavigationStack {
@@ -142,13 +143,25 @@ struct WorkoutTab: View {
             .sheet(isPresented: $isCreatingRoutine) {
                 RoutineEditor(routine: nil)
             }
-            .sheet(
-                isPresented: $isShowingStarterRoutines, onDismiss: presentStartedFromStarterRoutines
-            ) {
+            .sheet(isPresented: $isShowingStarterRoutines) {
                 StarterRoutinesSheet { started in
-                    // The workout screen can't cover the tab while this sheet is up.
-                    startedFromStarterRoutines = started
-                    isShowingStarterRoutines = false
+                    starterProgressions = started.progressions
+                    startedFromStarterRoutines = started.workout
+                }
+                // The root cover can't rise while this sheet is up (SwiftUI would first dismiss the sheet and show
+                // the tab for half a second), so the workout covers the sheet where it stands. The sheet is
+                // invisible from then on, and closes without animation once the workout has gone.
+                .fullScreenCover(
+                    item: $startedFromStarterRoutines, onDismiss: closeStarterRoutines
+                ) { workout in
+                    WorkoutScreen(workout: workout, progressions: $starterProgressions)
+                }
+                .opacity(startedFromStarterRoutines == nil ? 1 : 0)
+                .animation(reduceMotion ? nil : .default, value: startedFromStarterRoutines == nil)
+                .accessibilityHidden(startedFromStarterRoutines != nil)
+                .presentationBackground {
+                    Color(.systemGroupedBackground)
+                        .opacity(startedFromStarterRoutines == nil ? 1 : 0)
                 }
             }
             .alert("New Program", isPresented: $isCreatingProgram) {
@@ -165,10 +178,10 @@ struct WorkoutTab: View {
 }
 
 extension WorkoutTab {
-    private func presentStartedFromStarterRoutines() {
-        guard let started = startedFromStarterRoutines else { return }
-        startedFromStarterRoutines = nil
-        presentStarted(started)
+    private func closeStarterRoutines() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { isShowingStarterRoutines = false }
     }
 
     private func createProgram() {
