@@ -58,14 +58,21 @@ struct ExercisePicker: View {
                         .accessibilityIdentifier("exercisePicker.cancel")
                 }
                 ToolbarItem(placement: .bottomBar) {
-                    Menu("Equipment", systemImage: "line.3.horizontal.decrease.circle") {
+                    Menu {
                         Picker("Equipment", selection: $equipment) {
                             Text("All").tag(Equipment?.none)
                             ForEach(Equipment.allCases, id: \.self) { option in
                                 Text(option.title).tag(Equipment?.some(option))
                             }
                         }
+                    } label: {
+                        // Built from its own views: a toolbar shows only a Label's icon.
+                        HStack {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            Text(equipment?.title ?? "All")
+                        }
                     }
+                    .accessibilityLabel("Equipment")
                     .accessibilityValue(equipment?.title ?? "All")
                     .accessibilityIdentifier("exercisePicker.equipmentFilter")
                 }

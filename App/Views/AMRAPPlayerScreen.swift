@@ -332,17 +332,9 @@ private struct AMRAPControls: View {
 private struct AMRAPFinishedView: View {
     let player: AMRAPPlayer
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var hasAppeared = false
-
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.largeTitle)
-                .foregroundStyle(.tint)
-                .symbolEffect(.bounce, value: hasAppeared)
-                .symbolEffectsRemoved(reduceMotion)
-                .accessibilityHidden(true)
+            DoneSeal()
             Text(player.score.text)
                 .font(.title.weight(.bold))
                 .fontDesign(.rounded)
@@ -360,6 +352,5 @@ private struct AMRAPFinishedView: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .onAppear { hasAppeared = true }
     }
 }

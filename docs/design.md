@@ -14,9 +14,10 @@ Every UI ticket follows these rules, and the checkpoint design review checks eac
 - Accent: **Amber**, `AccentColor` in `App/Resources/Assets.xcassets`: `#B45309` in light mode, `#E8710A` in dark mode. Views get it through the default tint; never hard-code `.orange` or a hex value in a view.
   - Why amber: it nods to PowerBlock's yellow-and-black branding and reads as warm and energetic, while staying clearly apart from the green of completed sets, the red of destructive actions and the default system blue.
   - Contrast (WCAG): light `#B45309` is 5.0:1 on white and 4.5:1 on the grouped background, and white text on it is 5.0:1. Dark `#E8710A` is 5.5:1 on the dark cell background (`#1C1C1E`) and 6.8:1 on black, and white text on it is 3.1:1, which passes only for large text (at least 18 pt regular or 14 pt bold). So white text on the accent, such as a prominent button's label, uses `.headline` (17 pt semibold) or a larger text style, never a smaller one.
-- The stopwatch's goal shows in `.green` once the count reaches it.
+- The stopwatch's goal reads "Goal 0:45" under the count and shows in `.green` with a checkmark beside it once the count reaches it, so the colour is never the only signal.
 - Set summaries: a done summary has the row background `Color.green.opacity(0.15)` (system green, so it adapts to dark mode) and `checkmark.circle.fill` in `.green`. An upcoming summary has `circle` and its values in `.secondary`. The open set has no tint.
-- The accent marks what the user can act on, plus one highlight: a weight pre-filled by progression shows in the accent until the user changes it or checks off the set (ticket 19).
+- The accent marks what the user can act on, with two exceptions. A weight pre-filled by progression shows in the accent until the user changes it or checks off the set (ticket 19). In the stretch player, the AMRAP player and the stopwatch, the status line ("Get into position", "Side 1 of 2", "Get ready", "Paused") is that screen's one accent highlight that isn't tappable, so it reads at a glance from the floor.
+- The seal on the workout, AMRAP and stretch summaries is `.green`, centred, and bounces once (not under Reduce Motion).
 - Everything else uses semantic styles: `.primary`, `.secondary` and `.tertiary` for text; system grouped backgrounds; `role: .destructive` for red (the one exception: a swipe Delete that confirms first, such as a routine's, is tinted `.red` with no destructive role, because the role removes the row before the confirmation). No other custom colors in views. The PowerBlock diagram's rail bands are the one exception, because they copy the physical block (ticket 14).
 
 ## Typography
@@ -117,6 +118,7 @@ Use these names so the same idea looks the same everywhere. A new symbol is adde
 | Reorder | `arrow.up.arrow.down` |
 | Starter Routines | `rectangle.stack` |
 | Rest time | `timer` |
+| Timer Sounds | `speaker.wave.2` |
 | Progression note | `arrow.up.circle.fill` |
 | Finish summary, stretch routine done, AMRAP summary | `checkmark.seal.fill` |
 | Stretch player Back / Skip | `backward.fill` / `forward.fill` (during a lead-in, Skip is the text button Start Now) |

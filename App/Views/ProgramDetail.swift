@@ -37,13 +37,16 @@ struct ProgramDetail: View {
                 ForEach(routines.enumerated(), id: \.element.id) { index, routine in
                     layout {
                         RoutineLink(routine: routine)
+                            // No chevron between the name and Start; the link fills the row up to Start.
+                            .navigationLinkIndicatorVisibility(.hidden)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityIdentifier("program.routine.\(index)")
                         StartRoutineButton(routine: routine, present: present)
                             .accessibilityIdentifier("program.routine.\(index).start")
                     }
                     .swipeActions(edge: .trailing) {
                         Button("Remove", systemImage: "minus.circle") { remove(routine) }
-                            .tint(.orange)
+                            .tint(.accentColor)
                             .accessibilityIdentifier("program.routine.\(index).remove")
                     }
                 }

@@ -113,6 +113,11 @@ enum RoutineFormat: Equatable {
 
 @MainActor
 extension Routine {
+    /// The line under the routine's name in lists: its format's summary, or "6 exercises" for a Sets routine.
+    var listSummary: String {
+        format.summary ?? (exercises.count == 1 ? "1 exercise" : "\(exercises.count) exercises")
+    }
+
     /// The routine's format, read from its stored raw value and time cap. Stored fields that don't read as a format
     /// read as Sets: only a bug could write them, since import refuses them. Setting it writes both fields. The
     /// caller saves.

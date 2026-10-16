@@ -25,7 +25,7 @@ struct SettingsTab: View {
                         ForEach(RestTimer.choices, id: \.self) { Text(RestTimer.clock($0)) }
                     }
                     .accessibilityIdentifier("settings.defaultRest")
-                    Toggle("Timer Sounds", isOn: $timerSoundEnabled)
+                    Toggle("Timer Sounds", systemImage: "speaker.wave.2", isOn: $timerSoundEnabled)
                         .accessibilityIdentifier("settings.timerSound")
                         .onChange(of: timerSoundEnabled) { restTimer.timerSoundChanged() }
                 } footer: {

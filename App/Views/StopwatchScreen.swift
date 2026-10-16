@@ -222,16 +222,21 @@ private struct StopwatchRunView: View {
                 .accessibilityAddTraits(.updatesFrequently)
                 .accessibilityIdentifier("stopwatch.elapsed")
             if let goal = stopwatch.goal {
-                Text(RestTimer.clock(goal))
-                    .font(.title.weight(.semibold))
-                    .fontDesign(.rounded)
-                    .monospacedDigit()
-                    .foregroundStyle(isReached ? Color.green : Color.secondary)
-                    .accessibilityLabel("Goal")
-                    .accessibilityValue(
-                        StopwatchScreen.spoken(goal: goal) + (isReached ? ", reached" : "")
-                    )
-                    .accessibilityIdentifier("stopwatch.goal")
+                Label {
+                    Text("Goal \(RestTimer.clock(goal))")
+                } icon: {
+                    // Space is kept, so reaching the goal doesn't shift the line.
+                    Image(systemName: "checkmark").opacity(isReached ? 1 : 0)
+                }
+                .font(.title.weight(.semibold))
+                .fontDesign(.rounded)
+                .monospacedDigit()
+                .foregroundStyle(isReached ? Color.green : Color.secondary)
+                .accessibilityLabel("Goal")
+                .accessibilityValue(
+                    StopwatchScreen.spoken(goal: goal) + (isReached ? ", reached" : "")
+                )
+                .accessibilityIdentifier("stopwatch.goal")
             }
         }
     }

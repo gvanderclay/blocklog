@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A row opening a routine's detail: its name and, for a routine that isn't of the Sets format, its format, such as
-/// "Timed AMRAP · 20 min".
+/// A row opening a routine's detail: its name and its summary, such as "6 exercises" or "Timed AMRAP · 20 min".
 struct RoutineLink: View {
     let routine: Routine
 
@@ -10,16 +9,14 @@ struct RoutineLink: View {
         NavigationLink(value: routine) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(routine.name)
-                if let summary = format.summary {
-                    Text(summary)
-                        .font(.subheadline)
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
+                Text(routine.listSummary)
+                    .font(.subheadline)
+                    .fontDesign(.rounded)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
             }
         }
         .accessibilityLabel(routine.name)
-        .accessibilityValue(format.spokenSummary ?? "")
+        .accessibilityValue(format.spokenSummary ?? routine.listSummary)
     }
 }

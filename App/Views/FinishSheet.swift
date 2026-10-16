@@ -104,29 +104,25 @@ struct FinishSheet: View {
     }
 }
 
-/// "Workout N", the title, and the duration, completed sets and exercise count; after a program
+/// The title, "Workout N", and the duration, completed sets and exercise count; after a program
 /// workout, "Next in <program>: <routine>".
 private struct FinishSummary: View {
     let summary: WorkoutSummary
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var hasAppeared = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(.green)
-                    .symbolEffect(.bounce, value: hasAppeared)
-                    .symbolEffectsRemoved(reduceMotion)
-                    .accessibilityHidden(true)
-                Text("Workout \(summary.workoutNumber)")
-                    .font(.title.weight(.bold))
-                    .accessibilityIdentifier("summary.workoutNumber")
+                DoneSeal()
                 Text(summary.title)
-                    .font(.headline)
+                    .font(.title.weight(.bold))
+                    .accessibilityIdentifier("summary.title")
+                Text("Workout \(summary.workoutNumber)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("summary.workoutNumber")
                 let layout =
                     dynamicTypeSize.isAccessibilitySize
                     ? AnyLayout(VStackLayout(spacing: 16))
@@ -145,6 +141,8 @@ private struct FinishSummary: View {
             .padding()
             .frame(maxWidth: .infinity)
         }
+        // Centred while it fits, as the other summaries are.
+        .defaultScrollAnchor(.center, for: .alignment)
         .navigationTitle("Workout Saved")
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.success, trigger: hasAppeared)

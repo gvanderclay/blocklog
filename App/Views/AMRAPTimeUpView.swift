@@ -9,6 +9,7 @@ struct AMRAPTimeUpView: View {
     /// The Extra reps field's text, set back to the player's after each edit, so a number past the cap shows the cap
     /// even when the held value hasn't changed (29, then 295).
     @State private var extraRepsText = ""
+    @ScaledMetric private var extraRepsWidth = 96
 
     var body: some View {
         let score = player.score
@@ -37,6 +38,8 @@ struct AMRAPTimeUpView: View {
                     TextField("Extra reps", text: $extraRepsText, prompt: Text("0"))
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: extraRepsWidth)
                         .fontDesign(.rounded)
                         .monospacedDigit()
                         .accessibilityIdentifier("amrap.extraReps")

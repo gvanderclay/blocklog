@@ -253,10 +253,7 @@ private struct StretchFinishedView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.largeTitle)
-                .foregroundStyle(.tint)
-                .accessibilityHidden(true)
+            DoneSeal()
             Text("Routine done")
                 .font(.title2.weight(.semibold))
             if logged {

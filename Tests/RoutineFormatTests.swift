@@ -307,4 +307,15 @@ struct RoutineFormatTests {
             try StarterLibrary(context: context).startWorkout(from: starterRoutine("Cindy")) == nil)
         #expect(WorkoutLog(context: context).inProgressWorkout() == nil)
     }
+
+    @Test func setsRoutineSummaryCountsItsExercises() throws {
+        let routine = Routine(name: "R", creationDate: .now)
+        #expect(routine.listSummary == "0 exercises")
+        context.insert(routine)
+        let exercise = try #require(try context.fetch(FetchDescriptor<Exercise>()).first)
+        routine.exercises = [
+            RoutineExercise(exercise: exercise, position: 0, plannedSetTypes: [.normal])
+        ]
+        #expect(routine.listSummary == "1 exercise")
+    }
 }

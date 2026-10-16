@@ -273,6 +273,9 @@ private struct ProgramRow: View {
                         .accessibilityIdentifier("workoutTab.program.\(index).upNext")
                 }
             }
+            // No chevron between the name and Start; the link fills the row up to Start.
+            .navigationLinkIndicatorVisibility(.hidden)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityIdentifier("workoutTab.program.\(index)")
             if let upNext {
                 StartRoutineButton(routine: upNext, present: present)

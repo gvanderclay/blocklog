@@ -93,14 +93,12 @@ struct HistoryDetail: View {
                 TextField("Title", text: $workout.title)
                     .font(.title2.bold())
                     .accessibilityIdentifier("historyDetail.titleField")
-            } else {
-                Text(workout.title)
-                    .font(.title2.bold())
-                    .accessibilityIdentifier("historyDetail.title")
             }
             Text(WorkoutHistory.dateTimeText(of: workout))
             if let duration = WorkoutHistory.durationText(of: workout) {
-                Text(duration).fontDesign(.rounded).monospacedDigit()
+                LabeledContent("Duration") {
+                    Text(duration).fontDesign(.rounded).monospacedDigit()
+                }
             }
             if let score = workout.format.score {
                 LabeledContent("Score") {
@@ -118,6 +116,7 @@ struct HistoryDetail: View {
         Section(workoutExercise.exercise?.name ?? "Exercise") {
             let sets = WorkoutLog.orderedSets(of: workoutExercise)
             let labels = SetNumbering.labels(for: sets.map(\.setType))
+            let spokenNames = SetNumbering.spokenNames(for: sets.map(\.setType))
             ForEach(Array(sets.enumerated()), id: \.element.id) { s, set in
                 HStack {
                     Text(labels[s]).foregroundStyle(.secondary).frame(
@@ -127,7 +126,7 @@ struct HistoryDetail: View {
                         .monospacedDigit()
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Set \(labels[s])")
+                .accessibilityLabel(spokenNames[s])
                 .accessibilityValue(set.values.spokenText)
                 .accessibilityIdentifier("historyDetail.exercise.\(e).set.\(s)")
             }
