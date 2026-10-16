@@ -10,6 +10,7 @@ struct ProgramDetail: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(WorkoutLog.inProgressWorkouts) private var inProgressWorkouts: [Workout]
     @State private var isRenaming = false
     @State private var newName = ""
@@ -29,8 +30,12 @@ struct ProgramDetail: View {
         let routines = ProgramLibrary.orderedRoutines(of: program)
         List {
             Section {
+                let layout =
+                    dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout())
                 ForEach(routines.enumerated(), id: \.element.id) { index, routine in
-                    HStack {
+                    layout {
                         RoutineLink(routine: routine)
                             .accessibilityIdentifier("program.routine.\(index)")
                         StartRoutineButton(routine: routine, present: present)

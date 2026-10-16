@@ -243,10 +243,17 @@ private struct ProgramRow: View {
     let index: Int
     let present: (RoutineStart.Started) -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         let upNext = ProgramLibrary.upNext(in: program)
-        // Start sits beside the link, not inside it, so it stays its own accessibility element.
-        HStack {
+        // Start sits beside the link, not inside it, so it stays its own accessibility element. At accessibility
+        // sizes it drops below the text, which keeps the whole row width.
+        let layout =
+            dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout())
+        layout {
             NavigationLink(value: program) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(program.name)

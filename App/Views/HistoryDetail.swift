@@ -10,6 +10,7 @@ struct HistoryDetail: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric private var labelWidth = 28
     @FocusState private var focusedRepsSetID: UUID?
     @AccessibilityFocusState private var accessibilityFocusedSetID: UUID?
     /// The set shown open while editing; none when Edit starts.
@@ -133,7 +134,7 @@ struct HistoryDetail: View {
             ForEach(Array(sets.enumerated()), id: \.element.id) { s, set in
                 HStack {
                     Text(labels[s]).foregroundStyle(.secondary).frame(
-                        width: 28, alignment: .leading)
+                        width: labelWidth, alignment: .leading)
                     Text(set.values.text)
                         .fontDesign(.rounded)
                         .monospacedDigit()

@@ -329,13 +329,18 @@ struct SetRow: View {
     @ViewBuilder
     private func previousValue(_ previous: SetValues?) -> some View {
         let canCopy = previous != nil && !set.isCompleted
-        let label = HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let stacks = dynamicTypeSize.isAccessibilitySize
+        let layout =
+            stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+        let label = layout {
             Text("Previous").foregroundStyle(Color.secondary)
             Text(previous?.text ?? "—")
                 .fontDesign(.rounded)
                 .monospacedDigit()
                 .foregroundStyle(Color.secondary)
-            Spacer(minLength: 0)
+            if !stacks { Spacer(minLength: 0) }
             if canCopy { Text("Copy").foregroundStyle(Color.accentColor) }
         }
         .font(.subheadline)

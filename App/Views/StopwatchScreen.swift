@@ -49,31 +49,16 @@ struct StopwatchScreen: View {
     private var setup: some View {
         List {
             Section {
-                HStack {
+                let stacks = dynamicTypeSize.isAccessibilitySize
+                let layout =
+                    stacks
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout())
+                layout {
                     Text("Goal")
                         .accessibilityHidden(true)
-                    Spacer()
-                    Button("Decrease goal", systemImage: "minus") { stopwatch.decreaseGoal() }
-                        .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
-                        .disabled(!stopwatch.canDecreaseGoal)
-                        .accessibilityIdentifier("stopwatch.goalMinus")
-                    Text(stopwatch.goal.map(RestTimer.clock) ?? "No goal")
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                        .contentTransition(.numericText(value: Double(stopwatch.goal ?? 0)))
-                        .animation(.default, value: stopwatch.goal)
-                        .frame(minWidth: 72)
-                        .accessibilityLabel("Goal")
-                        .accessibilityValue(Self.spoken(goal: stopwatch.goal))
-                        .accessibilityIdentifier("stopwatch.goal")
-                    Button("Increase goal", systemImage: "plus") { stopwatch.increaseGoal() }
-                        .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(.rect)
-                        .disabled(!stopwatch.canIncreaseGoal)
-                        .accessibilityIdentifier("stopwatch.goalPlus")
+                    if !stacks { Spacer() }
+                    goalControls
                 }
                 .buttonStyle(.borderless)
                 .sensoryFeedback(.selection, trigger: stopwatch.goal)
@@ -86,6 +71,34 @@ struct StopwatchScreen: View {
             } footer: {
                 Text("Counts up after a \(Stopwatch.getReadySeconds)-second get-ready countdown.")
             }
+        }
+    }
+
+    /// − goal +; the goal never wraps.
+    private var goalControls: some View {
+        HStack {
+            Button("Decrease goal", systemImage: "minus") { stopwatch.decreaseGoal() }
+                .labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+                .disabled(!stopwatch.canDecreaseGoal)
+                .accessibilityIdentifier("stopwatch.goalMinus")
+            Text(stopwatch.goal.map(RestTimer.clock) ?? "No goal")
+                .fontDesign(.rounded)
+                .monospacedDigit()
+                .contentTransition(.numericText(value: Double(stopwatch.goal ?? 0)))
+                .animation(.default, value: stopwatch.goal)
+                .fixedSize()
+                .frame(minWidth: 72)
+                .accessibilityLabel("Goal")
+                .accessibilityValue(Self.spoken(goal: stopwatch.goal))
+                .accessibilityIdentifier("stopwatch.goal")
+            Button("Increase goal", systemImage: "plus") { stopwatch.increaseGoal() }
+                .labelStyle(.iconOnly)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+                .disabled(!stopwatch.canIncreaseGoal)
+                .accessibilityIdentifier("stopwatch.goalPlus")
         }
     }
 

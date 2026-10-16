@@ -190,9 +190,11 @@ private struct FormatSection: View {
     @Binding var draft: RoutineDraft
     let onRefusal: (String) -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         Section {
-            Picker(
+            let picker = Picker(
                 "Format",
                 selection: Binding(
                     get: { draft.format.kind },
@@ -202,7 +204,26 @@ private struct FormatSection: View {
             ) {
                 ForEach(RoutineFormat.Kind.allCases) { Text($0.title).tag($0) }
             }
-            .accessibilityIdentifier("routineEditor.format")
+            if dynamicTypeSize.isAccessibilitySize {
+                // A menu label can wrap, unlike a picker's value, which cuts "Timed AMRAP" to "Time…RAP".
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Format").accessibilityHidden(true)
+                    Menu {
+                        picker
+                    } label: {
+                        HStack {
+                            Text(draft.format.kind.title).multilineTextAlignment(.leading)
+                            Image(systemName: "chevron.up.chevron.down").font(.caption)
+                        }
+                        .foregroundStyle(Color.secondary)
+                    }
+                    .accessibilityLabel("Format")
+                    .accessibilityValue(draft.format.kind.title)
+                    .accessibilityIdentifier("routineEditor.format")
+                }
+            } else {
+                picker.accessibilityIdentifier("routineEditor.format")
+            }
             if let minutes = draft.format.timeCapMinutes {
                 Stepper(value: $draft.timeCapMinutes, in: RoutineFormat.timeCapMinuteBounds) {
                     NumberLabel(title: "Time Cap", value: minutes, unit: " min")
@@ -238,6 +259,8 @@ private struct EntrySection: View {
     let onRemove: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric private var rangeFieldWidth = 56
     @State private var typeChangeCount = 0
 
     private var identifierPrefix: String { "routineEditor.exercise.\(index)" }
@@ -301,14 +324,22 @@ private struct EntrySection: View {
             .accessibilityValue("\(seconds) seconds")
             .accessibilityIdentifier("\(identifierPrefix).targetDuration")
         case .repRange:
-            HStack {
+            let stacks = dynamicTypeSize.isAccessibilitySize
+            let layout =
+                stacks
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout())
+            layout {
                 Text("Reps")
-                Spacer()
-                rangeField(.low, label: "Low reps", identifier: "repLow")
-                Text("to")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                rangeField(.high, label: "High reps", identifier: "repHigh")
+                if !stacks { Spacer() }
+                HStack {
+                    rangeField(.low, label: "Low reps", identifier: "repLow")
+                    Text("to")
+                        .fixedSize()
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    rangeField(.high, label: "High reps", identifier: "repHigh")
+                }
             }
         }
         if showsSets {
@@ -330,7 +361,9 @@ private struct EntrySection: View {
             .textFieldStyle(.roundedBorder)
             .fontDesign(.rounded)
             .monospacedDigit()
-            .frame(width: 56)
+            // Scaling the width at accessibility sizes would leave no room for "to" in the stacked row; two digits
+            // fit in this.
+            .frame(width: dynamicTypeSize.isAccessibilitySize ? 100 : rangeFieldWidth)
             .frame(minHeight: 44)
             .focused(focusedRange, equals: field)
             .accessibilityLabel(label)
@@ -357,13 +390,23 @@ private struct NumberLabel: View {
     let value: Int
     var unit = ""
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        LabeledContent(title) {
-            Text("\(value)\(unit)")
-                .fontDesign(.rounded)
-                .monospacedDigit()
-                .contentTransition(.numericText(value: Double(value)))
-                .animation(.default, value: value)
+        // A no-break space keeps "20 min" on one line.
+        let number = Text("\(value)\(unit.replacing(" ", with: "\u{00A0}"))")
+            .fontDesign(.rounded)
+            .monospacedDigit()
+            .contentTransition(.numericText(value: Double(value)))
+            .animation(.default, value: value)
+        // At accessibility sizes the number sits under the title, so the stepper beside them leaves room for both.
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                number.foregroundStyle(.secondary)
+            }
+        } else {
+            LabeledContent(title) { number }
         }
     }
 }

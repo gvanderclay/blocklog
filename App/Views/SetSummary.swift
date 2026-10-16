@@ -20,6 +20,7 @@ struct SetSummary: View {
     let onOpen: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric private var labelWidth = 28
 
     var body: some View {
         Button(action: onOpen) {
@@ -35,7 +36,8 @@ struct SetSummary: View {
                     Text(label)
                         .font(.body.weight(.semibold))
                         .monospacedDigit()
-                        .frame(minWidth: 28, alignment: .leading)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: labelWidth, alignment: .leading)
                     Text(values.text)
                         .fontDesign(.rounded)
                         .monospacedDigit()
