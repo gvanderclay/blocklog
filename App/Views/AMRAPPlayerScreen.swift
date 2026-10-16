@@ -15,19 +15,31 @@ struct AMRAPPlayerScreen: View {
     /// The progress shown in the Finish dialog, taken when Finish is tapped, since a dialog's message can't tick.
     @State private var finishProgress = ""
     @State private var saveFailed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // With Reduce Motion the swap is a cut, not a cross-fade.
+        let fade: AnyTransition = reduceMotion ? .identity : .opacity
         NavigationStack {
-            Group {
+            // A ZStack, not a Group: a Group passes .animation(value:) to each branch, and a branch that is just
+            // inserted never sees the value change.
+            ZStack {
                 switch player.phase {
                 case .setup: AMRAPSetupView(player: player)
                 case .getReady, .running, .paused:
                     AMRAPRunView(player: player)
                         .safeAreaInset(edge: .bottom) { AMRAPControls(player: player) }
-                case .timeUp: AMRAPTimeUpView(player: player) { _ = save() }
-                case .finished: AMRAPFinishedView(player: player)
+                        .transition(fade)
+                case .timeUp:
+                    AMRAPTimeUpView(player: player) { _ = save() }
+                        .transition(fade)
+                case .finished:
+                    AMRAPFinishedView(player: player)
+                        .transition(fade)
                 }
             }
+            .animation(.default, value: player.phase == .timeUp)
+            .animation(.default, value: player.phase == .finished)
             .navigationTitle(player.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -225,15 +237,20 @@ private struct AMRAPRunView: View {
                     .contentTransition(.numericText(value: Double(player.roundNumber)))
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("amrap.round")
-                if let status = status {
-                    Text(status)
-                        .font(.headline)
-                        .foregroundStyle(.tint)
-                        .accessibilityIdentifier("amrap.status")
-                }
+                // Always laid out, so Get ready and Pause don't move the countdown.
+                Text(status ?? "Paused")
+                    .font(.headline)
+                    .foregroundStyle(.tint)
+                    .opacity(status == nil ? 0 : 1)
+                    .contentTransition(.identity)
+                    .accessibilityHidden(status == nil)
+                    .accessibilityIdentifier("amrap.status")
                 if let countdown = player.countdown {
+                    // A new view per step, so the digits don't roll from 0:01 to 20:00 as the run starts.
                     CountdownText(countdown: countdown, identifier: "amrap.countdown")
                         .font(.system(size: countdownSize, weight: .semibold))
+                        .id(countdown.index)
+                        .transition(.identity)
                 }
                 VStack(spacing: 8) {
                     ForEach(player.round.entries.indices, id: \.self) { index in

@@ -110,14 +110,20 @@ private struct StretchStepView: View {
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("stretch.name")
-                if let status = player.countdown.isPaused ? "Paused" : player.step?.status {
-                    Text(status)
-                        .font(.headline)
-                        .foregroundStyle(.tint)
-                        .accessibilityIdentifier("stretch.status")
-                }
+                // Always laid out, so a stretch without a status, Pause and Resume don't move the countdown.
+                let status = player.countdown.isPaused ? "Paused" : player.step?.status
+                Text(status ?? "Paused")
+                    .font(.headline)
+                    .foregroundStyle(.tint)
+                    .opacity(status == nil ? 0 : 1)
+                    .contentTransition(.identity)
+                    .accessibilityHidden(status == nil)
+                    .accessibilityIdentifier("stretch.status")
+                // A new view per step, so the digits don't roll from 0:01 to 0:30 as the step changes.
                 CountdownText(countdown: player.countdown, identifier: "stretch.countdown")
                     .font(.largeTitle.weight(.semibold))
+                    .id(player.countdown.index)
+                    .transition(.identity)
                 if let cue = player.cue {
                     Text(cue.cue)
                         .multilineTextAlignment(.center)
@@ -175,13 +181,19 @@ private struct StretchControls: View {
             ) { player.togglePause() }
             .accessibilityIdentifier("stretch.pause")
             // During a lead-in the button starts its hold, so it says so; during a hold it skips it.
-            if player.step?.kind == .leadIn {
-                Button("Start Now") { player.skip() }
+            // Start Now sizes the slot, hidden, under Skip too, so Back and Pause stay where they are.
+            ZStack {
+                Button("Start Now") {}
                     .font(.headline)
-                    .accessibilityIdentifier("stretch.startNow")
-            } else {
-                Button("Skip", systemImage: "forward.fill") { player.skip() }
-                    .accessibilityIdentifier("stretch.skip")
+                    .hidden()
+                if player.step?.kind == .leadIn {
+                    Button("Start Now") { player.skip() }
+                        .font(.headline)
+                        .accessibilityIdentifier("stretch.startNow")
+                } else {
+                    Button("Skip", systemImage: "forward.fill") { player.skip() }
+                        .accessibilityIdentifier("stretch.skip")
+                }
             }
             Button("+15") {
                 added()

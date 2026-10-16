@@ -155,8 +155,18 @@ private struct StopwatchRunView: View {
                     .accessibilityHidden(status == nil)
                     .accessibilityIdentifier("stopwatch.status")
                 if stopwatch.phase == .getReady, let countdown = stopwatch.countdown {
-                    CountdownText(countdown: countdown, identifier: "stopwatch.countdown")
-                        .font(.system(size: countSize, weight: .semibold))
+                    VStack(spacing: 8) {
+                        CountdownText(countdown: countdown, identifier: "stopwatch.countdown")
+                            .font(.system(size: countSize, weight: .semibold))
+                        // Takes the goal line's place, so the count doesn't move when the run starts.
+                        if let goal = stopwatch.goal {
+                            Text(RestTimer.clock(goal))
+                                .font(.title.weight(.semibold))
+                                .fontDesign(.rounded)
+                                .monospacedDigit()
+                                .hidden()
+                        }
+                    }
                 } else if let countStart = stopwatch.countStart {
                     TimelineView(.periodic(from: countStart, by: 1)) { context in
                         count(at: context.date)
