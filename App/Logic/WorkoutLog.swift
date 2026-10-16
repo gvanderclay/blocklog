@@ -73,6 +73,12 @@ struct WorkoutLog {
         workout.exercises.contains { $0.sets.contains { !$0.isCompleted } }
     }
 
+    /// Whether "All sets done" still applies to a set just checked: it is still checked and no set is unchecked.
+    static func offersFinish(afterChecking setID: UUID, in workout: Workout) -> Bool {
+        !hasUncheckedSet(workout)
+            && workout.exercises.contains { $0.sets.contains { $0.id == setID && $0.isCompleted } }
+    }
+
     /// How many sets are unchecked: the ones `finish` leaves out of the saved workout.
     static func uncheckedSetCount(_ workout: Workout) -> Int {
         workout.exercises.reduce(0) { $0 + $1.sets.filter { !$0.isCompleted }.count }

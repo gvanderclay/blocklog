@@ -37,8 +37,9 @@ struct HistoryDetail: View {
                         workoutExercise: workoutExercise, exerciseIndex: e, workout: workout,
                         focusedRepsSetID: $focusedRepsSetID, openSetID: $openSetID,
                         accessibilityFocus: $accessibilityFocusedSetID, deleteCount: $deleteCount,
-                        progressions: $progressions, onRemove: remove, onAllSetsDone: {},
-                        isEditingPast: true)
+                        progressions: $progressions, onRemove: remove,
+                        exerciseToRemove: $exerciseToRemove, onConfirmRemove: removeExercise,
+                        offeringFinishSetID: .constant(nil), isEditingPast: true)
                 } else {
                     readOnlySection(workoutExercise, e)
                 }
@@ -56,20 +57,6 @@ struct HistoryDetail: View {
         .navigationBarBackButtonHidden(isEditing)
         .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
         .toolbar { toolbar }
-        .deleteWorkoutDialog(item: $workoutToDelete) { _ in
-            isDeleted = true
-            dismiss()
-        }
-        .confirmationDialog(
-            "Remove this exercise?", item: $exerciseToRemove, titleVisibility: .visible
-        ) { workoutExercise in
-            Button("Remove Exercise", role: .destructive) { removeExercise(workoutExercise) }
-                .accessibilityIdentifier(
-                    "workout.exercise.\(WorkoutLog.orderedExercises(of: workout).firstIndex(of: workoutExercise) ?? 0).removeConfirm"
-                )
-        } message: { _ in
-            Text("Its sets will be deleted.")
-        }
         .sheet(isPresented: $isPickingExercise) {
             ExercisePicker { exercise in
                 withAnimation(reduceMotion ? nil : .default) {
@@ -165,11 +152,19 @@ struct HistoryDetail: View {
                 Button("Edit") { isEditing = true }
                     .accessibilityIdentifier("historyDetail.edit")
             }
-            ToolbarItem(placement: .secondaryAction) {
-                Button("Delete", systemImage: "trash", role: .destructive) {
-                    workoutToDelete = workout
+            ToolbarItem(placement: .primaryAction) {
+                // An explicit menu, not a secondary action, so the dialog can sit on it.
+                Menu("More", systemImage: "ellipsis.circle") {
+                    Button("Delete", systemImage: "trash", role: .destructive) {
+                        workoutToDelete = workout
+                    }
+                    .accessibilityIdentifier("historyDetail.delete")
                 }
-                .accessibilityIdentifier("historyDetail.delete")
+                .deleteWorkoutDialog(item: $workoutToDelete) { _ in
+                    isDeleted = true
+                    dismiss()
+                }
+                .accessibilityIdentifier("historyDetail.menu")
             }
         }
     }

@@ -414,7 +414,9 @@ struct SetRow: View {
 
     /// Runs a change through the workout log, showing the alert if it fails to save.
     private func checkOff(keyboardWasUp: Bool) {
-        withAnimation(reduceMotion ? nil : .default) {
+        // The dialog's popover anchors to the row's frame at presentation, so it waits for the row to collapse.
+        var offersFinish = false
+        withAnimation(reduceMotion ? nil : .default, completionCriteria: .removed) {
             do {
                 switch try WorkoutLog(context: modelContext, restTimer: restTimer)
                     .checkOff(set, in: workout, defaultRest: defaultRest)
@@ -428,7 +430,7 @@ struct SetRow: View {
                 case .allSetsDone:
                     openSetID = nil
                     focusedRepsSetID.wrappedValue = nil
-                    onAllSetsDone()
+                    offersFinish = true
                 case .missingValue(let missing):
                     focusedRepsSetID.wrappedValue = missing.id
                     missingValueCount += 1
@@ -438,6 +440,8 @@ struct SetRow: View {
                 if keyboardWasUp { focusedRepsSetID.wrappedValue = set.id }
                 saveFailed = true
             }
+        } completion: {
+            if offersFinish { onAllSetsDone() }
         }
     }
 

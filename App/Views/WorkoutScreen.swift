@@ -21,18 +21,22 @@ struct WorkoutScreen: View {
     @State private var isReordering = false
     @State private var deleteCount = 0
     @State private var isFinishing = false
+    /// Each opener of "Discard this workout?" has its own state, so the dialog appears by the one tapped.
     @State private var isConfirmingDiscard = false
-    @State private var isOfferingFinish = false
+    @State private var isConfirmingDiscardFromMenu = false
+    /// The checked set "All sets done" is anchored to.
+    @State private var offeringFinishSetID: UUID?
     @State private var isDiscarded = false
     @State private var saveFailed = false
-    /// Held here, not on the section header, so the dialog shows however far the list has scrolled.
+    /// Held here so the removal survives the section header scrolling away; the section anchors the dialog.
     @State private var exerciseToRemove: WorkoutExercise?
     /// Held here too, so a scrolled-away row can't drop the cover.
     @State private var stopwatch: Stopwatch?
     /// shortcut: lost when the screen closes (Minimize); hold it with the progressions if that bites.
     @State private var stopwatchGoals = StopwatchGoals()
-    /// Set when Stop checks off the last unchecked set; "All sets done" waits until the stopwatch has closed.
-    @State private var offersFinishAfterStopwatch = false
+    /// Set when Stop checks off the last unchecked set; "All sets done" waits until the stopwatch has closed,
+    /// then shows by that set.
+    @State private var offersFinishAfterStopwatchSetID: UUID?
 
     init(workout: Workout, progressions: Binding<AppliedProgressions>) {
         self.workout = workout
@@ -59,36 +63,6 @@ struct WorkoutScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.impact(weight: .medium), trigger: deleteCount)
             .toolbar { toolbar }
-            .confirmationDialog(
-                "Discard this workout?", isPresented: $isConfirmingDiscard,
-                titleVisibility: .visible
-            ) {
-                Button("Discard Workout", role: .destructive) {
-                    isDiscarded = true
-                    dismiss()
-                }
-                .accessibilityIdentifier("workout.discardConfirm")
-            } message: {
-                Text("Its sets will be deleted.")
-            }
-            .confirmationDialog(
-                "All sets done", isPresented: $isOfferingFinish, titleVisibility: .visible
-            ) {
-                Button("Finish") { isFinishing = true }
-                    .accessibilityIdentifier("allSetsDone.finish")
-                Button("Keep Going", role: .cancel) {}
-                    .accessibilityIdentifier("allSetsDone.keepGoing")
-            }
-            .confirmationDialog(
-                "Remove this exercise?", item: $exerciseToRemove, titleVisibility: .visible
-            ) { workoutExercise in
-                Button("Remove Exercise", role: .destructive) { removeExercise(workoutExercise) }
-                    .accessibilityIdentifier(
-                        "workout.exercise.\(WorkoutLog.orderedExercises(of: workout).firstIndex(of: workoutExercise) ?? 0).removeConfirm"
-                    )
-            } message: { _ in
-                Text("Its sets will be deleted.")
-            }
             .sheet(isPresented: $isPickingExercise) {
                 ExercisePicker { exercise in
                     withAnimation(reduceMotion ? nil : .default) {
@@ -118,9 +92,11 @@ struct WorkoutScreen: View {
         .fullScreenCover(
             item: $stopwatch,
             onDismiss: {
-                if offersFinishAfterStopwatch {
-                    offersFinishAfterStopwatch = false
-                    isOfferingFinish = true
+                if let id = offersFinishAfterStopwatchSetID {
+                    offersFinishAfterStopwatchSetID = nil
+                    if WorkoutLog.offersFinish(afterChecking: id, in: workout) {
+                        offeringFinishSetID = id
+                    }
                 }
             }
         ) { stopwatch in
@@ -152,7 +128,9 @@ struct WorkoutScreen: View {
                     workout: workout, focusedRepsSetID: $focusedRepsSetID,
                     openSetID: $openSetID, accessibilityFocus: $accessibilityFocusedSetID,
                     deleteCount: $deleteCount, progressions: $progressions, onRemove: remove,
-                    onAllSetsDone: { isOfferingFinish = true }, onStartStopwatch: startStopwatch)
+                    exerciseToRemove: $exerciseToRemove, onConfirmRemove: removeExercise,
+                    offeringFinishSetID: $offeringFinishSetID,
+                    onFinish: { isFinishing = true }, onStartStopwatch: startStopwatch)
             }
             Section {
                 Button("Add Exercise", systemImage: "plus") { isPickingExercise = true }
@@ -160,6 +138,7 @@ struct WorkoutScreen: View {
             }
             Section {
                 Button("Discard Workout", role: .destructive) { isConfirmingDiscard = true }
+                    .discardDialog(isPresented: $isConfirmingDiscard, discard: discard)
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("workout.discardBottom")
             }
@@ -218,12 +197,18 @@ struct WorkoutScreen: View {
                 .disabled(!WorkoutLog.canReorder(workout))
                 .accessibilityIdentifier("workout.reorder")
                 Button("Discard Workout", systemImage: "trash", role: .destructive) {
-                    isConfirmingDiscard = true
+                    isConfirmingDiscardFromMenu = true
                 }
                 .accessibilityIdentifier("workout.discard")
             }
+            .discardDialog(isPresented: $isConfirmingDiscardFromMenu, discard: discard)
             .accessibilityIdentifier("workout.menu")
         }
+    }
+
+    private func discard() {
+        isDiscarded = true
+        dismiss()
     }
 
     /// Play: puts the keyboard down, ends a running rest (as Skip does) and opens the stopwatch.
@@ -246,7 +231,7 @@ struct WorkoutScreen: View {
             case .open(let next): openSetID = next?.id
             case .allSetsDone:
                 openSetID = nil
-                offersFinishAfterStopwatch = true
+                offersFinishAfterStopwatchSetID = stopwatch.set.id
             case .missingValue: break
             }
         }
@@ -291,7 +276,12 @@ struct ExerciseSection: View {
     @Binding var deleteCount: Int
     @Binding var progressions: AppliedProgressions
     let onRemove: (WorkoutExercise) -> Void
-    let onAllSetsDone: () -> Void
+    /// The exercise whose "Remove this exercise?" is showing; the dialog sits on its ⋯ button.
+    @Binding var exerciseToRemove: WorkoutExercise?
+    let onConfirmRemove: (WorkoutExercise) -> Void
+    /// The checked set whose "All sets done" is showing; the dialog sits on that row. Unused in past editing.
+    @Binding var offeringFinishSetID: UUID?
+    var onFinish: () -> Void = {}
     /// Opens the stopwatch for a set; nil in past editing.
     var onStartStopwatch: ((WorkoutSet) -> Void)?
     /// True when the section edits a finished workout: sets are completed, with no check-off control.
@@ -314,8 +304,26 @@ struct ExerciseSection: View {
                     focusedRepsSetID: focusedRepsSetID, openSetID: $openSetID,
                     accessibilityFocus: accessibilityFocus, workout: workout,
                     progressions: $progressions, onDelete: { deleteCount += 1 },
-                    onAllSetsDone: onAllSetsDone, isEditingPast: isEditingPast,
-                    onStartStopwatch: isEditingPast ? nil : onStartStopwatch)
+                    onAllSetsDone: {
+                        if WorkoutLog.offersFinish(afterChecking: set.id, in: workout) {
+                            offeringFinishSetID = set.id
+                        }
+                    }, isEditingPast: isEditingPast,
+                    onStartStopwatch: isEditingPast ? nil : onStartStopwatch
+                )
+                .confirmationDialog(
+                    "All sets done",
+                    isPresented: Binding(
+                        get: { offeringFinishSetID == set.id },
+                        set: { if !$0 { offeringFinishSetID = nil } }),
+                    titleVisibility: .visible
+                ) {
+                    Button("Finish") { onFinish() }
+                        .accessibilityIdentifier("allSetsDone.finish")
+                    // No cancel role: an iOS 27 popover dialog hides it.
+                    Button("Keep Going") {}
+                        .accessibilityIdentifier("allSetsDone.keepGoing")
+                }
             }
             Button("Add Set", systemImage: "plus") {
                 withAnimation(reduceMotion ? nil : .default) {
@@ -391,6 +399,19 @@ struct ExerciseSection: View {
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(.rect)
             }
+            // On the button, so the dialog appears by it rather than at the top of the screen.
+            .confirmationDialog(
+                "Remove this exercise?",
+                isPresented: Binding(
+                    get: { exerciseToRemove === workoutExercise },
+                    set: { if !$0 { exerciseToRemove = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Remove Exercise", role: .destructive) { onConfirmRemove(workoutExercise) }
+                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).removeConfirm")
+            } message: {
+                Text("Its sets will be deleted.")
+            }
             .accessibilityIdentifier("workout.exercise.\(exerciseIndex).menu")
         }
     }
@@ -406,5 +427,21 @@ struct ExerciseSection: View {
                     saveFailed = true
                 }
             })
+    }
+}
+
+extension View {
+    /// "Discard this workout?" shown by the view it is attached to.
+    fileprivate func discardDialog(isPresented: Binding<Bool>, discard: @escaping () -> Void)
+        -> some View
+    {
+        confirmationDialog(
+            "Discard this workout?", isPresented: isPresented, titleVisibility: .visible
+        ) {
+            Button("Discard Workout", role: .destructive, action: discard)
+                .accessibilityIdentifier("workout.discardConfirm")
+        } message: {
+            Text("Its sets will be deleted.")
+        }
     }
 }

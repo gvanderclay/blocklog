@@ -80,15 +80,30 @@ struct WorkoutLogTests {
 
     @Test func uncheckedSetCountIsWhatFinishDrops() throws {
         let workout = try workout(sets: 3)
+        let benchSet = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])[0]
         try log.addExercise(try exercise("Hammer Curl"), to: workout)
         #expect(WorkoutLog.uncheckedSetCount(workout) == 4)
-        try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
+        try log.toggleCompleted(benchSet)
         #expect(WorkoutLog.uncheckedSetCount(workout) == 3)
 
         let before = try container.mainContext.fetchCount(FetchDescriptor<WorkoutSet>())
         _ = try log.finish(workout, title: "")
         #expect(before - (try container.mainContext.fetchCount(FetchDescriptor<WorkoutSet>())) == 3)
         #expect(WorkoutLog.uncheckedSetCount(workout) == 0)
+    }
+
+    @Test func offersFinishOnlyForACheckedSetWhenNoSetIsUnchecked() throws {
+        let workout = try workout(sets: 2)
+        let sets = WorkoutLog.orderedSets(of: WorkoutLog.orderedExercises(of: workout)[0])
+        try log.toggleCompleted(sets[0])
+        #expect(!WorkoutLog.offersFinish(afterChecking: sets[0].id, in: workout))
+        try log.toggleCompleted(sets[1])
+        #expect(WorkoutLog.offersFinish(afterChecking: sets[1].id, in: workout))
+        try log.toggleCompleted(sets[1])
+        #expect(!WorkoutLog.offersFinish(afterChecking: sets[1].id, in: workout))
+        try log.toggleCompleted(sets[1])
+        _ = try log.addSet(to: sets[1].workoutExercise!)
+        #expect(!WorkoutLog.offersFinish(afterChecking: sets[1].id, in: workout))
     }
 
     @Test func uncheckedSetCountIsZeroWhenEverySetIsChecked() throws {
