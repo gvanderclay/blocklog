@@ -73,6 +73,11 @@ struct WorkoutLog {
         workout.exercises.contains { $0.sets.contains { !$0.isCompleted } }
     }
 
+    /// How many sets are unchecked: the ones `finish` leaves out of the saved workout.
+    static func uncheckedSetCount(_ workout: Workout) -> Int {
+        workout.exercises.reduce(0) { $0 + $1.sets.filter { !$0.isCompleted }.count }
+    }
+
     // MARK: Changing
 
     /// Checks the set off and, once that has saved, starts the rest for its exercise, as the checkmark does; `open` carries the set to open next (`NextSet.after`). Checking off the

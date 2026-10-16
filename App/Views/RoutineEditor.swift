@@ -373,11 +373,12 @@ private struct EntrySection: View {
     /// One set-type row per planned set.
     @ViewBuilder private var setTypes: some View {
         let labels = SetNumbering.labels(for: entry.sets.map(\.type))
+        let spokenNames = SetNumbering.spokenNames(for: entry.sets.map(\.type))
         // Bindings from the collection, not by index, so a row being removed never reads past the end.
         ForEach($entry.sets) { $plannedSet in
             let setIndex = entry.sets.firstIndex { $0.id == plannedSet.id } ?? 0
             PlannedSetRow(
-                type: $plannedSet.type, label: labels[setIndex],
+                type: $plannedSet.type, label: labels[setIndex], spokenName: spokenNames[setIndex],
                 identifierPrefix: "\(identifierPrefix).set.\(setIndex)"
             ) { typeChangeCount += 1 }
         }
@@ -415,6 +416,8 @@ private struct NumberLabel: View {
 private struct PlannedSetRow: View {
     @Binding var type: SetType
     let label: String
+    /// The set's spoken name (`SetNumbering.spokenNames`), which the type menu's label extends: "Set 1 type".
+    let spokenName: String
     /// `routineEditor.exercise.<e>.set.<s>`.
     let identifierPrefix: String
     let onTypeChange: () -> Void
@@ -442,7 +445,7 @@ private struct PlannedSetRow: View {
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .contentShape(.rect)
             }
-            .accessibilityLabel("Set type")
+            .accessibilityLabel("\(spokenName) type")
             .accessibilityValue(type.title)
             .accessibilityIdentifier("\(identifierPrefix).typeMenu")
             Text(type.title)

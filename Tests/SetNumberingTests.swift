@@ -18,6 +18,13 @@ struct SetNumberingTests {
         }
     }
 
+    @Test func spokenNamesForPlannedTypesMatchTheSetNames() {
+        #expect(
+            SetNumbering.spokenNames(for: [.warmUp, .normal, .drop, .normal, .failure]) == [
+                "Warm-up 1", "Set 1", "Drop set 2", "Set 3", "Failure set 4",
+            ])
+    }
+
     @Test func spokenNamesCountWarmUpsApartFromCountedSets() throws {
         let container = try BlocklogApp.makeContainer(inMemory: true)
         let log = WorkoutLog(context: container.mainContext)

@@ -62,15 +62,8 @@ struct StarterRoutineDetail: View {
                 }
             }
             Section {
-                Button(starterRoutine.format == .sets ? "Start Workout" : "Start") { start() }
-                    .disabled(!inProgressWorkouts.isEmpty)
-                    .accessibilityIdentifier("starterRoutineDetail.start")
                 Button("Add to My Routines") { addToRoutines() }
                     .accessibilityIdentifier("starterRoutineDetail.addToRoutines")
-            } footer: {
-                if !inProgressWorkouts.isEmpty {
-                    Text("Finish or discard the workout in progress first.")
-                }
             }
             if let program {
                 Section {
@@ -86,6 +79,11 @@ struct StarterRoutineDetail: View {
                 }
             }
         }
+        .bottomBarButton(
+            starterRoutine.format == .sets ? "Start Workout" : "Start",
+            identifier: "starterRoutineDetail.start", isEnabled: inProgressWorkouts.isEmpty,
+            hint: "Finish or discard the workout in progress first.", action: start
+        )
         .navigationTitle(starterRoutine.name)
         .sheet(item: $draft) { draft in
             RoutineEditor(newFrom: draft)

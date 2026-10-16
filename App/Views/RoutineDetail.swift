@@ -48,8 +48,8 @@ struct RoutineDetail: View {
                     .accessibilityIdentifier("routineDetail.exercise.\(index)")
                 }
             }
-            Section {
-                if format == .stretch {
+            if format == .stretch {
+                Section {
                     Picker("Rounds", selection: $rounds) {
                         ForEach(StretchPlayer.roundChoices, id: \.self) {
                             Text("\($0)").tag($0)
@@ -57,15 +57,13 @@ struct RoutineDetail: View {
                     }
                     .accessibilityIdentifier("routineDetail.rounds")
                 }
-                Button(format == .sets ? "Start Workout" : "Start") { start() }
-                    .disabled(!inProgressWorkouts.isEmpty)
-                    .accessibilityIdentifier("routineDetail.start")
-            } footer: {
-                if !inProgressWorkouts.isEmpty {
-                    Text("Finish or discard the workout in progress first.")
-                }
             }
         }
+        .bottomBarButton(
+            format == .sets ? "Start Workout" : "Start", identifier: "routineDetail.start",
+            isEnabled: inProgressWorkouts.isEmpty,
+            hint: "Finish or discard the workout in progress first.", action: start
+        )
         .navigationTitle(routine.name)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

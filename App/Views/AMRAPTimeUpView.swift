@@ -62,26 +62,8 @@ struct AMRAPTimeUpView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 8) {
-                Button(action: save) {
-                    Text("Save").frame(maxWidth: .infinity)
-                }
-                .font(.headline)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(!player.canLog)
-                .accessibilityIdentifier("amrap.save")
-                if !player.canLog {
-                    Text("Add a round or reps to save")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("amrap.saveHint")
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(.bar)
-        }
+        .bottomBarButton(
+            "Save", identifier: "amrap.save", isEnabled: player.canLog,
+            hint: "Add a round or reps to save", hintIdentifier: "amrap.saveHint", action: save)
     }
 }

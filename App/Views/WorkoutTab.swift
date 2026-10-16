@@ -25,6 +25,8 @@ struct WorkoutTab: View {
     @State private var startedFromStarterRoutines: Workout?
     @State private var starterProgressions = AppliedProgressions()
 
+    private var isFirstRun: Bool { routines.isEmpty && programs.isEmpty }
+
     var body: some View {
         NavigationStack {
             List {
@@ -53,7 +55,7 @@ struct WorkoutTab: View {
                     .disabled(!inProgressWorkouts.isEmpty)
                     .accessibilityIdentifier("workoutTab.startEmpty")
                 }
-                Section("Programs") {
+                Section {
                     ForEach(programs.enumerated(), id: \.element.id) { index, program in
                         ProgramRow(program: program, index: index, present: presentStarted)
                             .swipeActions(edge: .trailing) {
@@ -83,9 +85,15 @@ struct WorkoutTab: View {
                         isCreatingProgram = true
                     }
                     .accessibilityIdentifier("workoutTab.newProgram")
+                } header: {
+                    Text("Programs")
+                } footer: {
+                    Text(
+                        "A program is a list of routines you rotate through, such as Push, Pull, Legs."
+                    )
                 }
-                Section {
-                    if routines.isEmpty && programs.isEmpty {
+                if isFirstRun {
+                    Section("Starter Routines") {
                         ForEach(StarterRoutine.suggestions(in: StarterRoutine.bundled)) {
                             starterRoutine in
                             StarterRoutineLink(
@@ -95,6 +103,8 @@ struct WorkoutTab: View {
                                 "workoutTab.suggestedStarterRoutine.\(starterRoutine.name)")
                         }
                     }
+                }
+                Section {
                     ForEach(routines) { routine in
                         RoutineLink(routine: routine)
                             .accessibilityIdentifier("workoutTab.routine.\(routine.name)")
@@ -128,7 +138,7 @@ struct WorkoutTab: View {
                 } header: {
                     Text("My Routines")
                 } footer: {
-                    if routines.isEmpty && programs.isEmpty {
+                    if isFirstRun {
                         Text("No routines yet. Try a starter routine, or make your own.")
                     }
                 }

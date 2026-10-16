@@ -22,6 +22,7 @@ struct FinishSheet: View {
     }
 
     var body: some View {
+        let unchecked = WorkoutLog.uncheckedSetCount(workout)
         NavigationStack {
             if let summary {
                 FinishSummary(summary: summary)
@@ -40,6 +41,13 @@ struct FinishSheet: View {
                     } footer: {
                         if !WorkoutLog.hasCheckedSet(workout) {
                             Text("Check off at least one set to save this workout.")
+                        } else if unchecked > 0 {
+                            Text(
+                                unchecked == 1
+                                    ? "1 unchecked set won’t be saved."
+                                    : "\(unchecked) unchecked sets won’t be saved."
+                            )
+                            .accessibilityIdentifier("finish.uncheckedNote")
                         }
                     }
                 }
@@ -71,6 +79,10 @@ struct FinishSheet: View {
                 }
             }
         }
+        // Medium, so a short sheet isn't mostly blank; the summary shares the grouped background with the form, so
+        // Save cross-fades the content rather than cutting between two backgrounds.
+        .presentationDetents([.medium, .large])
+        .presentationBackground(Color(.systemGroupedBackground))
         // Once saved, the workout is finished: leaving goes through Done.
         .interactiveDismissDisabled(summary != nil)
         .saveFailedAlert(isPresented: $saveFailed)

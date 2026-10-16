@@ -49,20 +49,17 @@ struct StretchRoutineDetail: View {
                     ForEach(StretchPlayer.roundChoices, id: \.self) { Text("\($0)").tag($0) }
                 }
                 .accessibilityIdentifier("stretch.rounds")
-                Button("Start") {
-                    player = StretchPlayer.start(starterRoutine, rounds: rounds, in: modelContext)
-                }
-                .disabled(!inProgressWorkouts.isEmpty)
-                .accessibilityIdentifier("stretch.start")
-            } footer: {
-                if !inProgressWorkouts.isEmpty {
-                    Text("Finish or discard the workout in progress first.")
-                }
             }
             Section {
                 Button("Add to My Routines") { addToRoutines() }
                     .accessibilityIdentifier("stretchRoutineDetail.addToRoutines")
             }
+        }
+        .bottomBarButton(
+            "Start", identifier: "stretch.start", isEnabled: inProgressWorkouts.isEmpty,
+            hint: "Finish or discard the workout in progress first."
+        ) {
+            player = StretchPlayer.start(starterRoutine, rounds: rounds, in: modelContext)
         }
         .navigationTitle(starterRoutine.name)
         .fullScreenCover(item: $player) { StretchPlayerScreen(player: $0) }

@@ -7,6 +7,36 @@ extension View {
         lineLimit(1).minimumScaleFactor(0.6)
     }
 
+    /// A bottom bar that stays put while the list scrolls: one full-width prominent button and, when it is
+    /// disabled, a footnote saying why.
+    func bottomBarButton(
+        _ title: LocalizedStringKey, identifier: String, isEnabled: Bool = true,
+        hint: LocalizedStringKey? = nil,
+        hintIdentifier: String? = nil, action: @escaping () -> Void
+    ) -> some View {
+        safeAreaInset(edge: .bottom) {
+            VStack(spacing: 8) {
+                Button(action: action) {
+                    Text(title).frame(maxWidth: .infinity)
+                }
+                .font(.headline)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!isEnabled)
+                .accessibilityIdentifier(identifier)
+                if !isEnabled, let hint {
+                    Text(hint)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier(hintIdentifier ?? "\(identifier).hint")
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(.bar)
+        }
+    }
+
     /// A bottom bar's icon buttons: icons alone, or titles alone at accessibility sizes, where the bar has two rows.
     @ViewBuilder
     func bottomBarLabels(isLarge: Bool) -> some View {

@@ -78,6 +78,25 @@ struct WorkoutLogTests {
         _ = try Backup(context: container.mainContext).export(at: .now)
     }
 
+    @Test func uncheckedSetCountIsWhatFinishDrops() throws {
+        let workout = try workout(sets: 3)
+        try log.addExercise(try exercise("Hammer Curl"), to: workout)
+        #expect(WorkoutLog.uncheckedSetCount(workout) == 4)
+        try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
+        #expect(WorkoutLog.uncheckedSetCount(workout) == 3)
+
+        let before = try container.mainContext.fetchCount(FetchDescriptor<WorkoutSet>())
+        _ = try log.finish(workout, title: "")
+        #expect(before - (try container.mainContext.fetchCount(FetchDescriptor<WorkoutSet>())) == 3)
+        #expect(WorkoutLog.uncheckedSetCount(workout) == 0)
+    }
+
+    @Test func uncheckedSetCountIsZeroWhenEverySetIsChecked() throws {
+        let workout = try workout(sets: 1)
+        try log.toggleCompleted(try #require(workout.exercises.first?.sets.first))
+        #expect(WorkoutLog.uncheckedSetCount(workout) == 0)
+    }
+
     @Test func finishDeletesUncheckedSetsAndEmptyExercises() throws {
         let workout = try workout(sets: 3)
         try log.addExercise(try exercise("Hammer Curl"), to: workout)

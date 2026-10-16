@@ -200,7 +200,10 @@ struct WorkoutScreen: View {
                 .font(.headline)
                 .fontDesign(.rounded)
                 .monospacedDigit()
+                // The ticking time is the value, not the label, as in the resume row.
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Elapsed time")
+                .accessibilityValue(Text(workout.startDate, style: .timer))
                 .accessibilityIdentifier("workout.elapsed")
         }
         ToolbarItem(placement: .confirmationAction) {
