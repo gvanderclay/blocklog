@@ -112,7 +112,7 @@ private struct StretchStepView: View {
                     .accessibilityIdentifier("stretch.name")
                 // Always laid out, so a stretch without a status, Pause and Resume don't move the countdown.
                 let status = player.countdown.isPaused ? "Paused" : player.step?.status
-                Text(status ?? "Paused")
+                Text(status ?? " ")
                     .font(.headline)
                     .foregroundStyle(.tint)
                     .opacity(status == nil ? 0 : 1)

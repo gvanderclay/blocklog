@@ -148,7 +148,7 @@ private struct StopwatchRunView: View {
         ScrollView {
             VStack(spacing: 16) {
                 // Always laid out, so Pause and Resume don't move the count.
-                Text(status ?? "Paused")
+                Text(status ?? " ")
                     .font(.headline)
                     .foregroundStyle(.tint)
                     .opacity(status == nil ? 0 : 1)

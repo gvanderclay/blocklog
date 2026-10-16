@@ -238,7 +238,7 @@ private struct AMRAPRunView: View {
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("amrap.round")
                 // Always laid out, so Get ready and Pause don't move the countdown.
-                Text(status ?? "Paused")
+                Text(status ?? " ")
                     .font(.headline)
                     .foregroundStyle(.tint)
                     .opacity(status == nil ? 0 : 1)
