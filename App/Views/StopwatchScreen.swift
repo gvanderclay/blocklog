@@ -10,6 +10,7 @@ struct StopwatchScreen: View {
     let onStop: (Int) throws -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var saveFailed = false
 
     var body: some View {
@@ -90,14 +91,18 @@ struct StopwatchScreen: View {
 
     /// Pause or Resume, beside Start Now during get ready, then Stop, enabled once a second has counted.
     private var controls: some View {
-        HStack(spacing: 12) {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let layout =
+            isLarge
+            ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
             Button(
                 stopwatch.isPaused ? "Resume" : "Pause",
                 systemImage: stopwatch.isPaused ? "play.fill" : "pause.fill"
             ) {
                 if stopwatch.isPaused { stopwatch.resume() } else { stopwatch.pause() }
             }
-            .labelStyle(.iconOnly)
+            .bottomBarLabels(isLarge: isLarge)
             .buttonStyle(.bordered)
             .accessibilityIdentifier("stopwatch.pause")
             if stopwatch.phase == .getReady {
@@ -125,6 +130,7 @@ struct StopwatchScreen: View {
         }
         .font(.headline)
         .controlSize(.large)
+        .bottomBarTextFit()
         .padding()
         .frame(maxWidth: .infinity)
         .background(.bar)

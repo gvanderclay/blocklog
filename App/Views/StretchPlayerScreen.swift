@@ -171,43 +171,79 @@ private struct StretchControls: View {
     /// Called for +15, for its haptic.
     let added: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// At accessibility sizes the buttons sit in two rows with their titles; otherwise in one row of icons.
     var body: some View {
-        HStack(spacing: 12) {
-            Button("Back", systemImage: "backward.fill") { player.back() }
-                .accessibilityIdentifier("stretch.back")
-            Button(
-                player.countdown.isPaused ? "Resume" : "Pause",
-                systemImage: player.countdown.isPaused ? "play.fill" : "pause.fill"
-            ) { player.togglePause() }
-            .accessibilityIdentifier("stretch.pause")
-            // During a lead-in the button starts its hold, so it says so; during a hold it skips it.
-            // Start Now sizes the slot, hidden, under Skip too, so Back and Pause stay where they are.
-            ZStack {
-                Button("Start Now") {}
-                    .font(.headline)
-                    .hidden()
-                if player.step?.kind == .leadIn {
-                    Button("Start Now") { player.skip() }
-                        .font(.headline)
-                        .accessibilityIdentifier("stretch.startNow")
-                } else {
-                    Button("Skip", systemImage: "forward.fill") { player.skip() }
-                        .accessibilityIdentifier("stretch.skip")
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        Group {
+            if isLarge {
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        back
+                        pause
+                    }
+                    HStack(spacing: 12) {
+                        skipSlot
+                        addTime
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    back
+                    pause
+                    skipSlot
+                    addTime
                 }
             }
-            Button("+15") {
-                added()
-                player.addTime()
-            }
-            .accessibilityLabel("Add 15 seconds")
-            .accessibilityIdentifier("stretch.addTime")
         }
-        .labelStyle(.iconOnly)
+        .bottomBarLabels(isLarge: isLarge)
         .buttonStyle(.bordered)
         .controlSize(.large)
+        .bottomBarTextFit()
         .padding()
         .frame(maxWidth: .infinity)
         .background(.bar)
+    }
+
+    private var back: some View {
+        Button("Back", systemImage: "backward.fill") { player.back() }
+            .accessibilityIdentifier("stretch.back")
+    }
+
+    private var pause: some View {
+        Button(
+            player.countdown.isPaused ? "Resume" : "Pause",
+            systemImage: player.countdown.isPaused ? "play.fill" : "pause.fill"
+        ) { player.togglePause() }
+        .accessibilityIdentifier("stretch.pause")
+    }
+
+    private var skipSlot: some View {
+        // During a lead-in the button starts its hold, so it says so; during a hold it skips it.
+        // Start Now sizes the slot, hidden, under Skip too, so Back and Pause stay where they are.
+        ZStack {
+            Button("Start Now") {}
+                .font(.headline)
+                .hidden()
+            if player.step?.kind == .leadIn {
+                Button("Start Now") { player.skip() }
+                    .font(.headline)
+                    .accessibilityIdentifier("stretch.startNow")
+            } else {
+                Button("Skip", systemImage: "forward.fill") { player.skip() }
+                    .accessibilityIdentifier("stretch.skip")
+            }
+        }
+    }
+
+    private var addTime: some View {
+        Button("+15") {
+            added()
+            player.addTime()
+        }
+        .accessibilityLabel("Add 15 seconds")
+        .accessibilityIdentifier("stretch.addTime")
     }
 }
 

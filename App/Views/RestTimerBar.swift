@@ -24,45 +24,66 @@ struct RestTimerBar: View {
     private func content(_ reading: RestTimer.Reading) -> some View {
         let shown = reading.seconds
         let isOvertime = reading.isOvertime
-        let layout =
-            dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-            : AnyLayout(HStackLayout(spacing: 12))
-        return layout {
-            HStack(spacing: 12) {
-                RestRing(progress: reading.progress, seconds: reading.countdownSeconds)
-                Text(isOvertime ? RestTimer.overtimeClock(shown) : RestTimer.clock(shown))
-                    // Overtime and countdown are different views, so a new rest swaps the text instead of
-                    // rolling "+0:10" into "1:30".
-                    .id(isOvertime)
-                    .transition(.identity)
-                    .font(.title2.weight(.semibold))
-                    .fontDesign(.rounded)
-                    .monospacedDigit()
-                    .contentTransition(.numericText(countsDown: true))
-                    .animation(.default, value: shown)
-                    .accessibilityLabel(isOvertime ? "Rest overtime" : "Rest remaining")
-                    .accessibilityValue(
-                        Duration.seconds(shown).formatted(
-                            .units(allowed: [.minutes, .seconds], width: .wide))
-                    )
-                    .accessibilityAddTraits(.updatesFrequently)
-                    .accessibilityIdentifier("restTimer.remaining")
-            }
-            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
-            HStack(spacing: 8) {
-                if !isOvertime {
-                    adjustButton(-15, identifier: "restTimer.minus15")
-                    adjustButton(15, identifier: "restTimer.plus15")
-                }
-                Button("Skip") {
-                    withAnimation { restTimer.skip() }
-                }
-                .accessibilityIdentifier("restTimer.skip")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let clock = HStack(spacing: 12) {
+            RestRing(
+                progress: reading.progress, seconds: reading.countdownSeconds, isCapped: isLarge)
+            Text(isOvertime ? RestTimer.overtimeClock(shown) : RestTimer.clock(shown))
+                // Overtime and countdown are different views, so a new rest swaps the text instead of
+                // rolling "+0:10" into "1:30".
+                .id(isOvertime)
+                .transition(.identity)
+                .font(.title2.weight(.semibold))
+                .fontDesign(.rounded)
+                .monospacedDigit()
+                .contentTransition(.numericText(countsDown: true))
+                .animation(.default, value: shown)
+                .accessibilityLabel(isOvertime ? "Rest overtime" : "Rest remaining")
+                .accessibilityValue(
+                    Duration.seconds(shown).formatted(
+                        .units(allowed: [.minutes, .seconds], width: .wide))
+                )
+                .accessibilityAddTraits(.updatesFrequently)
+                .accessibilityIdentifier("restTimer.remaining")
         }
+        let skip = Button("Skip") {
+            withAnimation { restTimer.skip() }
+        }
+        .accessibilityIdentifier("restTimer.skip")
+        // At accessibility sizes the clock and Skip share the first row and −15 and +15 the second, so the
+        // bar stays slim and no label breaks.
+        return Group {
+            if isLarge {
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        clock
+                        Spacer(minLength: 0)
+                        skip
+                    }
+                    if !isOvertime {
+                        HStack(spacing: 12) {
+                            adjustButton(-15, identifier: "restTimer.minus15")
+                            adjustButton(15, identifier: "restTimer.plus15")
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    clock
+                    Spacer(minLength: 0)
+                    HStack(spacing: 8) {
+                        if !isOvertime {
+                            adjustButton(-15, identifier: "restTimer.minus15")
+                            adjustButton(15, identifier: "restTimer.plus15")
+                        }
+                        skip
+                    }
+                }
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .bottomBarTextFit()
         .sensoryFeedback(trigger: reading.countdownSeconds) { old, new in
             RestTimer.isCountdownTick(from: old, to: new) ? .impact(weight: .light) : nil
         }
@@ -82,8 +103,11 @@ struct RestTimerBar: View {
 private struct RestRing: View {
     let progress: Double
     let seconds: Int
+    /// Keeps the ring from growing with the text, so the bar stays slim at accessibility sizes.
+    let isCapped: Bool
 
-    @ScaledMetric(relativeTo: .title2) private var size = 36
+    @ScaledMetric(relativeTo: .title2) private var scaledSize = 36
+    private var size: CGFloat { isCapped ? 44 : scaledSize }
 
     var body: some View {
         Circle()

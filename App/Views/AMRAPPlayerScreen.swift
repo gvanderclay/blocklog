@@ -281,13 +281,20 @@ private struct AMRAPRunView: View {
 private struct AMRAPControls: View {
     let player: AMRAPPlayer
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// At accessibility sizes Pause sits above the wide button, with its title.
     var body: some View {
         let isPaused = player.phase == .paused
-        HStack(spacing: 12) {
+        let isLarge = dynamicTypeSize.isAccessibilitySize
+        let layout =
+            isLarge
+            ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 12))
+        layout {
             Button(
                 isPaused ? "Resume" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill"
             ) { player.send(isPaused ? .resume : .pause) }
-            .labelStyle(.iconOnly)
+            .bottomBarLabels(isLarge: isLarge)
             .buttonStyle(.bordered)
             .accessibilityIdentifier("amrap.pause")
             // During get ready, Start Now takes Round done's place, which can't be tapped until the clock runs.
@@ -314,6 +321,7 @@ private struct AMRAPControls: View {
             }
         }
         .controlSize(.large)
+        .bottomBarTextFit()
         .padding()
         .frame(maxWidth: .infinity)
         .background(.bar)
